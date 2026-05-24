@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
+/* ─── Design tokens ─────────────────────────────────────────────────────────
+   Palette: cinematic warmth.
+   Dark espresso anchors, warm parchment surfaces, rich contrast hierarchy.
+   Inspired by premium hotel lounge, Japanese minimalism, dark roast + stone.
+   ─────────────────────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Page backgrounds */
+  --bg:        #f0ebe0;   /* warm parchment — richer than before */
+  --surface:   #fdfaf2;   /* warm cream card surface */
+  --surface-2: #f2ece0;   /* inset / recessed surface */
+
+  /* Borders */
+  --border:    #d4ccbc;   /* visible warm divider */
+  --border-2:  #e0d9ce;   /* subtle row separator */
+
+  /* Text hierarchy */
+  --ink:       #141210;   /* near-black, deep warm */
+  --ink-2:     #58493e;   /* secondary — warm espresso brown */
+  --ink-3:     #9c9080;   /* tertiary — muted warm */
+
+  /* Anchor surfaces */
+  --user-message: #d9d2c8; /* warm stone — chat user pill (light, calm) */
+  --user-bubble: #161210; /* deep espresso — kept for dark anchor uses */
+  --nav-bg:    #1c1814;   /* dark warm floor — bottom nav */
+
+  /* Nav text */
+  --nav-active:   #9692b4; /* desaturated indigo-gray — intelligent, cinematic */
+  --nav-inactive: #9c8e7c; /* warm gray-stone — readable on dark */
+
+  /* Shadows — warm-tinted, richer than before */
+  --shadow-card:   0 1px 3px rgba(16,10,4,0.07), 0 2px 10px rgba(16,10,4,0.05);
+  --shadow-raised: 0 4px 24px rgba(16,10,4,0.14), 0 2px 6px rgba(16,10,4,0.08);
+  --shadow-nav:    0 -12px 32px rgba(16,10,4,0.18), 0 -1px 0 rgba(255,255,255,0.05);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html,
+body {
+  overscroll-behavior: none;
+}
+
+html {
+  /* Reserve scrollbar space so its appearance never causes layout shifts */
+  scrollbar-gutter: stable;
+}
+
+/* ─── Utilities ────────────────────────────────────────────────────────────── */
+
+.h-safe-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+}
+
+/* Hide textarea scrollbars — auto-resize handles height */
+textarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+textarea::-webkit-scrollbar {
+  display: none;
+}
+
+/* Elevated card surface */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-card);
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.75);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.2s ease-out forwards;
 }
