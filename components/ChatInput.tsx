@@ -1,134 +1,295 @@
 "use client";
 
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  type KeyboardEvent,
+} from "react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ChatInputProps {
-  onSend: (text: string) => void;
-  disabled?: boolean;
+  onSend:       (text: string) => void;
+  disabled?:    boolean;
+  messageCount?: number;
 }
 
-export default function ChatInput({ onSend, disabled = false }: ChatInputProps) {
-  const [value,   setValue]   = useState("");
-  const [focused, setFocused] = useState(false);
-  const [pulse,   setPulse]   = useState(false); // signature send moment
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const hasText = value.trim().length > 0;
+// ─── Placeholders ─────────────────────────────────────────────────────────────
 
+const PLACEHOLDERS = [
+  "Ask Meridian anything…",
+  "What's on your mind?",
+  "What needs attention?",
+  "What feels unfinished?",
+  "What matters today?",
+  "What's pulling at you?",
+  "What needs a plan?",
+  "What should I remember?",
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ChatInput({
+  onSend,
+  disabled   = false,
+  messageCount = 0,
+}: ChatInputProps) {
+  const [value,    setValue]   = useState("");
+  const [focused,  setFocused] = useState(false);
+  const [phIndex,  setPhIndex] = useState(0);
+  const [phVisible, setPhVisible] = useState(true);
+
+  const textareaRef  = useRef<HTMLTextAreaElement>(null);
+  const intervalRef  = useRef<ReturnType<typeof setInterval>  | null>(null);
+  const resumeRef    = useRef<ReturnType<typeof setTimeout>   | null>(null);
+
+  const hasText = value.length > 0;
+
+  // Randomize placeholder on mount (avoids SSR mismatch)
+  useEffect(() => {
+    setPhIndex(Math.floor(Math.random() * PLACEHOLDERS.length));
+  }, []);
+
+  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 152)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [value]);
 
-  const submit = () => {
+  // Restore focus when a new message lands
+  useEffect(() => {
+    if (messageCount > 0) textareaRef.current?.focus();
+  }, [messageCount]);
+
+  // Placeholder rotation
+  const rotatePlaceholder = useCallback(() => {
+    setPhVisible(false);
+    setTimeout(() => {
+      setPhIndex((i) => (i + 1) % PLACEHOLDERS.length);
+      setPhVisible(true);
+    }, 350);
+  }, []);
+
+  const startRotation = useCallback(() => {
+    if (intervalRef.current) return;
+    intervalRef.current = setInterval(rotatePlaceholder, 7000);
+  }, [rotatePlaceholder]);
+
+  const stopRotation = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    startRotation();
+    return () => {
+      stopRotation();
+      if (resumeRef.current) clearTimeout(resumeRef.current);
+    };
+  }, [startRotation, stopRotation]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleFocus = () => {
+    setFocused(true);
+    stopRotation();
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    if (!hasText) {
+      resumeRef.current = setTimeout(startRotation, 1500);
+    }
+  };
+
+  const submit = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
 
-    // Pulse the pill on send — subconscious signature moment
-    setPulse(true);
-    setTimeout(() => setPulse(false), 380);
+    // Call focus() synchronously (mobile requirement)
+    textareaRef.current?.focus();
 
     onSend(trimmed);
     setValue("");
-
-    // Preserve keyboard / focus continuity — critical for conversation flow
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => textareaRef.current?.focus());
-    });
-  };
+  }, [value, disabled, onSend]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       submit();
     }
   };
 
-  // Three-state shadow: resting → focused → pulse (send moment)
-  const pillShadow = pulse
-    ? "0 2px 20px rgba(16,10,4,0.14), 0 0 0 2px rgba(150,146,180,0.32), 0 0 36px rgba(150,146,180,0.14)"
-    : focused
-    ? "0 2px 16px rgba(16,10,4,0.10), 0 0 0 1.5px rgba(150,146,180,0.20), 0 0 24px rgba(150,146,180,0.07)"
-    : "0 1px 6px rgba(16,10,4,0.07), 0 1px 2px rgba(16,10,4,0.05)";
+  const handleSendTap = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    submit();
+  };
+
+  // Placeholder: hide instantly on focus or when text present
+  const showPlaceholder = !hasText && !focused && phVisible;
 
   return (
-    /*
-      Composer sits on the same warm bg as the conversation — not inside the
-      dark nav zone. The conversation remains the primary space; the nav is
-      the grounding floor below, not the container for the input.
-    */
-    <div style={{ background: "var(--bg)" }} className="pb-safe">
-      {/* Soft dissolve from messages into the composer — no hard edge */}
+    <div
+      style={{
+        width: "100%",
+        background: "transparent",
+      }}
+    >
       <div
-        className="h-10 w-full pointer-events-none"
         style={{
-          background: "linear-gradient(to bottom, transparent, var(--bg))",
-          marginBottom: -6,
-          position: "relative",
-          zIndex: 1,
+          maxWidth: 480,
+          margin:   "0 auto",
+          padding:  "6px 14px 10px",
+          display:  "flex",
+          alignItems: "flex-end",
+          gap:      10,
         }}
-      />
-
-      <div className="px-4 pb-4 pt-0 max-w-lg mx-auto">
-        <div className="flex items-end gap-2.5">
-
-          {/* Pill — symmetric padding, no internal gutter */}
+      >
+        {/* ── Input pill ──────────────────────────────────────────── */}
+        <div
+          style={{
+            flex:      1,
+            position:  "relative",
+            display:   "flex",
+            alignItems: "flex-end",
+            background: "#FFFFFF",
+            borderRadius: 30,
+            border: focused
+              ? "1px solid rgba(108,105,224,0.40)"
+              : "1px solid rgba(0,0,0,0.08)",
+            boxShadow: focused
+              ? "0 0 0 3px rgba(108,105,224,0.08), 0 2px 12px rgba(0,0,0,0.06)"
+              : "0 2px 10px rgba(0,0,0,0.06)",
+            transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+            minHeight:  50,
+            overflow:   "hidden",
+          }}
+        >
+          {/* Presence dot (left, vertically centered) */}
           <div
-            className="flex-1 rounded-[26px] px-5 transition-shadow duration-250"
+            aria-hidden
             style={{
-              background: "var(--surface)",
-              boxShadow: pillShadow,
+              flexShrink: 0,
+              alignSelf:  "center",
+              width:  7,
+              height: 7,
+              borderRadius: "50%",
+              marginLeft: 16,
+              background: focused
+                ? "rgba(108,105,224,0.90)"
+                : "rgba(108,105,224,0.30)",
+              transition: "background 0.3s ease",
+            }}
+          />
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            disabled={disabled}
+            placeholder=""
+            autoFocus
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="sentences"
+            inputMode="text"
+            className="flex-1 resize-none bg-transparent focus:outline-none"
+            style={{
+              fontSize:    15,
+              lineHeight:  1.5,
+              color:       "#1C1A2E",
+              caretColor:  "#6C69E0",
+              padding:     "13px 10px 13px 10px",
+              minHeight:   50,
+              maxHeight:   140,
+              overflowY:   "auto",
+              WebkitAppearance: "none",
+              scrollbarWidth:   "none",
+            }}
+          />
+
+          {/* Placeholder overlay */}
+          <div
+            aria-hidden
+            style={{
+              position:      "absolute",
+              left:          36,
+              right:         72,          // leave space for action icons
+              top:           "50%",
+              transform:     "translateY(-50%)",
+              pointerEvents: "none",
+              color:         "#B0AEC4",
+              fontSize:      15,
+              lineHeight:    1.5,
+              whiteSpace:    "nowrap",
+              overflow:      "hidden",
+              textOverflow:  "ellipsis",
+              opacity:       showPlaceholder ? 1 : 0,
+              transition:    showPlaceholder
+                ? "opacity 400ms ease"
+                : "opacity 80ms ease",
             }}
           >
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              disabled={disabled}
-              placeholder="What's on your mind?"
-              className="w-full resize-none bg-transparent py-[14px] text-[15px] focus:outline-none leading-relaxed block"
-              style={{
-                color: "var(--ink)",
-                caretColor: "var(--nav-active)",
-              }}
-            />
+            {PLACEHOLDERS[phIndex]}
           </div>
 
-          {/* Send — outside the pill, always occupies layout space */}
-          <button
-            onClick={submit}
-            disabled={disabled || !hasText}
-            aria-label="Send"
-            className="flex-none w-9 h-9 rounded-full flex items-center justify-center"
-            style={{
-              background: "var(--ink)",
-              opacity: hasText ? 1 : 0,
-              transform: hasText ? "scale(1)" : "scale(0.68)",
-              pointerEvents: hasText ? "auto" : "none",
-              transition: "opacity 0.18s ease, transform 0.18s ease",
-              alignSelf: "flex-end",
-              marginBottom: 4,
-            }}
-          >
-            <ArrowUpIcon />
-          </button>
+          {/* Action icons inside pill (right side) */}
+          <div style={{ width: 10, flexShrink: 0 }} />
+        </div>
 
+        {/* ── Send button — always visible, activates on text ──────── */}
+        <div
+          role="button"
+          aria-label="Send message"
+          tabIndex={0}
+          onMouseDown={(e) => e.preventDefault()}
+          onTouchStart={(e) => e.preventDefault()}
+          onClick={handleSendTap}
+          style={{
+            width:        46,
+            height:       46,
+            borderRadius: "50%",
+            background:   hasText && !disabled
+              ? "#6C69E0"
+              : "rgba(108,105,224,0.18)",
+            display:      "flex",
+            alignItems:   "center",
+            justifyContent: "center",
+            flexShrink:   0,
+            cursor:       "pointer",
+            transition:   "background 0.2s ease",
+            alignSelf:    "flex-end",
+            marginBottom: 2,
+          }}
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={hasText && !disabled ? "#FFFFFF" : "rgba(108,105,224,0.55)"}
+            strokeWidth={2.3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transition: "stroke 0.2s ease" }}
+          >
+            <line x1="12" y1="19" x2="12" y2="5" />
+            <polyline points="5 12 12 5 19 12" />
+          </svg>
         </div>
       </div>
     </div>
-  );
-}
-
-function ArrowUpIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
-    </svg>
   );
 }

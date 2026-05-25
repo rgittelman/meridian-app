@@ -2,11 +2,16 @@
 
 export type ChatRole = "user" | "assistant";
 
+export type ChatMessageStatus = "sending" | "sent" | "streaming" | "error";
+
 export interface ChatMessage {
-  id: string;
-  role: ChatRole;
-  content: string;
+  id:        string;
+  role:      ChatRole;
+  content:   string;
   createdAt: Date;
+  status?:   ChatMessageStatus;
+  /** Set when status is error — allows retry */
+  retryPayload?: string;
 }
 
 export interface Item {
@@ -55,3 +60,12 @@ export interface ClassifyResult {
   intent: MessageIntent;
   confidence: number;
 }
+
+// ─── Memory (re-exported from lib/memory/types) ──────────────────────────────
+
+export type {
+  Memory,
+  MemoryCategory,
+  RankedMemory,
+  UserMemoryPreferences,
+} from "@/lib/memory/types";

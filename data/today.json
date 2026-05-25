@@ -1,0 +1,75 @@
+{
+  "user": {
+    "name": "Ryan",
+    "timezone": "America/New_York"
+  },
+  "priorities": [
+    {
+      "id": "p1",
+      "text": "Review Q2 goals",
+      "done": false,
+      "tag": "Work",
+      "scheduledTime": "10:00 – 11:30 AM",
+      "progress": 0.45
+    },
+    {
+      "id": "p2",
+      "text": "Call dentist",
+      "done": true
+    },
+    {
+      "id": "p3",
+      "text": "Finish reading chapter 4",
+      "done": false,
+      "tag": "Growth"
+    }
+  ],
+  "events": [
+    {
+      "id": "e1",
+      "time": "9:00 AM",
+      "title": "Team standup",
+      "color": "#6C69E0",
+      "durationMin": 30,
+      "category": "work"
+    },
+    {
+      "id": "e2",
+      "time": "10:00 AM",
+      "title": "Review Q2 goals",
+      "color": "#D4810A",
+      "durationMin": 90,
+      "category": "work"
+    },
+    {
+      "id": "e3",
+      "time": "12:30 PM",
+      "title": "Lunch with Alex",
+      "color": "#3D9A7A",
+      "durationMin": 60,
+      "category": "social"
+    },
+    {
+      "id": "e4",
+      "time": "3:00 PM",
+      "title": "Doctor appointment",
+      "color": "#C4597A",
+      "durationMin": 60,
+      "category": "health"
+    }
+  ],
+  "focus": {
+    "deepWorkMinutes": 135,
+    "targetMinutes": 180,
+    "onTrackPct": 0.87,
+    "nextBlockTime": "2:00 PM",
+    "sessionsToday": 3
+  },
+  "context": {
+    "energyLevel": "medium-high",
+    "calendarLoad": "moderate",
+    "focusTrend": "improving",
+    "recoveryStatus": "adequate",
+    "focusWindow": "10:30 – 12:00"
+  }
+}

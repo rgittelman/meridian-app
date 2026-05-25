@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LeafSvg } from "@/components/PageHeader";
 
 const NAV_ITEMS = [
   { label: "Today",  href: "/",       icon: SunIcon    },
@@ -11,16 +12,22 @@ const NAV_ITEMS = [
   { label: "Money",  href: "/money",  icon: MoneyIcon  },
 ];
 
+// Routes where the bottom nav is hidden
+const HIDDEN_ON = ["/login", "/signup", "/onboarding", "/settings"];
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  if (HIDDEN_ON.includes(pathname)) return null;
 
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
         background: "var(--nav-bg)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
         boxShadow: "var(--shadow-nav)",
-        // GPU compositing prevents paint jitter during scroll
         willChange: "transform",
         transform: "translateZ(0)",
       }}
@@ -39,12 +46,14 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center gap-[3px] active:opacity-50 transition-opacity duration-150"
+              className="flex flex-col items-center gap-[3px] transition-opacity duration-150"
               style={{
                 width: 56,
-                paddingTop: 4,
-                paddingBottom: 4,
+                minHeight: 44,
+                paddingTop: 6,
+                paddingBottom: 6,
                 color: active ? "var(--nav-active)" : "var(--nav-inactive)",
+                justifyContent: "center",
               }}
             >
               {/* Icon wrapper: fixed size prevents any icon-shape shift */}
@@ -103,14 +112,9 @@ function ChatIcon({ active }: { active: boolean }) {
   );
 }
 
-// Life: bookmark — "what matters to you", calm and intentional
+// Life: leaf — same icon as the Life page header chip
 function LifeIcon({ active }: { active: boolean }) {
-  const w = active ? 2 : 1.5;
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-    </svg>
-  );
+  return <LeafSvg size={22} strokeWidth={active ? 2 : 1.5} />;
 }
 
 function HealthIcon({ active }: { active: boolean }) {

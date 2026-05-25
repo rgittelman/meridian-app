@@ -4,8 +4,8 @@
   "description": "Your calm, personal life operating system.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f4f0",
-  "theme_color": "#f5f4f0",
+  "background_color": "#F7F6FA",
+  "theme_color": "#F7F6FA",
   "orientation": "portrait",
   "icons": [
     {

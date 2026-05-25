@@ -1,116 +1,138 @@
 import PageShell from "@/components/PageShell";
+import PageHeader, { HealthPageIcon } from "@/components/PageHeader";
+import { requireOnboarding } from "@/lib/auth";
+import { assembleDomainContext } from "@/lib/domains/retrieve";
+import { getTasksForUser } from "@/lib/tasks/db";
+import { getRemindersForUser } from "@/lib/reminders/db";
 
-const STATS = [
-  { label: "Sleep",  value: "7h 20m", sub: "last night",   icon: "🌙" },
-  { label: "Steps",  value: "8,240",  sub: "today",        icon: "🚶" },
-  { label: "Mood",   value: "Good",   sub: "this morning", icon: "☀️" },
-  { label: "Weight", value: "174 lb", sub: "2 days ago",   icon: "⚖️" },
-];
-
-const LOGS = [
-  { id: "1", date: "Today",     type: "Sleep",    value: "7h 20m",   note: "Felt rested" },
-  { id: "2", date: "Today",     type: "Exercise", value: "30 min run", note: "" },
-  { id: "3", date: "Yesterday", type: "Sleep",    value: "6h 45m",   note: "Up late" },
-  { id: "4", date: "Yesterday", type: "Mood",     value: "Okay",     note: "Stressful day" },
-  { id: "5", date: "May 22",    type: "Weight",   value: "174 lb",   note: "" },
-];
-
-export default function HealthPage() {
+function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <PageShell>
-
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <header className="mb-14">
-        <h1
-          className="text-[34px] font-bold leading-[1.08] tracking-[-0.03em]"
-          style={{ color: "var(--ink)" }}
-        >
-          Health
-        </h1>
-        <p className="text-[14px] mt-1.5" style={{ color: "var(--ink-3)" }}>
-          Your wellbeing at a glance.
-        </p>
-      </header>
-
-      {/* ── Snapshot — keep cards; they're quantitative, not list items ── */}
-      <section className="mb-12">
-        <Eyebrow>Snapshot</Eyebrow>
-        <div className="grid grid-cols-2 gap-3">
-          {STATS.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl px-4 py-4"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border-2)",
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <span className="text-[22px] leading-none block mb-3">{stat.icon}</span>
-              <p
-                className="text-[19px] font-semibold leading-none tracking-[-0.01em]"
-                style={{ color: "var(--ink)" }}
-              >
-                {stat.value}
-              </p>
-              <p className="text-[12px] mt-1" style={{ color: "var(--ink-3)" }}>
-                {stat.label} · {stat.sub}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Log ─────────────────────────────────────────────────── */}
-      <section>
-        <Eyebrow>Log</Eyebrow>
-        <ul>
-          {LOGS.map((log, i) => (
-            <li
-              key={log.id}
-              className="flex items-start gap-5 py-4"
-              style={i < LOGS.length - 1 ? { borderBottom: "1px solid var(--border-2)" } : undefined}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[15px] font-medium" style={{ color: "var(--ink)" }}>
-                    {log.value}
-                  </span>
-                  <span
-                    className="text-[11px] font-medium"
-                    style={{ color: "var(--ink-3)" }}
-                  >
-                    {log.type}
-                  </span>
-                </div>
-                {log.note && (
-                  <p className="text-[13px] mt-0.5" style={{ color: "var(--ink-3)" }}>
-                    {log.note}
-                  </p>
-                )}
-              </div>
-              <span
-                className="text-[12px] flex-none tabular-nums pt-0.5"
-                style={{ color: "var(--ink-3)" }}
-              >
-                {log.date}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-    </PageShell>
+    <div style={{
+      background: "#FFFFFF", borderRadius: 18,
+      border: "1px solid rgba(0,0,0,0.06)",
+      boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)",
+      ...style,
+    }}>
+      {children}
+    </div>
   );
 }
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p
-      className="text-[11px] font-semibold tracking-[0.08em] mb-1"
-      style={{ color: "var(--ink-3)" }}
-    >
+    <p style={{ fontSize: 11, fontWeight: 600, color: "#9E9CB0", letterSpacing: "0.08em", marginBottom: 10 }}>
       {String(children).toUpperCase()}
     </p>
+  );
+}
+
+export default async function HealthPage() {
+  const profile = await requireOnboarding();
+
+  let memories: { id: string; title: string; summary: string | null; category: string }[] = [];
+  let themes: string[] = [];
+  let tasks: { id: string; title: string; due_date: string | null }[] = [];
+  let reminders: { id: string; title: string; body: string | null }[] = [];
+
+  try {
+    const [ctx, t, r] = await Promise.all([
+      assembleDomainContext(profile.id, "health"),
+      getTasksForUser(profile.id, { status: ["open", "snoozed"], limit: 5 }),
+      getRemindersForUser(profile.id, { status: "pending", limit: 3 }),
+    ]);
+    memories = ctx.memories.map((m) => ({ id: m.id, title: m.title, summary: m.summary, category: m.category }));
+    themes = ctx.themes;
+    const healthTasks = t.filter((x) => x.domains?.includes("health"));
+    tasks = (healthTasks.length > 0 ? healthTasks : t.slice(0, 3)).map((x) => ({ id: x.id, title: x.title, due_date: x.due_date }));
+    reminders = r.map((x) => ({ id: x.id, title: x.title, body: x.body }));
+  } catch {
+    // Fallback to empty
+  }
+
+  const hasData = memories.length > 0 || tasks.length > 0;
+
+  return (
+    <PageShell>
+      <PageHeader icon={<HealthPageIcon />} title="Health" subtitle="Stronger every day." />
+
+      {/* ── Health summary card ────────────────────────────────── */}
+      {themes.length > 0 && (
+        <section className="mb-4">
+          <Eyebrow>Health Themes</Eyebrow>
+          <Card style={{ padding: "16px 18px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {themes.map((t, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#3D9A7A", opacity: 0.6, flexShrink: 0 }} />
+                  <p style={{ fontSize: 14, color: "#3A3860", lineHeight: 1.4, margin: 0 }}>{t}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* ── Health tasks ──────────────────────────────────────── */}
+      {tasks.length > 0 && (
+        <section className="mb-4">
+          <Eyebrow>Health Focus</Eyebrow>
+          <Card>
+            <ul style={{ padding: "4px 0" }}>
+              {tasks.map((item, i) => (
+                <li key={item.id} style={{ padding: "14px 18px", ...(i < tasks.length - 1 ? { borderBottom: "1px solid rgba(0,0,0,0.04)" } : {}) }}>
+                  <div className="flex items-center justify-between">
+                    <span style={{ fontSize: 14, fontWeight: 500, color: "#3A3860" }}>{item.title}</span>
+                    {item.due_date && <span style={{ fontSize: 12, color: "#9E9CB0" }}>{item.due_date}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      )}
+
+      {/* ── Reminders ─────────────────────────────────────────── */}
+      {reminders.length > 0 && (
+        <section className="mb-4">
+          <Eyebrow>Reminders</Eyebrow>
+          <Card>
+            <ul style={{ padding: "4px 0" }}>
+              {reminders.map((r, i) => (
+                <li key={r.id} style={{ padding: "12px 18px", ...(i < reminders.length - 1 ? { borderBottom: "1px solid rgba(0,0,0,0.04)" } : {}) }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "#3A3860" }}>{r.title}</p>
+                  {r.body && <p style={{ fontSize: 12, color: "#9E9CB0", marginTop: 2 }}>{r.body}</p>}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      )}
+
+      {/* ── Health memories ────────────────────────────────────── */}
+      {memories.length > 0 && (
+        <section className="mb-6">
+          <Eyebrow>What Meridian remembers</Eyebrow>
+          <Card>
+            <ul style={{ padding: "4px 0" }}>
+              {memories.map((m, i) => (
+                <li key={m.id} style={{ padding: "14px 18px", ...(i < memories.length - 1 ? { borderBottom: "1px solid rgba(0,0,0,0.04)" } : {}) }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "#3A3860", marginBottom: 3 }}>{m.title}</p>
+                  {m.summary && <p style={{ fontSize: 13, color: "#9E9CB0", lineHeight: 1.45 }}>{m.summary}</p>}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      )}
+
+      {/* ── Empty state ───────────────────────────────────────── */}
+      {!hasData && (
+        <Card style={{ padding: "28px 20px", textAlign: "center" }}>
+          <p style={{ fontSize: 14, fontWeight: 500, color: "#64627A", lineHeight: 1.5 }}>
+            Nothing here yet. Mention sleep, exercise, or how you feel — patterns will appear.
+          </p>
+        </Card>
+      )}
+    </PageShell>
   );
 }

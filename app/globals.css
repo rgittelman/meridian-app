@@ -1,38 +1,70 @@
 @import "tailwindcss";
 
 /* ─── Design tokens ─────────────────────────────────────────────────────────
-   Palette: cinematic warmth.
-   Dark espresso anchors, warm parchment surfaces, rich contrast hierarchy.
-   Inspired by premium hotel lounge, Japanese minimalism, dark roast + stone.
+   Palette: luminous light — Meridian default.
+   Warm pearl foundation. Soft indigo/periwinkle accent. Frosted surfaces.
+   Target feel: "A beautifully organized mind."
    ─────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Page backgrounds */
-  --bg:        #f0ebe0;   /* warm parchment — richer than before */
-  --surface:   #fdfaf2;   /* warm cream card surface */
-  --surface-2: #f2ece0;   /* inset / recessed surface */
+  /* Page canvas — three surface levels */
+  --bg:        #F7F6FA;              /* faint lavender-tinted near-white — the room */
+  --surface:   #FFFFFF;             /* white card — sits above */
+  --surface-2: #EEEDFB;             /* soft lavender tint — elevated */
 
   /* Borders */
-  --border:    #d4ccbc;   /* visible warm divider */
-  --border-2:  #e0d9ce;   /* subtle row separator */
+  --border:    rgba(0,0,0,0.07);    /* visible but gentle */
+  --border-2:  rgba(0,0,0,0.04);   /* subtle separator */
 
   /* Text hierarchy */
-  --ink:       #141210;   /* near-black, deep warm */
-  --ink-2:     #58493e;   /* secondary — warm espresso brown */
-  --ink-3:     #9c9080;   /* tertiary — muted warm */
+  --ink:       #1C1A2E;             /* near-black with indigo tint — primary */
+  --ink-2:     #64627A;             /* muted purple-gray — secondary */
+  --ink-3:     #9E9CB0;             /* soft gray-purple — dim labels */
 
   /* Anchor surfaces */
-  --user-message: #d9d2c8; /* warm stone — chat user pill (light, calm) */
-  --user-bubble: #161210; /* deep espresso — kept for dark anchor uses */
-  --nav-bg:    #1c1814;   /* dark warm floor — bottom nav */
+  --user-bubble: #EEEDFB;           /* soft lavender — elevated surface */
+  --nav-bg:    rgba(255,255,255,0.94); /* frosted white nav */
 
   /* Nav text */
-  --nav-active:   #9692b4; /* desaturated indigo-gray — intelligent, cinematic */
-  --nav-inactive: #9c8e7c; /* warm gray-stone — readable on dark */
+  --nav-active:   #6C69E0;          /* soft indigo/periwinkle — present tab */
+  --nav-inactive: #A8A6BC;          /* readable warm gray-purple */
 
-  /* Shadows — warm-tinted, richer than before */
-  --shadow-card:   0 1px 3px rgba(16,10,4,0.07), 0 2px 10px rgba(16,10,4,0.05);
-  --shadow-raised: 0 4px 24px rgba(16,10,4,0.14), 0 2px 6px rgba(16,10,4,0.08);
-  --shadow-nav:    0 -12px 32px rgba(16,10,4,0.18), 0 -1px 0 rgba(255,255,255,0.05);
+  /* Shadows — light mode (layered for atmospheric depth) */
+  --shadow-card:   0 1px 1px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+  --shadow-raised: 0 2px 4px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.09), 0 1px 0 rgba(255,255,255,0.8) inset;
+  --shadow-focus:  0 2px 4px rgba(0,0,0,0.04), 0 8px 32px rgba(108,105,224,0.10);
+  --shadow-amber:  0 2px 4px rgba(0,0,0,0.04), 0 8px 32px rgba(212,129,10,0.10);
+  --shadow-nav:    0 -1px 0 rgba(0,0,0,0.06), 0 -6px 32px rgba(108,105,224,0.07);
+
+  /* ─── Accent — soft indigo/periwinkle ───────────────────────────────────── */
+  --accent:        #6C69E0;
+  --accent-soft:   rgba(108,105,224,0.10);
+  --accent-border: rgba(108,105,224,0.35);
+
+  /* ─── Semantic color tokens ─────────────────────────────────────────────── */
+  --color-canvas:           #F7F6FA;
+  --color-surface:          #FFFFFF;
+  --color-surface-elevated: #EEEDFB;
+  --color-border:           rgba(0,0,0,0.09);
+  --color-border-subtle:    rgba(0,0,0,0.05);
+
+  --color-text-primary:   #1C1A2E;
+  --color-text-secondary: #64627A;
+  --color-text-dim:       #9E9CB0;
+  --color-text-ghost:     #C4C2D4;
+
+  --color-accent:     rgba(108,105,224,0.85);
+  --color-accent-dim: rgba(108,105,224,0.40);
+
+  /* ─── Chat light surface tokens ─────────────────────────────────────────── */
+  --chat-bg:       #F7F6FA;
+  --chat-surface:  #FFFFFF;
+  --chat-raised:   #EEEDFB;
+  --chat-text:     #FFFFFF;              /* user bubble text — on indigo bg */
+  --chat-text-ai:  #4A4870;             /* AI text — dark indigo-gray */
+  --chat-user-bg:  #6C69E0;             /* user pill — soft indigo */
+  --chat-text-dim: #9E9CB0;             /* dim metadata */
+  --chat-border:   rgba(0,0,0,0.07);
+  --chat-accent:   #6C69E0;             /* indigo — the one accent */
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────────── */
@@ -82,6 +114,12 @@ textarea::-webkit-scrollbar {
   display: none;
 }
 
+/* Chat composer placeholder color */
+textarea::placeholder {
+  color: #B0AEC4;
+  opacity: 1;
+}
+
 /* Elevated card surface */
 .card {
   background: var(--surface);
@@ -89,15 +127,45 @@ textarea::-webkit-scrollbar {
   box-shadow: var(--shadow-card);
 }
 
+/* ─── Micro-interactions ───────────────────────────────────────────────────── */
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tap-scale {
+  transition: transform 0.1s ease;
+}
+.tap-scale:active {
+  transform: scale(0.97);
+}
+
+.section-enter {
+  animation: section-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.item-dismiss {
+  animation: item-out 0.25s ease forwards;
+}
+
+@keyframes item-out {
+  to { opacity: 0; transform: translateX(-12px); height: 0; padding: 0; margin: 0; overflow: hidden; }
+}
+
 /* ─── Animations ───────────────────────────────────────────────────────────── */
 
 @keyframes pulse-dot {
   0%, 100% {
-    opacity: 0.2;
+    opacity: 0.25;
     transform: scale(0.75);
   }
   50% {
-    opacity: 0.7;
+    opacity: 0.75;
     transform: scale(1);
   }
 }
@@ -119,4 +187,44 @@ textarea::-webkit-scrollbar {
 
 .animate-fade-up {
   animation: fade-up 0.2s ease-out forwards;
+}
+
+/* ─── Card entrance — staggered via animation-delay ─────────────────────────── */
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-in {
+  animation: card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Ambient pulse for live indicators ──────────────────────────────────────── */
+
+@keyframes ambient-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1);    }
+  50%       { opacity: 0.7; transform: scale(1.15); }
+}
+
+.animate-ambient-pulse {
+  animation: ambient-pulse 2.8s ease-in-out infinite;
+}
+
+/* ─── Progress bar shimmer ───────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 2.4s linear infinite;
 }
