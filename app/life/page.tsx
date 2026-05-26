@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import PageHeader, { LifePageIcon } from "@/components/PageHeader";
 import { requireOnboarding } from "@/lib/auth";
@@ -8,10 +9,10 @@ import { getRemindersForUser } from "@/lib/reminders/db";
 // ─── Fallback data ────────────────────────────────────────────────────────────
 
 const AREAS = [
-  { id: "1", label: "Projects",      sub: "Track active projects",   bg: "#EEEDFB", accent: "#6C69E0", iconPath: "M12 2l3.09 6.26L22 9.27 17 14.14l1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" },
-  { id: "2", label: "Goals",         sub: "What you're working on",  bg: "#FFF5E6", accent: "#D4810A", iconPath: "M12 2a6 6 0 016 6c0 2.22-1.21 4.16-3 5.19V22H9v-8.81A6.002 6.002 0 0112 2z" },
-  { id: "3", label: "Relationships", sub: "People who matter",       bg: "#FFE8F3", accent: "#C4597A", iconPath: "M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" },
-  { id: "4", label: "Personal",      sub: "Growth & wellbeing",      bg: "#E6F5F0", accent: "#3A9A7A", iconPath: "M12 22V12m0 0s-5-3-5-7.5a5 5 0 0110 0C17 9 12 12 12 12z" },
+  { id: "1", label: "Projects",      sub: "Track active projects",   bg: "#EEEDFB", accent: "#6C69E0", href: "/life/projects",      iconPath: "M12 2l3.09 6.26L22 9.27 17 14.14l1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" },
+  { id: "2", label: "Goals",         sub: "What you're working on",  bg: "#FFF5E6", accent: "#D4810A", href: "/life/goals",         iconPath: "M12 2a6 6 0 016 6c0 2.22-1.21 4.16-3 5.19V22H9v-8.81A6.002 6.002 0 0112 2z" },
+  { id: "3", label: "Relationships", sub: "People who matter",       bg: "#FFE8F3", accent: "#C4597A", href: "/life/relationships", iconPath: "M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" },
+  { id: "4", label: "Personal",      sub: "Growth & wellbeing",      bg: "#E6F5F0", accent: "#3A9A7A", href: "/life/personal",      iconPath: "M12 22V12m0 0s-5-3-5-7.5a5 5 0 0110 0C17 9 12 12 12 12z" },
 ];
 
 // ─── Shared card ──────────────────────────────────────────────────────────────
@@ -49,15 +50,21 @@ export default async function LifePage() {
   try {
     const [ctx, t, r] = await Promise.all([
       assembleDomainContext(profile.id, "life"),
-      getTasksForUser(profile.id, { status: ["open", "snoozed"], limit: 5 }),
-      getRemindersForUser(profile.id, { status: "pending", limit: 3 }),
+      getTasksForUser(profile.id, { status: ["open", "snoozed"], limit: 20 }),
+      getRemindersForUser(profile.id, { status: "pending", limit: 20 }),
     ]);
     domainContext = {
       themes: ctx.themes,
       memories: ctx.memories.map((m) => ({ id: m.id, title: m.title, summary: m.summary, category: m.category })),
     };
-    tasks = t.map((x) => ({ id: x.id, title: x.title, due_date: x.due_date, status: x.status }));
-    reminders = r.map((x) => ({ id: x.id, title: x.title, body: x.body }));
+    tasks = t
+      .filter((x) => x.domains?.includes("life"))
+      .slice(0, 5)
+      .map((x) => ({ id: x.id, title: x.title, due_date: x.due_date, status: x.status }));
+    reminders = r
+      .filter((x) => x.domains?.includes("life"))
+      .slice(0, 3)
+      .map((x) => ({ id: x.id, title: x.title, body: x.body }));
   } catch {
     // Fallback to empty state
   }
@@ -73,15 +80,17 @@ export default async function LifePage() {
         <Eyebrow>Areas</Eyebrow>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {AREAS.map((area) => (
-            <div key={area.id} style={{ background: area.bg, borderRadius: 16, padding: "16px 14px", border: "1px solid rgba(0,0,0,0.04)" }}>
-              <div style={{ marginBottom: 10 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={area.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <path d={area.iconPath} />
-                </svg>
+            <Link key={area.id} href={area.href} style={{ textDecoration: "none" }}>
+              <div className="tap-scale" style={{ background: area.bg, borderRadius: 16, padding: "16px 14px", border: "1px solid rgba(0,0,0,0.04)", cursor: "pointer", transition: "transform 0.1s ease" }}>
+                <div style={{ marginBottom: 10 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={area.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <path d={area.iconPath} />
+                  </svg>
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#1C1A2E", marginBottom: 2 }}>{area.label}</p>
+                <p style={{ fontSize: 12, color: "#9E9CB0" }}>{area.sub}</p>
               </div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: "#1C1A2E", marginBottom: 2 }}>{area.label}</p>
-              <p style={{ fontSize: 12, color: "#9E9CB0" }}>{area.sub}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

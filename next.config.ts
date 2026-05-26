@@ -1,13 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Required for PWA: allow serving manifest from public/
-  // Headers help browsers treat it as installable
+  env: {
+    NEXT_PUBLIC_BUILD_ID: Date.now().toString(36),
+  },
   async headers() {
     return [
       {
         source: "/manifest.json",
         headers: [{ key: "Content-Type", value: "application/manifest+json" }],
+      },
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
       },
     ];
   },

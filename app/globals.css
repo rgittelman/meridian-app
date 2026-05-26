@@ -235,3 +235,21 @@ button {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
+
+/* ─── Responsive: FAB on mobile, inline card on desktop ───────────────────── */
+
+.desktop-only-add {
+  display: none;
+}
+.mobile-only-fab {
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .desktop-only-add {
+    display: flex;
+  }
+  .mobile-only-fab {
+    display: none;
+  }
+}

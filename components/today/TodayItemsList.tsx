@@ -244,11 +244,15 @@ function ReminderRow({ reminder, onDismiss, onDelete, onEdit }: {
 
 function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: string) => void }) {
   return (
-    <div style={{
-      padding: "10px 16px",
-      display: "flex", alignItems: "center", gap: 12,
-      opacity: 0.5,
-    }}>
+    <div
+      onClick={() => onReopen(task.id)}
+      style={{
+        padding: "10px 16px",
+        display: "flex", alignItems: "center", gap: 12,
+        opacity: 0.5,
+        cursor: "pointer",
+      }}
+    >
       <CheckCircle checked={true} onToggle={() => onReopen(task.id)} />
       <p style={{
         flex: 1, fontSize: 14, color: "#9E9CB0", lineHeight: 1.35, margin: 0,
@@ -256,6 +260,7 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: string) =
       }}>
         {task.title}
       </p>
+      <span style={{ fontSize: 11, color: "#C4C2D4", flexShrink: 0 }}>Restore</span>
     </div>
   );
 }
@@ -327,6 +332,18 @@ export default function TodayItemsList({ userName }: Props) {
     }
   }, [items.reminders, dismissReminder, refresh]);
 
+  const handleReopen = useCallback((id: string) => {
+    const task = items.completed.find((t) => t.id === id);
+    reopenTask(id);
+    if (task) {
+      setUndoAction({
+        id,
+        label: `"${task.title.slice(0, 30)}" restored`,
+        onUndo: () => { completeTask(id); setUndoAction(null); },
+      });
+    }
+  }, [items.completed, reopenTask, completeTask]);
+
   const openEdit = useCallback((task: Task) => {
     const dateStr = task.due_date || "";
     let timeStr = "";
@@ -397,14 +414,14 @@ export default function TodayItemsList({ userName }: Props) {
         </p>
       </div>
 
-      {/* Quick add button */}
+      {/* Quick add button — desktop/tablet only (hidden on mobile where FAB is used) */}
       <button
         onClick={() => { setEditTarget(null); setSheetOpen(true); }}
-        className="tap-scale"
+        className="tap-scale desktop-only-add"
         style={{
           ...card,
           padding: "14px 16px",
-          display: "flex", alignItems: "center", gap: 10,
+          alignItems: "center", gap: 10,
           cursor: "pointer", border: "1px solid rgba(108,105,224,0.12)",
           background: "rgba(108,105,224,0.03)",
         }}
@@ -495,7 +512,7 @@ export default function TodayItemsList({ userName }: Props) {
               <div key={task.id} style={{
                 borderBottom: i < items.completed.length - 1 ? "1px solid rgba(0,0,0,0.04)" : undefined,
               }}>
-                <CompletedRow task={task} onReopen={reopenTask} />
+                <CompletedRow task={task} onReopen={handleReopen} />
               </div>
             ))}
           </div>
@@ -513,12 +530,12 @@ export default function TodayItemsList({ userName }: Props) {
       {/* Undo toast */}
       <UndoToast action={undoAction} />
 
-      {/* Floating quick-add FAB — always visible on mobile */}
+      {/* Floating quick-add FAB — mobile only (hidden on desktop where inline card is used) */}
       {!sheetOpen && (
         <button
           onClick={() => { setEditTarget(null); setSheetOpen(true); }}
           aria-label="Quick add"
-          className="tap-scale"
+          className="tap-scale mobile-only-fab"
           style={{
             position: "fixed",
             bottom: "calc(60px + env(safe-area-inset-bottom, 0px) + 78px)",
@@ -529,7 +546,7 @@ export default function TodayItemsList({ userName }: Props) {
             background: "#6C69E0",
             border: "none",
             boxShadow: "0 4px 16px rgba(108,105,224,0.35), 0 2px 4px rgba(0,0,0,0.08)",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            alignItems: "center", justifyContent: "center",
             cursor: "pointer",
           }}
         >

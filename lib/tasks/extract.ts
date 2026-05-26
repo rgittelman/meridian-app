@@ -14,7 +14,8 @@ const HARD_PATTERNS: { re: RegExp; titleIdx: number; due?: "tomorrow" | "friday"
   { re: /\b(?:i'll|i will)\s+(.+?)(?:\.|$)/i, titleIdx: 1 },
   { re: /\b(?:need to|have to)\s+(.+?)(?:\s+tomorrow|\s+by\b|\.|$)/i, titleIdx: 1, due: "tomorrow" },
   { re: /\b(call|email|text|contact)\s+(?:the\s+)?(.+?)(?:\s+tomorrow|\s+by\b|\.|$)/i, titleIdx: 0 },
-  { re: /\b(pick\s+up|drop\s+off|pick)\s+(.+?)(?:\.|$)/i, titleIdx: 0 },
+  { re: /\b(pick\s+up|drop\s+off)\s+(.+?)(?:\.|$)/i, titleIdx: 0 },
+  { re: /\b(schedule|book|set\s+up|arrange)\s+(.+?)(?:\.|$)/i, titleIdx: 0 },
   { re: /\b(?:finish|complete|submit|send)\s+(.+?)\s+by\s+(friday|monday|tuesday|wednesday|thursday|saturday|sunday)/i, titleIdx: 1, due: "parsed" },
   { re: /\b(?:finish|complete)\s+(.+?)\s+by\s+(\d{1,2}\/\d{1,2}|\w+\s+\d{1,2})/i, titleIdx: 1, due: "parsed" },
 ];
@@ -44,12 +45,14 @@ function tomorrowDate(): string {
   return d.toISOString().split("T")[0];
 }
 
+const TIME_CONTEXT_RE = /\s+(tomorrow|today|tonight|this\s+(?:morning|afternoon|evening)|(?:by|before|after|at)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|(?:by|before|at)\s+(?:friday|monday|tuesday|wednesday|thursday|saturday|sunday))\b.*/i;
+
 function cleanTitle(raw: string, verb?: string): string {
   let title = raw.trim().slice(0, 150);
 
-  const timeSuffix = title.match(/\s+(tomorrow|today|by\s+(?:friday|monday|tuesday|wednesday|thursday|saturday|sunday))\b/i);
-  const timeContext = timeSuffix?.[1] ?? "";
-  title = title.replace(/\s+(tomorrow|today|by\s+\w+).*$/i, "").trim();
+  const timeMatch = title.match(TIME_CONTEXT_RE);
+  const timeContext = timeMatch?.[1]?.trim() ?? "";
+  title = title.replace(TIME_CONTEXT_RE, "").trim();
 
   if (title.length < 3) return title;
 
@@ -62,21 +65,36 @@ function cleanTitle(raw: string, verb?: string): string {
   return title.slice(0, 120);
 }
 
+const STOP_WORDS = new Set(["a", "an", "the", "my", "our", "his", "her", "their", "up", "at", "in", "on", "to", "for", "of", "and", "or", "it", "is"]);
+
 function normalizeTitle(raw: string, verb?: string): string {
   let t = raw.trim();
   if (!t) return t;
 
+  t = t.replace(/\bi\b/g, "I");
+  t = t.replace(/\bi'm\b/gi, "I'm");
+  t = t.replace(/\bi'll\b/gi, "I'll");
+  t = t.replace(/\bi've\b/gi, "I've");
+  t = t.replace(/\bi'd\b/gi, "I'd");
+
   t = t.charAt(0).toUpperCase() + t.slice(1);
 
-  t = t.replace(/\b(i|i'm|i'll|i've|i'd)\b/gi, (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase());
+  t = t.replace(/\b([a-z])([a-z]*)\b/g, (full, first, rest) => {
+    if (STOP_WORDS.has(full)) return full;
+    if (full.length >= 3 && /^[a-z]/.test(full)) {
+      const isLikelyName = !STOP_WORDS.has(full) && /^[a-z]{3,}$/.test(full);
+      if (!isLikelyName) return full;
+    }
+    return full;
+  });
 
-  const knownNames = /\b([A-Z][a-z]{2,})\b/g;
-  t = t.replace(knownNames, (m) => m);
-
-  const wordOnlyTitle = t.replace(/[^a-zA-Z\s]/g, "").trim();
-  if (wordOnlyTitle.split(/\s+/).length <= 1 && verb) {
-    t = `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${t.toLowerCase()}`;
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length <= 1 && verb) {
+    const capVerb = verb.charAt(0).toUpperCase() + verb.slice(1);
+    t = `${capVerb} ${t.charAt(0).toLowerCase() + t.slice(1)}`;
   }
+
+  t = t.charAt(0).toUpperCase() + t.slice(1);
 
   return t;
 }

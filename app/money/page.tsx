@@ -37,19 +37,24 @@ export default async function MoneyPage() {
   try {
     const [ctx, t, r] = await Promise.all([
       assembleDomainContext(profile.id, "money"),
-      getTasksForUser(profile.id, { status: ["open", "snoozed"], limit: 5 }),
-      getRemindersForUser(profile.id, { status: "pending", limit: 3 }),
+      getTasksForUser(profile.id, { status: ["open", "snoozed"], limit: 20 }),
+      getRemindersForUser(profile.id, { status: "pending", limit: 20 }),
     ]);
     memories = ctx.memories.map((m) => ({ id: m.id, title: m.title, summary: m.summary, category: m.category }));
     themes = ctx.themes;
-    const moneyTasks = t.filter((x) => x.domains?.includes("money"));
-    tasks = (moneyTasks.length > 0 ? moneyTasks : t.slice(0, 3)).map((x) => ({ id: x.id, title: x.title, due_date: x.due_date }));
-    reminders = r.map((x) => ({ id: x.id, title: x.title, body: x.body }));
+    tasks = t
+      .filter((x) => x.domains?.includes("money"))
+      .slice(0, 5)
+      .map((x) => ({ id: x.id, title: x.title, due_date: x.due_date }));
+    reminders = r
+      .filter((x) => x.domains?.includes("money"))
+      .slice(0, 3)
+      .map((x) => ({ id: x.id, title: x.title, body: x.body }));
   } catch {
     // Fallback to empty
   }
 
-  const hasData = memories.length > 0 || tasks.length > 0;
+  const hasData = memories.length > 0 || tasks.length > 0 || reminders.length > 0;
 
   return (
     <PageShell>
@@ -128,8 +133,11 @@ export default async function MoneyPage() {
       {/* ── Empty state ───────────────────────────────────────── */}
       {!hasData && (
         <Card style={{ padding: "28px 20px", textAlign: "center" }}>
-          <p style={{ fontSize: 14, fontWeight: 500, color: "#64627A", lineHeight: 1.5 }}>
-            Nothing here yet. Talk about money, spending, or goals — clarity will build.
+          <p style={{ fontSize: 14, fontWeight: 500, color: "#64627A", lineHeight: 1.5, marginBottom: 4 }}>
+            Nothing in Money yet.
+          </p>
+          <p style={{ fontSize: 13, color: "#9E9CB0", lineHeight: 1.5 }}>
+            Track bills, budgets, spending, or financial goals.
           </p>
         </Card>
       )}

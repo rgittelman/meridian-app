@@ -176,19 +176,30 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
           background: "#FFFFFF",
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -4px 32px rgba(0,0,0,0.12)",
-          paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+          maxHeight: "90dvh",
+          display: "flex",
+          flexDirection: "column",
           animation: "sheet-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both",
         }}
       >
-        {/* Handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
+        {/* Handle — fixed at top of sheet, not scrollable */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px", flexShrink: 0 }}>
           <div style={{
             width: 36, height: 4, borderRadius: 2,
             background: "rgba(0,0,0,0.10)",
           }} />
         </div>
 
-        <div style={{ padding: "0 20px" }}>
+        {/* Scrollable body */}
+        <div style={{
+          padding: "0 20px",
+          paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          flex: 1,
+          minHeight: 0,
+        }}>
           {/* Type selector */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {(["task", "reminder", "event"] as ItemType[]).map((t) => {
@@ -251,6 +262,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
                   padding: "10px 12px", borderRadius: 10,
                   border: "1px solid rgba(0,0,0,0.08)",
                   background: "rgba(0,0,0,0.02)", outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -267,6 +279,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
                   padding: "10px 12px", borderRadius: 10,
                   border: "1px solid rgba(0,0,0,0.08)",
                   background: "rgba(0,0,0,0.02)", outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
