@@ -236,6 +236,22 @@ button {
   to   { transform: translateY(0); }
 }
 
+/* Transform-free sheet entrance for QuickAddSheet.
+   Android Chrome positions native date/time picker dialogs relative to the
+   nearest ancestor with a CSS transform — any transform causes the picker's
+   action buttons to overflow off-screen on narrow viewports. */
+@keyframes sheet-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Toast animation ─────────────────────────────────────────────────────── */
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
 /* ─── Row completion animation ────────────────────────────────────────────── */
 
 @keyframes check-pop {
@@ -267,6 +283,37 @@ button {
 
 .swipe-actions-reveal {
   animation: reveal-in 0.15s ease both;
+}
+
+/* ─── QuickAddSheet responsive sizing ─────────────────────────────────────── */
+
+.quick-add-sheet {
+  max-width: 100%;
+}
+.quick-add-sheet-body {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 640px) {
+  .quick-add-sheet {
+    max-width: 560px;
+  }
+  .quick-add-sheet-body {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .quick-add-sheet {
+    max-width: 720px;
+    border-radius: 20px 20px 0 0;
+  }
+  .quick-add-sheet-body {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
 }
 
 /* ─── Responsive: FAB on mobile, inline card on desktop ───────────────────── */

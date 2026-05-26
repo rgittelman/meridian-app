@@ -3,9 +3,16 @@
 /**
  * QuickAddSheet — Mobile-first bottom sheet for creating tasks, reminders, and events.
  * Optimized for one-handed use and fast entry.
+ *
+ * IMPORTANT: No CSS `transform` is used on the sheet container.
+ * Android Chrome in standalone PWA mode positions native date/time picker
+ * dialogs relative to the nearest transformed ancestor. Any transform
+ * (even translateY(0) from an animation fill) causes the picker's
+ * action buttons to overflow off-screen on narrow viewports.
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 type ItemType = "task" | "reminder" | "event";
 
@@ -38,12 +45,6 @@ function formatDateForInput(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function formatTimeForInput(d: Date): string {
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
 export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: QuickAddSheetProps) {
   const [type, setType]       = useState<ItemType>("task");
   const [title, setTitle]     = useState("");
@@ -51,8 +52,11 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
   const [time, setTime]       = useState("");
   const [saving, setSaving]   = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(editTarget);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (open) {
@@ -68,7 +72,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
       }
       setFeedback(null);
       setSaving(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus(), 120);
     }
   }, [open, editTarget]);
 
@@ -84,12 +88,8 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
       }
 
       if (isEdit && editTarget) {
-        const endpoint = editTarget.kind === "task"
-          ? `/api/tasks/${editTarget.id}`
-          : `/api/reminders/${editTarget.id}`;
-
         if (editTarget.kind === "task") {
-          const res = await fetch(endpoint, {
+          const res = await fetch(`/api/tasks/${editTarget.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title: trimmed, due_date: date || null, due_at }),
@@ -106,17 +106,16 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
           });
           if (!res.ok) throw new Error("Failed to save");
         }
-
         setFeedback("Saved");
       } else if (type === "task" || type === "event") {
         const res = await fetch("/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title:     trimmed,
+            title: trimmed,
             task_type: type === "event" ? "event" : "soft",
-            due_date:  date || null,
-            due_at:    due_at,
+            due_date: date || null,
+            due_at,
           }),
         });
         if (!res.ok) throw new Error("Failed to save");
@@ -126,8 +125,8 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title:          trimmed,
-            scheduled_for:  due_at,
+            title: trimmed,
+            scheduled_for: due_at,
             scheduled_date: date || null,
           }),
         });
@@ -153,11 +152,11 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
     }
   };
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const cfg = TYPE_CONFIG[type];
 
-  return (
+  const content = (
     <>
       {/* Backdrop */}
       <div
@@ -169,20 +168,30 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
         }}
       />
 
-      {/* Sheet */}
+      {/* Sheet — NO transform used (breaks Android native pickers).
+          Centered with left/right:0 + margin:auto.
+          Mobile: full-width. Desktop: constrained to content column. */}
       <div
+        className="quick-add-sheet"
         style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 91,
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          marginLeft: "auto",
+          marginRight: "auto",
+          zIndex: 91,
           background: "#FFFFFF",
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -4px 32px rgba(0,0,0,0.12)",
           maxHeight: "90dvh",
+          width: "100%",
           display: "flex",
           flexDirection: "column",
-          animation: "sheet-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both",
+          animation: "sheet-fade-in 0.2s ease both",
         }}
       >
-        {/* Handle — fixed at top of sheet, not scrollable */}
+        {/* Handle */}
         <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px", flexShrink: 0 }}>
           <div style={{
             width: 36, height: 4, borderRadius: 2,
@@ -191,15 +200,17 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
         </div>
 
         {/* Scrollable body */}
-        <div style={{
-          padding: "0 20px",
-          paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
-          overflowY: "auto",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehavior: "contain",
-          flex: 1,
-          minHeight: 0,
-        }}>
+        <div
+          className="quick-add-sheet-body"
+          style={{
+            paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
           {/* Type selector */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {(["task", "reminder", "event"] as ItemType[]).map((t) => {
@@ -244,12 +255,13 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
               borderBottom: "1px solid rgba(0,0,0,0.06)",
               outline: "none", background: "transparent",
               letterSpacing: "-0.01em",
+              boxSizing: "border-box",
             }}
           />
 
           {/* Date + Time row */}
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
                 Date
               </label>
@@ -266,7 +278,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
                 }}
               />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
                 Time <span style={{ color: "#C4C2D4" }}>(optional)</span>
               </label>
@@ -306,4 +318,6 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
       </div>
     </>
   );
+
+  return createPortal(content, document.body);
 }

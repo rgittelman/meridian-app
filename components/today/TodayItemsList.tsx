@@ -109,8 +109,20 @@ function CheckCircle({ checked, onToggle, color = "#6C69E0", completing }: {
 }
 
 // ── SwipeRow — swipe right to complete, swipe left to reveal actions ────────
+// Velocity-aware, rubber-band damped, spring snap-back.
 
-const SWIPE_THRESHOLD = 60;
+const SWIPE_COMMIT = 72;
+const SWIPE_REVEAL = 64;
+const DIR_LOCK_PX = 12;
+const ACTION_TRAY_W = 96;
+
+function rubberBand(offset: number, limit: number): number {
+  const abs = Math.abs(offset);
+  if (abs <= limit) return offset;
+  const over = abs - limit;
+  const damped = limit + over * 0.3;
+  return offset > 0 ? damped : -damped;
+}
 
 function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
   children: React.ReactNode;
@@ -120,100 +132,162 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
 }) {
   const startX = useRef(0);
   const startY = useRef(0);
+  const startTime = useRef(0);
   const [offset, setOffset] = useState(0);
-  const [showActions, setShowActions] = useState(false);
+  const [settled, setSettled] = useState<"closed" | "open">("closed");
   const tracking = useRef(false);
   const lockDir = useRef<"h" | "v" | null>(null);
+  const lastDx = useRef(0);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
+    const t = e.touches[0];
+    startX.current = t.clientX;
+    startY.current = t.clientY;
+    startTime.current = Date.now();
     tracking.current = true;
     lockDir.current = null;
-  }, []);
+    lastDx.current = 0;
+    if (settled === "open") {
+      setSettled("closed");
+      setOffset(0);
+    }
+  }, [settled]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!tracking.current) return;
-    const dx = e.touches[0].clientX - startX.current;
-    const dy = e.touches[0].clientY - startY.current;
+    const t = e.touches[0];
+    const dx = t.clientX - startX.current;
+    const dy = t.clientY - startY.current;
 
     if (!lockDir.current) {
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-        lockDir.current = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      if (Math.abs(dx) > DIR_LOCK_PX || Math.abs(dy) > DIR_LOCK_PX) {
+        lockDir.current = Math.abs(dx) > Math.abs(dy) * 1.4 ? "h" : "v";
       }
       return;
     }
     if (lockDir.current === "v") return;
 
     e.preventDefault();
-    const clamped = Math.max(-100, Math.min(80, dx));
-    setOffset(clamped);
+    lastDx.current = dx;
+    setOffset(rubberBand(dx, 90));
   }, []);
 
   const handleTouchEnd = useCallback(() => {
+    if (!tracking.current || lockDir.current !== "h") {
+      tracking.current = false;
+      return;
+    }
     tracking.current = false;
-    if (offset > SWIPE_THRESHOLD && onSwipeRight) {
+
+    const elapsed = Date.now() - startTime.current;
+    const velocity = Math.abs(lastDx.current) / Math.max(elapsed, 1);
+    const fast = velocity > 0.5;
+
+    if ((offset > SWIPE_COMMIT || (fast && offset > 30)) && onSwipeRight) {
       haptic.medium();
       onSwipeRight();
-    } else if (offset < -SWIPE_THRESHOLD) {
-      setShowActions(true);
+    } else if (offset < -SWIPE_REVEAL || (fast && offset < -25)) {
+      setSettled("open");
+      setOffset(-ACTION_TRAY_W);
+      return;
     }
+
     setOffset(0);
   }, [offset, onSwipeRight]);
 
-  const handleActionClose = useCallback(() => {
-    setShowActions(false);
+  const closeTray = useCallback(() => {
+    setSettled("closed");
+    setOffset(0);
   }, []);
 
-  const rightIndicatorOpacity = Math.min(1, Math.max(0, offset / SWIPE_THRESHOLD));
-  const leftIndicatorOpacity = Math.min(1, Math.max(0, -offset / SWIPE_THRESHOLD));
+  const isOpen = settled === "open";
+  const dragging = tracking.current && lockDir.current === "h";
+  const rightProg = Math.min(1, Math.max(0, offset / SWIPE_COMMIT));
+  const leftProg = Math.min(1, Math.max(0, -offset / SWIPE_REVEAL));
 
   return (
     <div style={{ position: "relative", overflow: "hidden" }}>
-      {/* Right-swipe hint (complete) */}
-      {offset > 10 && (
+      {/* Background indicators */}
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex",
+      }}>
+        {/* Right-swipe (complete) */}
         <div style={{
-          position: "absolute", left: 0, top: 0, bottom: 0, width: offset,
-          background: `rgba(61,154,122,${0.08 + rightIndicatorOpacity * 0.12})`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "none",
+          flex: 1,
+          background: rightProg > 0 ? `rgba(61,154,122,${0.06 + rightProg * 0.1})` : "transparent",
+          display: "flex", alignItems: "center", paddingLeft: 20,
         }}>
-          <svg
-            width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="#3D9A7A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-            style={{ opacity: rightIndicatorOpacity }}
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          {rightProg > 0.15 && (
+            <svg
+              width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="#3D9A7A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+              style={{ opacity: Math.min(1, rightProg * 1.5), transition: dragging ? "none" : "opacity 0.15s" }}
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
         </div>
-      )}
-
-      {/* Left-swipe hint (actions) */}
-      {offset < -10 && (
+        {/* Left-swipe (actions tray background) */}
         <div style={{
-          position: "absolute", right: 0, top: 0, bottom: 0, width: -offset,
-          background: `rgba(108,105,224,${0.04 + leftIndicatorOpacity * 0.08})`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "none",
+          width: ACTION_TRAY_W,
+          background: (leftProg > 0 || isOpen) ? "rgba(0,0,0,0.02)" : "transparent",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          transition: dragging ? "none" : "background 0.2s ease",
         }}>
-          <svg
-            width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="#6C69E0" strokeWidth={2} strokeLinecap="round"
-            style={{ opacity: leftIndicatorOpacity }}
-          >
-            <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-          </svg>
+          {(leftProg > 0.3 || isOpen) && (
+            <>
+              {onEdit && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); closeTray(); onEdit(); }}
+                  className="tap-scale"
+                  style={{
+                    width: 38, height: 38, borderRadius: 10,
+                    background: "rgba(108,105,224,0.1)", border: "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    opacity: isOpen ? 1 : leftProg,
+                    transition: dragging ? "none" : "opacity 0.15s",
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6C69E0" strokeWidth={2} strokeLinecap="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); closeTray(); haptic.warning(); onDelete!(); }}
+                  className="tap-scale"
+                  style={{
+                    width: 38, height: 38, borderRadius: 10,
+                    background: "rgba(224,62,62,0.06)", border: "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    opacity: isOpen ? 1 : leftProg,
+                    transition: dragging ? "none" : "opacity 0.15s",
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D4483E" strokeWidth={2} strokeLinecap="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Row content */}
+      {/* Row content — slides with touch */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          transform: offset ? `translateX(${offset}px)` : undefined,
-          transition: offset ? "none" : "transform 0.2s ease",
+          transform: `translateX(${offset}px)`,
+          transition: dragging ? "none" : "transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
           position: "relative",
           zIndex: 1,
           background: "#FFFFFF",
@@ -222,56 +296,12 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
         {children}
       </div>
 
-      {/* Action tray (revealed on swipe-left) */}
-      {showActions && (
-        <>
-          <div
-            onClick={handleActionClose}
-            style={{ position: "fixed", inset: 0, zIndex: 60 }}
-          />
-          <div
-            className="swipe-actions-reveal"
-            style={{
-              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-              display: "flex", gap: 6, zIndex: 61,
-            }}
-          >
-            {onEdit && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleActionClose(); onEdit(); }}
-                className="tap-scale"
-                style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: "rgba(108,105,224,0.08)", border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C69E0" strokeWidth={2} strokeLinecap="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleActionClose(); haptic.warning(); onDelete(); }}
-                className="tap-scale"
-                style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: "rgba(224,62,62,0.06)", border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4483E" strokeWidth={2} strokeLinecap="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </>
+      {/* Close-tray scrim when tray is open */}
+      {isOpen && (
+        <div
+          onClick={closeTray}
+          style={{ position: "fixed", inset: 0, zIndex: 2 }}
+        />
       )}
     </div>
   );
