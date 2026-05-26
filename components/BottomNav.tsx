@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LeafSvg } from "@/components/PageHeader";
+import { haptic } from "@/lib/haptics";
 
 const NAV_ITEMS = [
   { label: "Today",  href: "/",       icon: SunIcon    },
@@ -46,6 +47,7 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
+              onClick={() => { if (!active) haptic.light(); }}
               className="flex flex-col items-center gap-[3px] transition-opacity duration-150"
               style={{
                 width: 56,

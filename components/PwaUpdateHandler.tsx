@@ -14,6 +14,10 @@ const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 const VERSION_KEY = "meridian_build_id";
 const RELOAD_GUARD_KEY = "meridian_reload_guard";
 
+function ts(): string {
+  return new Date().toISOString().slice(11, 23);
+}
+
 export default function PwaUpdateHandler() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
@@ -21,20 +25,28 @@ export default function PwaUpdateHandler() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    console.log(`[PWA ${ts()}] current build: ${BUILD_ID}`);
+    console.log(`[PWA ${ts()}] standalone: ${window.matchMedia("(display-mode: standalone)").matches}`);
+    console.log(`[PWA ${ts()}] serviceWorker supported: ${"serviceWorker" in navigator}`);
+    console.log(`[PWA ${ts()}] existing controller: ${navigator.serviceWorker?.controller?.state ?? "none"}`);
+
     // --- Fallback: build-id version check ---
     const storedBuild = localStorage.getItem(VERSION_KEY);
+    console.log(`[PWA ${ts()}] stored build: ${storedBuild ?? "(none)"}`);
     if (storedBuild && storedBuild !== BUILD_ID) {
       const guard = sessionStorage.getItem(RELOAD_GUARD_KEY);
       if (!guard) {
-        console.log("[PWA UPDATE] build version changed:", storedBuild, "→", BUILD_ID);
+        console.log(`[PWA ${ts()}] build version changed: ${storedBuild} → ${BUILD_ID}`);
         setUpdateAvailable(true);
+      } else {
+        console.log(`[PWA ${ts()}] build changed but reload guard active, skipping`);
       }
     }
     localStorage.setItem(VERSION_KEY, BUILD_ID);
 
     // --- Service worker registration ---
     if (!("serviceWorker" in navigator)) {
-      console.log("[PWA UPDATE] service worker not supported");
+      console.log(`[PWA ${ts()}] service worker not supported, aborting`);
       return;
     }
 
@@ -42,68 +54,99 @@ export default function PwaUpdateHandler() {
 
     navigator.serviceWorker
       .register("/sw.js")
-      .then((reg) => {
+      .then(async (reg) => {
         registration = reg;
-        console.log("[PWA UPDATE] service worker registered");
+        console.log(`[PWA ${ts()}] service worker registered (scope: ${reg.scope})`);
+        console.log(`[PWA ${ts()}] active: ${reg.active?.state ?? "none"}, installing: ${reg.installing?.state ?? "none"}, waiting: ${reg.waiting?.state ?? "none"}`);
 
-        // Check if there's already a waiting worker (e.g. from a previous visit)
         if (reg.waiting) {
-          console.log("[PWA UPDATE] waiting worker available (existing)");
+          console.log(`[PWA ${ts()}] waiting worker exists`);
+          setWaitingWorker(reg.waiting);
+          setUpdateAvailable(true);
+        }
+
+        // Force immediate update check against server
+        try {
+          console.log(`[PWA ${ts()}] calling registration.update()...`);
+          await reg.update();
+          console.log(`[PWA ${ts()}] registration.update() completed. installing: ${reg.installing?.state ?? "none"}, waiting: ${reg.waiting?.state ?? "none"}`);
+        } catch (err) {
+          console.warn(`[PWA ${ts()}] registration.update() failed:`, err);
+        }
+
+        // Re-check after update() in case a waiting worker appeared
+        if (reg.waiting && !waitingWorker) {
+          console.log(`[PWA ${ts()}] waiting worker appeared after update()`);
           setWaitingWorker(reg.waiting);
           setUpdateAvailable(true);
         }
 
         reg.addEventListener("updatefound", () => {
-          console.log("[PWA UPDATE] update found");
+          console.log(`[PWA ${ts()}] updatefound event fired`);
           const newWorker = reg.installing;
-          if (!newWorker) return;
+          if (!newWorker) {
+            console.log(`[PWA ${ts()}] updatefound but no installing worker`);
+            return;
+          }
+          console.log(`[PWA ${ts()}] new worker state: ${newWorker.state}`);
 
           newWorker.addEventListener("statechange", () => {
-            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-              console.log("[PWA UPDATE] waiting worker available (new)");
-              setWaitingWorker(newWorker);
-              setUpdateAvailable(true);
+            console.log(`[PWA ${ts()}] new worker statechange: ${newWorker.state}`);
+            if (newWorker.state === "installed") {
+              if (navigator.serviceWorker.controller) {
+                console.log(`[PWA ${ts()}] new waiting worker installed — update available`);
+                setWaitingWorker(newWorker);
+                setUpdateAvailable(true);
+              } else {
+                console.log(`[PWA ${ts()}] worker installed but no controller — first install`);
+              }
             }
           });
         });
       })
       .catch((err) => {
-        console.warn("[PWA UPDATE] registration failed:", err);
+        console.warn(`[PWA ${ts()}] registration failed:`, err);
       });
 
     // When the new SW takes over, reload
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
+      console.log(`[PWA ${ts()}] controllerchange event fired`);
+      if (refreshing) {
+        console.log(`[PWA ${ts()}] already refreshing, skipping`);
+        return;
+      }
       refreshing = true;
-      console.log("[PWA UPDATE] controller changed, reloading");
+      console.log(`[PWA ${ts()}] setting reload guard and reloading`);
       sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
       window.location.reload();
     });
 
-    // Periodically check for updates (every 60s when page is visible)
+    // Periodically check for updates (every 30s when page is visible)
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && registration) {
+        console.log(`[PWA ${ts()}] periodic update check`);
         registration.update().catch(() => {});
       }
-    }, 60_000);
+    }, 30_000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpdate = useCallback(() => {
-    console.log("[PWA UPDATE] update accepted by user");
+    console.log(`[PWA ${ts()}] update accepted by user`);
 
     if (waitingWorker) {
+      console.log(`[PWA ${ts()}] posting SKIP_WAITING to waiting worker`);
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
-      // controllerchange listener above will handle reload
     } else {
-      // Fallback: no waiting worker, just reload
+      console.log(`[PWA ${ts()}] no waiting worker — clearing caches and reloading`);
       sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
-      caches.keys().then((names) =>
-        Promise.all(names.map((n) => caches.delete(n)))
-      ).finally(() => {
-        console.log("[PWA UPDATE] caches cleared, reloading");
+      caches.keys().then((names) => {
+        console.log(`[PWA ${ts()}] clearing ${names.length} caches:`, names);
+        return Promise.all(names.map((n) => caches.delete(n)));
+      }).finally(() => {
+        console.log(`[PWA ${ts()}] caches cleared, reloading`);
         window.location.reload();
       });
     }

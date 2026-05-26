@@ -3,14 +3,16 @@
 /**
  * TodayItemsList — Real tasks, events, and reminders for the Today screen.
  * Mobile-first, one-handed use, minimal friction.
+ * Swipe right = complete. Swipe left = reveal action tray.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useTodayItems } from "@/lib/hooks/use-today-items";
 import QuickAddSheet from "@/components/QuickAddSheet";
 import type { EditTarget } from "@/components/QuickAddSheet";
 import UndoToast from "@/components/UndoToast";
 import type { UndoAction } from "@/components/UndoToast";
+import { haptic } from "@/lib/haptics";
 import type { Task } from "@/lib/tasks/types";
 import type { Reminder } from "@/lib/reminders/types";
 
@@ -30,6 +32,8 @@ const sectionLabel: React.CSSProperties = {
   marginBottom:  8,
   paddingLeft:   2,
 };
+
+// ── Formatting helpers ──────────────────────────────────────────────────────
 
 function formatDue(task: Task): string | null {
   if (task.due_at) {
@@ -71,8 +75,10 @@ function isOverdue(task: Task): boolean {
   return task.due_date < today;
 }
 
-function CheckCircle({ checked, onToggle, color = "#6C69E0" }: {
-  checked: boolean; onToggle: () => void; color?: string;
+// ── CheckCircle ─────────────────────────────────────────────────────────────
+
+function CheckCircle({ checked, onToggle, color = "#6C69E0", completing }: {
+  checked: boolean; onToggle: () => void; color?: string; completing?: boolean;
 }) {
   return (
     <button
@@ -81,14 +87,20 @@ function CheckCircle({ checked, onToggle, color = "#6C69E0" }: {
       className="tap-scale"
       style={{
         width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
-        border: checked ? "none" : `1.5px solid rgba(0,0,0,0.14)`,
-        background: checked ? color : "transparent",
+        border: (checked || completing) ? "none" : `1.5px solid rgba(0,0,0,0.14)`,
+        background: (checked || completing) ? color : "transparent",
         display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", transition: "all 0.15s ease",
+        cursor: "pointer",
+        transition: "all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        transform: completing ? "scale(1.15)" : "scale(1)",
       }}
     >
-      {checked && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+      {(checked || completing) && (
+        <svg
+          width="12" height="12" viewBox="0 0 24 24" fill="none"
+          stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"
+          className={completing ? "animate-check-pop" : undefined}
+        >
           <polyline points="20 6 9 17 4 12" />
         </svg>
       )}
@@ -96,47 +108,200 @@ function CheckCircle({ checked, onToggle, color = "#6C69E0" }: {
   );
 }
 
-function SwipeDelete({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+// ── SwipeRow — swipe right to complete, swipe left to reveal actions ────────
+
+const SWIPE_THRESHOLD = 60;
+
+function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
+  children: React.ReactNode;
+  onSwipeRight?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const [offset, setOffset] = useState(0);
+  const [showActions, setShowActions] = useState(false);
+  const tracking = useRef(false);
+  const lockDir = useRef<"h" | "v" | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    tracking.current = true;
+    lockDir.current = null;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!tracking.current) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = e.touches[0].clientY - startY.current;
+
+    if (!lockDir.current) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        lockDir.current = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      }
+      return;
+    }
+    if (lockDir.current === "v") return;
+
+    e.preventDefault();
+    const clamped = Math.max(-100, Math.min(80, dx));
+    setOffset(clamped);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    tracking.current = false;
+    if (offset > SWIPE_THRESHOLD && onSwipeRight) {
+      haptic.medium();
+      onSwipeRight();
+    } else if (offset < -SWIPE_THRESHOLD) {
+      setShowActions(true);
+    }
+    setOffset(0);
+  }, [offset, onSwipeRight]);
+
+  const handleActionClose = useCallback(() => {
+    setShowActions(false);
+  }, []);
+
+  const rightIndicatorOpacity = Math.min(1, Math.max(0, offset / SWIPE_THRESHOLD));
+  const leftIndicatorOpacity = Math.min(1, Math.max(0, -offset / SWIPE_THRESHOLD));
+
   return (
-    <div style={{ position: "relative" }}>
-      {children}
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        aria-label="Delete"
-        className="tap-scale"
-        style={{
-          position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-          width: 28, height: 28, borderRadius: "50%",
-          background: "rgba(224,62,62,0.08)", border: "none",
+    <div style={{ position: "relative", overflow: "hidden" }}>
+      {/* Right-swipe hint (complete) */}
+      {offset > 10 && (
+        <div style={{
+          position: "absolute", left: 0, top: 0, bottom: 0, width: offset,
+          background: `rgba(61,154,122,${0.08 + rightIndicatorOpacity * 0.12})`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", opacity: 0.5,
+          transition: "none",
+        }}>
+          <svg
+            width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="#3D9A7A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+            style={{ opacity: rightIndicatorOpacity }}
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
+
+      {/* Left-swipe hint (actions) */}
+      {offset < -10 && (
+        <div style={{
+          position: "absolute", right: 0, top: 0, bottom: 0, width: -offset,
+          background: `rgba(108,105,224,${0.04 + leftIndicatorOpacity * 0.08})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "none",
+        }}>
+          <svg
+            width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="#6C69E0" strokeWidth={2} strokeLinecap="round"
+            style={{ opacity: leftIndicatorOpacity }}
+          >
+            <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+          </svg>
+        </div>
+      )}
+
+      {/* Row content */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: offset ? `translateX(${offset}px)` : undefined,
+          transition: offset ? "none" : "transform 0.2s ease",
+          position: "relative",
+          zIndex: 1,
+          background: "#FFFFFF",
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E03E3E" strokeWidth={2} strokeLinecap="round">
-          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+        {children}
+      </div>
+
+      {/* Action tray (revealed on swipe-left) */}
+      {showActions && (
+        <>
+          <div
+            onClick={handleActionClose}
+            style={{ position: "fixed", inset: 0, zIndex: 60 }}
+          />
+          <div
+            className="swipe-actions-reveal"
+            style={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              display: "flex", gap: 6, zIndex: 61,
+            }}
+          >
+            {onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleActionClose(); onEdit(); }}
+                className="tap-scale"
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: "rgba(108,105,224,0.08)", border: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C69E0" strokeWidth={2} strokeLinecap="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleActionClose(); haptic.warning(); onDelete(); }}
+                className="tap-scale"
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: "rgba(224,62,62,0.06)", border: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4483E" strokeWidth={2} strokeLinecap="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-function TaskRow({ task, onComplete, onDelete, onEdit }: {
-  task: Task; onComplete: (id: string) => void; onDelete: (id: string) => void; onEdit?: (task: Task) => void;
+// ── Row components ──────────────────────────────────────────────────────────
+
+function TaskRow({ task, onComplete, onDelete, onEdit, completing }: {
+  task: Task; onComplete: (id: string) => void; onDelete: (id: string) => void;
+  onEdit?: (task: Task) => void; completing?: boolean;
 }) {
   const due = formatDue(task);
   const overdue = isOverdue(task);
   const isAI = task.source_type === "conversation";
   return (
-    <SwipeDelete onDelete={() => onDelete(task.id)}>
+    <SwipeRow
+      onSwipeRight={() => onComplete(task.id)}
+      onEdit={onEdit ? () => onEdit(task) : undefined}
+      onDelete={() => onDelete(task.id)}
+    >
       <div
         onClick={() => onEdit?.(task)}
+        className={completing ? "animate-row-complete" : undefined}
         style={{
-          padding: "13px 44px 13px 16px",
+          padding: "13px 16px",
           display: "flex", alignItems: "center", gap: 12,
           cursor: onEdit ? "pointer" : undefined,
         }}
       >
-        <CheckCircle checked={false} onToggle={() => onComplete(task.id)} />
+        <CheckCircle checked={false} completing={completing} onToggle={() => onComplete(task.id)} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 15, color: "#1C1A2E", lineHeight: 1.35, margin: 0 }}>
             {task.title}
@@ -156,20 +321,26 @@ function TaskRow({ task, onComplete, onDelete, onEdit }: {
           </span>
         )}
       </div>
-    </SwipeDelete>
+    </SwipeRow>
   );
 }
 
-function EventRow({ event, onComplete, onDelete, onEdit }: {
-  event: Task; onComplete: (id: string) => void; onDelete: (id: string) => void; onEdit?: (task: Task) => void;
+function EventRow({ event, onComplete, onDelete, onEdit, completing }: {
+  event: Task; onComplete: (id: string) => void; onDelete: (id: string) => void;
+  onEdit?: (task: Task) => void; completing?: boolean;
 }) {
   const due = formatDue(event);
   return (
-    <SwipeDelete onDelete={() => onDelete(event.id)}>
+    <SwipeRow
+      onSwipeRight={() => onComplete(event.id)}
+      onEdit={onEdit ? () => onEdit(event) : undefined}
+      onDelete={() => onDelete(event.id)}
+    >
       <div
         onClick={() => onEdit?.(event)}
+        className={completing ? "animate-row-complete" : undefined}
         style={{
-          padding: "13px 44px 13px 16px",
+          padding: "13px 16px",
           display: "flex", alignItems: "center", gap: 12,
           cursor: onEdit ? "pointer" : undefined,
         }}
@@ -186,23 +357,28 @@ function EventRow({ event, onComplete, onDelete, onEdit }: {
             {due}
           </span>
         )}
-        <CheckCircle checked={false} onToggle={() => onComplete(event.id)} color="#3D9A7A" />
+        <CheckCircle checked={false} completing={completing} onToggle={() => onComplete(event.id)} color="#3D9A7A" />
       </div>
-    </SwipeDelete>
+    </SwipeRow>
   );
 }
 
 function ReminderRow({ reminder, onDismiss, onDelete, onEdit }: {
-  reminder: Reminder; onDismiss: (id: string) => void; onDelete: (id: string) => void; onEdit?: (r: Reminder) => void;
+  reminder: Reminder; onDismiss: (id: string) => void; onDelete: (id: string) => void;
+  onEdit?: (r: Reminder) => void;
 }) {
   const when = formatReminderTime(reminder);
   const isManual = reminder.reminder_type === "manual";
   return (
-    <SwipeDelete onDelete={() => onDelete(reminder.id)}>
+    <SwipeRow
+      onSwipeRight={() => onDismiss(reminder.id)}
+      onEdit={onEdit ? () => onEdit(reminder) : undefined}
+      onDelete={() => onDelete(reminder.id)}
+    >
       <div
         onClick={() => onEdit?.(reminder)}
         style={{
-          padding: "13px 44px 13px 16px",
+          padding: "13px 16px",
           display: "flex", alignItems: "center", gap: 12,
           cursor: onEdit ? "pointer" : undefined,
         }}
@@ -230,15 +406,15 @@ function ReminderRow({ reminder, onDismiss, onDelete, onEdit }: {
           onClick={(e) => { e.stopPropagation(); onDismiss(reminder.id); }}
           className="tap-scale"
           style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: 11, fontWeight: 600, color: "#3D9A7A", padding: "6px 10px",
-            minHeight: 32,
+            background: "rgba(61,154,122,0.06)", border: "none", cursor: "pointer",
+            fontSize: 12, fontWeight: 600, color: "#3D9A7A", padding: "6px 12px",
+            borderRadius: 8, minHeight: 32,
           }}
         >
           Done
         </button>
       </div>
-    </SwipeDelete>
+    </SwipeRow>
   );
 }
 
@@ -249,8 +425,8 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: string) =
       style={{
         padding: "10px 16px",
         display: "flex", alignItems: "center", gap: 12,
-        opacity: 0.5,
         cursor: "pointer",
+        transition: "background 0.15s ease",
       }}
     >
       <CheckCircle checked={true} onToggle={() => onReopen(task.id)} />
@@ -260,7 +436,13 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: string) =
       }}>
         {task.title}
       </p>
-      <span style={{ fontSize: 11, color: "#C4C2D4", flexShrink: 0 }}>Restore</span>
+      <span style={{
+        fontSize: 11, fontWeight: 600, color: "#6C69E0",
+        background: "rgba(108,105,224,0.06)", borderRadius: 6,
+        padding: "3px 8px", flexShrink: 0,
+      }}>
+        Restore
+      </span>
     </div>
   );
 }
@@ -279,6 +461,8 @@ function SkeletonList() {
     </div>
   );
 }
+
+// ── Main component ──────────────────────────────────────────────────────────
 
 interface Props {
   userName: string;
@@ -307,10 +491,19 @@ export default function TodayItemsList({ userName }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
 
   const handleComplete = useCallback((id: string) => {
     const task = [...items.tasks, ...items.events].find((t) => t.id === id);
-    completeTask(id);
+    haptic.medium();
+
+    setCompletingIds((prev) => new Set(prev).add(id));
+
+    setTimeout(() => {
+      completeTask(id);
+      setCompletingIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
+    }, 400);
+
     if (task) {
       setUndoAction({
         id,
@@ -322,6 +515,7 @@ export default function TodayItemsList({ userName }: Props) {
 
   const handleDismiss = useCallback((id: string) => {
     const reminder = items.reminders.find((r) => r.id === id);
+    haptic.medium();
     dismissReminder(id);
     if (reminder) {
       setUndoAction({
@@ -334,6 +528,7 @@ export default function TodayItemsList({ userName }: Props) {
 
   const handleReopen = useCallback((id: string) => {
     const task = items.completed.find((t) => t.id === id);
+    haptic.light();
     reopenTask(id);
     if (task) {
       setUndoAction({
@@ -345,6 +540,7 @@ export default function TodayItemsList({ userName }: Props) {
   }, [items.completed, reopenTask, completeTask]);
 
   const openEdit = useCallback((task: Task) => {
+    haptic.light();
     const dateStr = task.due_date || "";
     let timeStr = "";
     if (task.due_at) {
@@ -363,6 +559,7 @@ export default function TodayItemsList({ userName }: Props) {
   }, []);
 
   const openEditReminder = useCallback((r: Reminder) => {
+    haptic.light();
     let dateStr = r.scheduled_date || "";
     let timeStr = "";
     if (r.scheduled_for) {
@@ -385,6 +582,11 @@ export default function TodayItemsList({ userName }: Props) {
     });
     setSheetOpen(true);
   }, []);
+
+  const handleCreate = useCallback(() => {
+    haptic.success();
+    refresh();
+  }, [refresh]);
 
   const name = userName || "there";
   const totalOpen = items.tasks.length + items.events.length + items.reminders.length;
@@ -414,7 +616,7 @@ export default function TodayItemsList({ userName }: Props) {
         </p>
       </div>
 
-      {/* Quick add button — desktop/tablet only (hidden on mobile where FAB is used) */}
+      {/* Quick add button — desktop/tablet only */}
       <button
         onClick={() => { setEditTarget(null); setSheetOpen(true); }}
         className="tap-scale desktop-only-add"
@@ -449,7 +651,7 @@ export default function TodayItemsList({ userName }: Props) {
               <div key={event.id} style={{
                 borderBottom: i < items.events.length - 1 ? "1px solid rgba(0,0,0,0.04)" : undefined,
               }}>
-                <EventRow event={event} onComplete={handleComplete} onDelete={deleteTask} onEdit={openEdit} />
+                <EventRow event={event} onComplete={handleComplete} onDelete={deleteTask} onEdit={openEdit} completing={completingIds.has(event.id)} />
               </div>
             ))}
           </div>
@@ -465,7 +667,7 @@ export default function TodayItemsList({ userName }: Props) {
               <div key={task.id} style={{
                 borderBottom: i < items.tasks.length - 1 ? "1px solid rgba(0,0,0,0.04)" : undefined,
               }}>
-                <TaskRow task={task} onComplete={handleComplete} onDelete={deleteTask} onEdit={openEdit} />
+                <TaskRow task={task} onComplete={handleComplete} onDelete={deleteTask} onEdit={openEdit} completing={completingIds.has(task.id)} />
               </div>
             ))}
           </div>
@@ -498,7 +700,7 @@ export default function TodayItemsList({ userName }: Props) {
           border: "1px solid rgba(61,154,122,0.08)",
         }}>
           <p style={{ fontSize: 14, color: "#3D9A7A", margin: 0 }}>
-            Nothing here yet. Tap the button above to add something.
+            Nothing here yet. Tap the + button to add something.
           </p>
         </div>
       )}
@@ -523,17 +725,17 @@ export default function TodayItemsList({ userName }: Props) {
       <QuickAddSheet
         open={sheetOpen}
         onClose={() => { setSheetOpen(false); setEditTarget(null); }}
-        onCreated={refresh}
+        onCreated={handleCreate}
         editTarget={editTarget}
       />
 
       {/* Undo toast */}
       <UndoToast action={undoAction} />
 
-      {/* Floating quick-add FAB — mobile only (hidden on desktop where inline card is used) */}
+      {/* Floating quick-add FAB — mobile only */}
       {!sheetOpen && (
         <button
-          onClick={() => { setEditTarget(null); setSheetOpen(true); }}
+          onClick={() => { setEditTarget(null); haptic.light(); setSheetOpen(true); }}
           aria-label="Quick add"
           className="tap-scale mobile-only-fab"
           style={{
