@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import TopBar from "@/components/TopBar";
-import PwaUpdateHandler from "@/components/PwaUpdateHandler";
+import BuildUpdateChecker from "@/components/BuildUpdateChecker";
 import { MeridianProvider } from "@/lib/meridian-context";
 
 export const metadata: Metadata = {
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <TopBar />
           {children}
           <BottomNav />
-          <PwaUpdateHandler />
+          <BuildUpdateChecker />
         </MeridianProvider>
       </body>
     </html>

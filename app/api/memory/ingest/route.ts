@@ -51,6 +51,7 @@ export const POST = safeHandler(async function POST(req: NextRequest) {
     })),
     reinforced_ids: result.reinforced.map((m) => m.id),
     os_loop: osLoop,
+    chat_action: osLoop.chatAction ?? null,
   };
 
   if (isMemoryDebugEnabled() && result.debug) {

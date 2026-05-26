@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
+const buildTs = Date.now();
+
 const nextConfig: NextConfig = {
   env: {
-    NEXT_PUBLIC_BUILD_ID: Date.now().toString(36),
+    NEXT_PUBLIC_BUILD_ID: buildTs.toString(36),
+    NEXT_PUBLIC_BUILT_AT: new Date(buildTs).toISOString(),
   },
   async headers() {
     return [

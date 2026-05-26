@@ -86,6 +86,16 @@ export function useTodayItems(): UseTodayItemsResult {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Listen for cross-component refresh signals (e.g. after chat creates a reminder)
+  useEffect(() => {
+    const handler = () => {
+      console.log("[today-items] received meridian:todayRefresh");
+      refresh();
+    };
+    window.addEventListener("meridian:todayRefresh", handler);
+    return () => window.removeEventListener("meridian:todayRefresh", handler);
+  }, [refresh]);
+
   const completeTask = useCallback(async (id: string) => {
     setItems((prev) => ({
       ...prev,

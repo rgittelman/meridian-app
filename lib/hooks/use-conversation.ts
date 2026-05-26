@@ -214,6 +214,44 @@ export function useConversation(): UseConversationResult {
         body:    JSON.stringify({ messages: forIngest, conversationId: convId }),
       })
         .then((r) => r.json())
+        .then((data) => {
+          const loop = data?.os_loop;
+          const action = data?.chat_action;
+
+          if (loop && (loop.tasksCreated > 0 || loop.remindersCreated > 0)) {
+            console.log("[chat] items created — broadcasting refresh", loop);
+            window.dispatchEvent(new CustomEvent("meridian:todayRefresh"));
+          }
+
+          // Show confirmation based on ACTUAL persistence, not AI text
+          if (action?.persisted && action.reason === "created") {
+            const label = action.type === "reminder" ? "Reminder" : action.type === "event" ? "Event" : "Task";
+            let confirm = `${label} saved: "${action.title}"`;
+            if (action.date) {
+              const d = new Date(action.date + "T00:00:00");
+              const dayStr = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+              confirm += ` — ${dayStr}`;
+            }
+            if (action.time) {
+              const [h, m] = action.time.split(":").map(Number);
+              const ampm = h >= 12 ? "PM" : "AM";
+              const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+              confirm += ` at ${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+            }
+            confirm += ".";
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                role: "assistant",
+                content: confirm,
+                createdAt: new Date(),
+                status: "sent",
+              },
+            ]);
+          }
+        })
         .catch(() => {});
     }
 

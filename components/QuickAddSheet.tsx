@@ -13,6 +13,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import InlineTimePicker from "./InlineTimePicker";
 
 type ItemType = "task" | "reminder" | "event";
 
@@ -53,10 +54,18 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
   const [saving, setSaving]   = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(editTarget);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const mq = window.matchMedia("(max-width: 600px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -259,7 +268,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
             }}
           />
 
-          {/* Date + Time row */}
+          {/* Date row */}
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
@@ -278,24 +287,42 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
                 }}
               />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+
+            {/* Desktop: native time input  |  Mobile: collapsed button (opens InlineTimePicker below) */}
+            {!isMobile && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
+                  Time <span style={{ color: "#C4C2D4" }}>(optional)</span>
+                </label>
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  style={{
+                    width: "100%", fontSize: 15, color: "#1C1A2E",
+                    padding: "10px 12px", borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    background: "rgba(0,0,0,0.02)", outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Mobile: custom inline time picker (avoids broken native Android picker) */}
+          {isMobile && (
+            <div style={{ marginTop: 10 }}>
               <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
                 Time <span style={{ color: "#C4C2D4" }}>(optional)</span>
               </label>
-              <input
-                type="time"
+              <InlineTimePicker
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
-                style={{
-                  width: "100%", fontSize: 15, color: "#1C1A2E",
-                  padding: "10px 12px", borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.08)",
-                  background: "rgba(0,0,0,0.02)", outline: "none",
-                  boxSizing: "border-box",
-                }}
+                onChange={setTime}
+                accentColor={cfg.color}
               />
             </div>
-          </div>
+          )}
 
           {/* Save button */}
           <button

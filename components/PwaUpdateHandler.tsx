@@ -159,41 +159,53 @@ export default function PwaUpdateHandler() {
       style={{
         position: "fixed",
         top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-        left: "50%",
-        transform: "translateX(-50%)",
+        left: 16,
+        right: 16,
         zIndex: 100,
-        background: "#1C1A2E",
-        color: "#FFFFFF",
-        borderRadius: 14,
-        padding: "11px 14px",
         display: "flex",
-        alignItems: "center",
-        gap: 12,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
-        animation: "fade-up 0.25s ease both",
-        maxWidth: "calc(100% - 32px)",
-        width: "auto",
+        justifyContent: "center",
+        pointerEvents: "none",
       }}
     >
-      <span style={{ fontSize: 14, flex: 1, whiteSpace: "nowrap" }}>
-        New version available
-      </span>
-      <button
-        onClick={handleUpdate}
+      <div
         style={{
-          background: "#6C69E0",
-          border: "none",
-          borderRadius: 10,
+          background: "rgba(28,26,46,0.9)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           color: "#FFFFFF",
-          fontSize: 13,
-          fontWeight: 700,
-          padding: "7px 16px",
-          cursor: "pointer",
-          flexShrink: 0,
+          borderRadius: 22,
+          padding: "8px 8px 8px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.06) inset",
+          maxWidth: 320,
+          width: "auto",
+          animation: "toast-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both",
+          pointerEvents: "auto",
         }}
       >
-        Update
-      </button>
+        <span style={{ fontSize: 13, fontWeight: 500, flex: 1, whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
+          New version available
+        </span>
+        <button
+          onClick={handleUpdate}
+          style={{
+            background: "rgba(108,105,224,0.85)",
+            border: "none",
+            borderRadius: 14,
+            color: "#FFFFFF",
+            fontSize: 12,
+            fontWeight: 700,
+            padding: "6px 14px",
+            cursor: "pointer",
+            flexShrink: 0,
+            letterSpacing: "0.02em",
+          }}
+        >
+          Update
+        </button>
+      </div>
     </div>
   );
 }

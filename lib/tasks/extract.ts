@@ -9,7 +9,7 @@ import { scoreDomains, domainsFromScores } from "@/lib/domains/scoring";
 import type { ExtractedTask } from "./types";
 
 const HARD_PATTERNS: { re: RegExp; titleIdx: number; due?: "tomorrow" | "friday" | "parsed"; verb?: string }[] = [
-  { re: /\b(?:remind me to)\s+(.+?)(?:\.|$)/i, titleIdx: 1 },
+  // Note: "remind me to" is handled by lib/chat-actions/extract.ts — not here.
   { re: /\b(?:i need to|i have to|i must)\s+(.+?)(?:\.|$)/i, titleIdx: 1 },
   { re: /\b(?:i'll|i will)\s+(.+?)(?:\.|$)/i, titleIdx: 1 },
   { re: /\b(?:need to|have to)\s+(.+?)(?:\s+tomorrow|\s+by\b|\.|$)/i, titleIdx: 1, due: "tomorrow" },

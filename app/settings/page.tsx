@@ -16,6 +16,7 @@ import SettingsSection, { SettingsRow } from "@/components/SettingsSection";
 import { CONNECTIONS }           from "@/data/connections";
 import { createClient }          from "@/lib/supabase/client";
 import { useAuth }               from "@/lib/hooks/use-auth";
+import { useBuildInfo }          from "@/components/BuildUpdateChecker";
 
 export default function SettingsPage() {
   const router   = useRouter();
@@ -28,6 +29,9 @@ export default function SettingsPage() {
   const [signInMethod, setSignInMethod] = useState<string>("—");
   const [deleteStep,   setDeleteStep]   = useState<0 | 1 | 2>(0);
   const [deleting,     setDeleting]     = useState(false);
+  const [lastUpdateCheck, setLastUpdateCheck] = useState<string | null>(null);
+  const [checking,     setChecking]     = useState(false);
+  const build = useBuildInfo();
 
   // Populate account info once auth is resolved
   useEffect(() => {
@@ -284,9 +288,111 @@ export default function SettingsPage() {
           />
         </SettingsSection>
 
+        {/* ── Build & Update (debug) ─────────────────────────────── */}
+        <SettingsSection title="Build & Update">
+          <SettingsRow
+            label="Build ID"
+            value={build.shortBuild}
+            border
+          />
+          <SettingsRow
+            label="Built at"
+            value={build.builtAtFormatted}
+            border
+          />
+          <SettingsRow
+            label="Last update check"
+            value={lastUpdateCheck ?? "Not checked yet"}
+            border
+          />
+          <SettingsRow
+            label="Check for update"
+            action={
+              <button
+                disabled={checking}
+                onClick={async () => {
+                  setChecking(true);
+                  try {
+                    const res = await fetch("/api/version", { cache: "no-store" });
+                    const data = await res.json();
+                    const now = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+                    setLastUpdateCheck(now);
+                    console.log("[PWA] manual check:", { current: build.buildId, fetched: data.buildId });
+                    if (data.buildId !== build.buildId) {
+                      if (confirm(`New build available: ${data.buildId}. Refresh now?`)) {
+                        console.log("[PWA] manual reload triggered from settings");
+                        window.location.reload();
+                      }
+                    } else {
+                      alert("You're on the latest build.");
+                    }
+                  } catch {
+                    alert("Could not check for updates.");
+                  } finally {
+                    setChecking(false);
+                  }
+                }}
+                style={{
+                  fontSize: 12, fontWeight: 600, color: "#6C69E0",
+                  background: "rgba(108,105,224,0.06)",
+                  border: "1px solid rgba(108,105,224,0.15)",
+                  borderRadius: 20, padding: "5px 14px", cursor: "pointer",
+                }}
+              >
+                {checking ? "Checking…" : "Check now"}
+              </button>
+            }
+            border
+          />
+          <SettingsRow
+            label="Reload latest version"
+            action={
+              <button
+                onClick={() => {
+                  console.log("[PWA] reload latest version from settings");
+                  window.location.reload();
+                }}
+                style={{
+                  fontSize: 12, fontWeight: 600, color: "#6C69E0",
+                  background: "rgba(108,105,224,0.06)",
+                  border: "1px solid rgba(108,105,224,0.15)",
+                  borderRadius: 20, padding: "5px 14px", cursor: "pointer",
+                }}
+              >
+                Reload
+              </button>
+            }
+            border
+          />
+          <SettingsRow
+            label="Clear cache + reload"
+            action={
+              <button
+                onClick={async () => {
+                  console.log("[PWA] clear cache + reload from settings");
+                  const names = await caches.keys();
+                  console.log(`[PWA] clearing ${names.length} caches:`, names);
+                  await Promise.all(names.map((n) => caches.delete(n)));
+                  console.log("[PWA] caches cleared, reloading");
+                  window.location.reload();
+                }}
+                style={{
+                  fontSize: 12, fontWeight: 600, color: "#D4810A",
+                  background: "rgba(212,129,10,0.06)",
+                  border: "1px solid rgba(212,129,10,0.15)",
+                  borderRadius: 20, padding: "5px 14px", cursor: "pointer",
+                }}
+              >
+                Clear & reload
+              </button>
+            }
+            border={false}
+          />
+        </SettingsSection>
+
         {/* Version */}
         <p style={{ textAlign: "center", fontSize: 11, color: "#C4C2D4", letterSpacing: "0.04em" }}>
-          MERIDIAN · v0.1
+          MERIDIAN · v0.1 · {build.shortBuild}
         </p>
 
       </div>

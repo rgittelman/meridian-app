@@ -147,11 +147,7 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
     tracking.current = true;
     lockDir.current = null;
     lastDx.current = 0;
-    if (settled === "open") {
-      setSettled("closed");
-      setOffset(0);
-    }
-  }, [settled]);
+  }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!tracking.current) return;
@@ -169,8 +165,13 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
 
     e.preventDefault();
     lastDx.current = dx;
-    setOffset(rubberBand(dx, 90));
-  }, []);
+
+    if (settled === "open") {
+      setOffset(-ACTION_TRAY_W + rubberBand(dx, 40));
+    } else {
+      setOffset(rubberBand(dx, 90));
+    }
+  }, [settled]);
 
   const handleTouchEnd = useCallback(() => {
     if (!tracking.current || lockDir.current !== "h") {
@@ -183,6 +184,16 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
     const velocity = Math.abs(lastDx.current) / Math.max(elapsed, 1);
     const fast = velocity > 0.5;
 
+    if (settled === "open") {
+      if (lastDx.current > 20 || fast) {
+        setSettled("closed");
+        setOffset(0);
+      } else {
+        setOffset(-ACTION_TRAY_W);
+      }
+      return;
+    }
+
     if ((offset > SWIPE_COMMIT || (fast && offset > 30)) && onSwipeRight) {
       haptic.medium();
       onSwipeRight();
@@ -193,7 +204,7 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
     }
 
     setOffset(0);
-  }, [offset, onSwipeRight]);
+  }, [offset, onSwipeRight, settled]);
 
   const closeTray = useCallback(() => {
     setSettled("closed");
@@ -203,82 +214,27 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
   const isOpen = settled === "open";
   const dragging = tracking.current && lockDir.current === "h";
   const rightProg = Math.min(1, Math.max(0, offset / SWIPE_COMMIT));
-  const leftProg = Math.min(1, Math.max(0, -offset / SWIPE_REVEAL));
 
   return (
     <div style={{ position: "relative", overflow: "hidden" }}>
-      {/* Background indicators */}
-      <div style={{
-        position: "absolute", inset: 0,
-        display: "flex",
-      }}>
-        {/* Right-swipe (complete) */}
+      {/* Right-swipe background (complete indicator) */}
+      {rightProg > 0 && (
         <div style={{
-          flex: 1,
-          background: rightProg > 0 ? `rgba(61,154,122,${0.06 + rightProg * 0.1})` : "transparent",
+          position: "absolute", inset: 0,
+          background: `rgba(61,154,122,${0.06 + rightProg * 0.1})`,
           display: "flex", alignItems: "center", paddingLeft: 20,
         }}>
           {rightProg > 0.15 && (
             <svg
               width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="#3D9A7A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-              style={{ opacity: Math.min(1, rightProg * 1.5), transition: dragging ? "none" : "opacity 0.15s" }}
+              style={{ opacity: Math.min(1, rightProg * 1.5) }}
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
           )}
         </div>
-        {/* Left-swipe (actions tray background) */}
-        <div style={{
-          width: ACTION_TRAY_W,
-          background: (leftProg > 0 || isOpen) ? "rgba(0,0,0,0.02)" : "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          transition: dragging ? "none" : "background 0.2s ease",
-        }}>
-          {(leftProg > 0.3 || isOpen) && (
-            <>
-              {onEdit && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); closeTray(); onEdit(); }}
-                  className="tap-scale"
-                  style={{
-                    width: 38, height: 38, borderRadius: 10,
-                    background: "rgba(108,105,224,0.1)", border: "none",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                    opacity: isOpen ? 1 : leftProg,
-                    transition: dragging ? "none" : "opacity 0.15s",
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6C69E0" strokeWidth={2} strokeLinecap="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); closeTray(); haptic.warning(); onDelete!(); }}
-                  className="tap-scale"
-                  style={{
-                    width: 38, height: 38, borderRadius: 10,
-                    background: "rgba(224,62,62,0.06)", border: "none",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                    opacity: isOpen ? 1 : leftProg,
-                    transition: dragging ? "none" : "opacity 0.15s",
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D4483E" strokeWidth={2} strokeLinecap="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Row content — slides with touch */}
       <div
@@ -296,12 +252,73 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
         {children}
       </div>
 
-      {/* Close-tray scrim when tray is open */}
+      {/* Action tray — rendered ABOVE row content so buttons always receive taps */}
       {isOpen && (
         <div
-          onClick={closeTray}
-          style={{ position: "fixed", inset: 0, zIndex: 2 }}
-        />
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: ACTION_TRAY_W,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            zIndex: 3,
+            background: "rgba(245,244,250,0.95)",
+          }}
+        >
+          {onEdit && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("[SwipeRow] Edit tapped");
+                closeTray();
+                onEdit();
+              }}
+              className="tap-scale"
+              style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: "rgba(108,105,224,0.1)", border: "none",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6C69E0" strokeWidth={2} strokeLinecap="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("[SwipeRow] Delete tapped");
+                closeTray();
+                haptic.warning();
+                onDelete();
+              }}
+              className="tap-scale"
+              style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: "rgba(224,62,62,0.06)", border: "none",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D4483E" strokeWidth={2} strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

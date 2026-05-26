@@ -1,45 +1,35 @@
 /**
- * Meridian Service Worker
+ * Meridian Service Worker — Beta / Development
  *
- * Minimal SW focused on enabling the PWA update flow.
- * Does NOT aggressively cache — lets Next.js handle its own caching.
- * Primary job: install, activate, and support skipWaiting for update prompts.
+ * Network-first, no aggressive caching.
+ * During active testing, stale caches cause more harm than benefit.
+ * This SW exists solely to enable PWA install + minimal lifecycle.
  */
 
-const CACHE_NAME = "meridian-v1";
-
-self.addEventListener("install", (event) => {
-  console.log("[PWA UPDATE] service worker installed");
-  // Don't call skipWaiting here — let the client control when to activate
+self.addEventListener("install", () => {
+  console.log("[PWA] sw installed — skipping waiting");
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  console.log("[PWA UPDATE] service worker activated");
-  // Clear any old caches from previous versions
+  console.log("[PWA] sw activated — clearing all caches");
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(
-        names
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-            console.log("[PWA UPDATE] clearing old cache:", name);
-            return caches.delete(name);
-          })
-      )
-    )
+      Promise.all(names.map((name) => {
+        console.log("[PWA] deleting cache:", name);
+        return caches.delete(name);
+      }))
+    ).then(() => self.clients.claim())
   );
 });
 
-// Listen for skip-waiting message from the client
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    console.log("[PWA UPDATE] skip waiting accepted, activating new worker");
+  if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
 
-// Network-first fetch: don't serve stale content
-self.addEventListener("fetch", (event) => {
-  // Let all requests go to the network normally
-  // This prevents the SW from caching stale HTML/JS
+// Network-first: never serve cached responses during beta
+self.addEventListener("fetch", () => {
+  // No-op — let all requests go to network
 });
