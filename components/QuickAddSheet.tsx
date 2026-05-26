@@ -172,7 +172,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
         onClick={onClose}
         style={{
           position: "fixed", inset: 0, zIndex: 90,
-          background: "rgba(0,0,0,0.25)",
+          background: "rgba(0,0,0,0.18)",
           animation: "fade-up 0.15s ease both",
         }}
       />
@@ -191,8 +191,8 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
           marginRight: "auto",
           zIndex: 91,
           background: "#FFFFFF",
-          borderRadius: "20px 20px 0 0",
-          boxShadow: "0 -4px 32px rgba(0,0,0,0.12)",
+          borderRadius: "22px 22px 0 0",
+          boxShadow: "0 -4px 40px rgba(0,0,0,0.08)",
           maxHeight: "90dvh",
           width: "100%",
           display: "flex",
@@ -204,7 +204,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
         <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px", flexShrink: 0 }}>
           <div style={{
             width: 36, height: 4, borderRadius: 2,
-            background: "rgba(0,0,0,0.10)",
+            background: "rgba(0,0,0,0.07)",
           }} />
         </div>
 
@@ -232,13 +232,13 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
                   className="tap-scale"
                   style={{
                     flex: 1, padding: "10px 0",
-                    borderRadius: 12,
-                    border: active ? `1.5px solid ${c.color}` : "1.5px solid rgba(0,0,0,0.08)",
-                    background: active ? `${c.color}10` : "transparent",
-                    color: active ? c.color : "#9E9CB0",
+                    borderRadius: 14,
+                    border: active ? `1.5px solid ${c.color}30` : "1.5px solid rgba(0,0,0,0.05)",
+                    background: active ? `${c.color}0C` : "transparent",
+                    color: active ? c.color : "#A09EB4",
                     fontSize: 13, fontWeight: 600,
                     cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    transition: "all 0.2s ease",
                   }}
                 >
                   {c.label}
@@ -259,9 +259,9 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
             autoCapitalize="sentences"
             style={{
               width: "100%", fontSize: 17, fontWeight: 500,
-              color: "#1C1A2E", caretColor: cfg.color,
+              color: "#2C2B3D", caretColor: cfg.color,
               padding: "14px 0", border: "none",
-              borderBottom: "1px solid rgba(0,0,0,0.06)",
+              borderBottom: "1px solid rgba(0,0,0,0.04)",
               outline: "none", background: "transparent",
               letterSpacing: "-0.01em",
               boxSizing: "border-box",
@@ -271,7 +271,7 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
           {/* Date row */}
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: "#A09EB4", fontWeight: 500, display: "block", marginBottom: 4 }}>
                 Date
               </label>
               <input
@@ -279,10 +279,10 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 style={{
-                  width: "100%", fontSize: 15, color: "#1C1A2E",
-                  padding: "10px 12px", borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.08)",
-                  background: "rgba(0,0,0,0.02)", outline: "none",
+                  width: "100%", fontSize: 15, color: "#2C2B3D",
+                  padding: "10px 12px", borderRadius: 12,
+                  border: "1px solid rgba(0,0,0,0.05)",
+                  background: "rgba(0,0,0,0.015)", outline: "none",
                   boxSizing: "border-box",
                 }}
               />
@@ -291,18 +291,18 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
             {/* Desktop: native time input  |  Mobile: collapsed button (opens InlineTimePicker below) */}
             {!isMobile && (
               <div style={{ flex: 1, minWidth: 0 }}>
-                <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
-                  Time <span style={{ color: "#C4C2D4" }}>(optional)</span>
+                <label style={{ fontSize: 11, color: "#A09EB4", fontWeight: 500, display: "block", marginBottom: 4 }}>
+                  Time <span style={{ color: "#C8C6D8" }}>(optional)</span>
                 </label>
                 <input
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   style={{
-                    width: "100%", fontSize: 15, color: "#1C1A2E",
-                    padding: "10px 12px", borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    background: "rgba(0,0,0,0.02)", outline: "none",
+                    width: "100%", fontSize: 15, color: "#2C2B3D",
+                    padding: "10px 12px", borderRadius: 12,
+                    border: "1px solid rgba(0,0,0,0.05)",
+                    background: "rgba(0,0,0,0.015)", outline: "none",
                     boxSizing: "border-box",
                   }}
                 />
@@ -313,8 +313,8 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
           {/* Mobile: custom inline time picker (avoids broken native Android picker) */}
           {isMobile && (
             <div style={{ marginTop: 10 }}>
-              <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
-                Time <span style={{ color: "#C4C2D4" }}>(optional)</span>
+              <label style={{ fontSize: 11, color: "#A09EB4", fontWeight: 500, display: "block", marginBottom: 4 }}>
+                Time <span style={{ color: "#C8C6D8" }}>(optional)</span>
               </label>
               <InlineTimePicker
                 value={time}
@@ -330,13 +330,13 @@ export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: 
             disabled={!title.trim() || saving}
             className="tap-scale"
             style={{
-              width: "100%", marginTop: 18,
-              padding: "14px 0", borderRadius: 14,
-              background: title.trim() ? cfg.color : "rgba(0,0,0,0.06)",
-              color: title.trim() ? "#FFFFFF" : "#C4C2D4",
+              width: "100%", marginTop: 20,
+              padding: "14px 0", borderRadius: 16,
+              background: title.trim() ? cfg.color : "rgba(0,0,0,0.04)",
+              color: title.trim() ? "#FFFFFF" : "#C8C6D8",
               fontSize: 16, fontWeight: 600,
               border: "none", cursor: title.trim() ? "pointer" : "default",
-              transition: "all 0.2s ease",
+              transition: "all 0.25s ease",
             }}
           >
             {feedback ?? (saving ? "Saving…" : isEdit ? "Save changes" : `Add ${cfg.label}`)}

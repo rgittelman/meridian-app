@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LeafSvg } from "@/components/PageHeader";
 import { haptic } from "@/lib/haptics";
+import { space, radius, shadow, color } from "@/lib/design/tokens";
 
 const NAV_ITEMS = [
   { label: "Today",  href: "/",       icon: SunIcon    },
@@ -25,10 +26,10 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: "var(--nav-bg)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "var(--shadow-nav)",
+        background: "rgba(255,255,255,0.96)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        boxShadow: shadow.nav,
         willChange: "transform",
         transform: "translateZ(0)",
       }}
@@ -65,9 +66,9 @@ export default function BottomNav() {
               <span
                 style={{
                   fontSize: 10,
-                  fontWeight: active ? 600 : 400,
-                  letterSpacing: "0.025em",
-                  color: active ? "var(--nav-active)" : "var(--nav-inactive)",
+                  fontWeight: active ? 600 : 450,
+                  letterSpacing: "0.015em",
+                  color: active ? color.accent : color.placeholder,
                   lineHeight: 1,
                 }}
               >

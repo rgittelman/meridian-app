@@ -36,4 +36,6 @@ export interface ReminderCandidate {
   scheduled_for?: string;
   why_shown:      string;
   domains?:       LifeDomain[];
+  display_time?:  string;
+  display_date?:  string;
 }

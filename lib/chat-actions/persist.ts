@@ -5,8 +5,10 @@
  * so the frontend can show accurate confirmations.
  */
 
-import type { ChatAction } from "./extract";
+import type { ChatActionCompat } from "./extract";
 import { normalizeForDedup } from "./extract";
+
+type ChatAction = ChatActionCompat;
 import { findExistingReminder, insertReminder } from "@/lib/reminders/db";
 import { createClient } from "@/lib/supabase/server";
 import type { LifeDomain } from "@/lib/domains/types";
@@ -25,9 +27,11 @@ export async function persistChatAction(
   userId: string,
   action: ChatAction,
 ): Promise<PersistResult> {
+  const intent = action.intent ?? action.type;
   const fail = (reason: string): PersistResult => ({
     persisted: false, id: null,
-    type: action.type, title: action.title,
+    type: (intent === "reminder" ? "reminder" : intent === "event" ? "event" : "task"),
+    title: action.title,
     date: action.date, time: action.time,
     reason,
   });
@@ -37,11 +41,15 @@ export async function persistChatAction(
     return fail("low_confidence");
   }
 
-  if (action.type === "reminder") {
+  if (intent === "reminder") {
     return persistReminder(userId, action);
   }
 
-  return persistTask(userId, action);
+  if (intent === "event" || intent === "task") {
+    return persistTask(userId, action);
+  }
+
+  return fail("not_actionable");
 }
 
 async function persistReminder(
@@ -96,9 +104,16 @@ async function persistReminder(
     }
   }
 
+  const metadata: Record<string, unknown> = {
+    source: "chat",
+    source_text: action.source_text.slice(0, 200),
+  };
+  if (action.time) metadata.display_time = action.time;
+  if (action.date) metadata.display_date = action.date;
+
   const reminder = await insertReminder(userId, {
     title:          action.title,
-    body:           action.description,
+    body:           action.body,
     reminder_type:  "manual",
     status:         "pending",
     task_id:        null,
@@ -109,7 +124,7 @@ async function persistReminder(
     why_shown:      "You asked for this reminder",
     gentle:         true,
     domains:        [] as LifeDomain[],
-    metadata:       { source: "chat", source_text: action.source_text.slice(0, 200) },
+    metadata,
   });
 
   if (!reminder) {
@@ -117,7 +132,15 @@ async function persistReminder(
     return fail("db_error");
   }
 
-  console.log("[chat-actions/persist] reminder created:", { id: reminder.id, title: reminder.title });
+  console.log("[chat-actions/persist] reminder created:", {
+    id: reminder.id,
+    title: reminder.title,
+    scheduled_for: reminder.scheduled_for,
+    scheduled_date: reminder.scheduled_date,
+    metadata_display_time: (reminder.metadata as Record<string, unknown>)?.display_time ?? "NOT SET",
+    metadata_display_date: (reminder.metadata as Record<string, unknown>)?.display_date ?? "NOT SET",
+    created_at: reminder.created_at,
+  });
   return {
     persisted: true, id: reminder.id,
     type: "reminder", title: reminder.title,
@@ -130,9 +153,10 @@ async function persistTask(
   userId: string,
   action: ChatAction,
 ): Promise<PersistResult> {
+  const actionType = (action.intent ?? action.type) === "event" ? "event" as const : "task" as const;
   const fail = (reason: string): PersistResult => ({
     persisted: false, id: null,
-    type: action.type, title: action.title,
+    type: actionType, title: action.title,
     date: action.date, time: action.time,
     reason,
   });
@@ -155,7 +179,7 @@ async function persistTask(
         console.log("[chat-actions/persist] duplicate task:", action.title, "matches", t.title);
         return {
           persisted: true, id: t.id,
-          type: action.type, title: t.title,
+          type: actionType, title: t.title,
           date: action.date, time: action.time,
           reason: "duplicate_existing",
         };
@@ -163,10 +187,17 @@ async function persistTask(
     }
   }
 
-  let due_at: string | null = null;
-  if (action.date && action.time) {
-    due_at = new Date(`${action.date}T${action.time}`).toISOString();
-  }
+  const taskMeta: Record<string, unknown> = {
+    source: "chat",
+    source_text: action.source_text.slice(0, 200),
+  };
+  if (action.time) taskMeta.display_time = action.time;
+  if (action.date) taskMeta.display_date = action.date;
+
+  // due_at uses the naive local-time string (no Z) so sorting is reasonable
+  const due_at = action.date && action.time
+    ? `${action.date}T${action.time}:00`
+    : null;
 
   const { data, error } = await supabase
     .from("tasks")
@@ -180,7 +211,7 @@ async function persistTask(
       due_at,
       source_type: "conversation",
       domains:     [],
-      metadata:    { source: "chat", source_text: action.source_text.slice(0, 200) },
+      metadata:    taskMeta,
     })
     .select("id, title")
     .single();
@@ -193,7 +224,7 @@ async function persistTask(
   console.log("[chat-actions/persist] task created:", { id: data.id, title: data.title });
   return {
     persisted: true, id: data.id,
-    type: action.type, title: data.title,
+    type: actionType, title: data.title,
     date: action.date, time: action.time,
     reason: "created",
   };

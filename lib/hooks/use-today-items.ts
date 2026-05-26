@@ -5,7 +5,7 @@
  * Provides real CRUD operations with optimistic UI.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Task } from "@/lib/tasks/types";
 import type { Reminder } from "@/lib/reminders/types";
 
@@ -17,14 +17,15 @@ export interface TodayItems {
 }
 
 interface UseTodayItemsResult {
-  items:          TodayItems;
-  loading:        boolean;
-  refresh:        () => Promise<void>;
-  completeTask:   (id: string) => Promise<void>;
-  reopenTask:     (id: string) => Promise<void>;
-  deleteTask:     (id: string) => Promise<void>;
-  dismissReminder: (id: string) => Promise<void>;
-  deleteReminder:  (id: string) => Promise<void>;
+  items:            TodayItems;
+  loading:          boolean;
+  refresh:          () => Promise<void>;
+  completeTask:     (id: string) => Promise<void>;
+  reopenTask:       (id: string) => Promise<void>;
+  deleteTask:       (id: string) => Promise<void>;
+  dismissReminder:  (id: string) => Promise<void>;
+  restoreReminder:  (id: string) => Promise<void>;
+  deleteReminder:   (id: string) => Promise<void>;
 }
 
 function todayDate(): string {
@@ -40,6 +41,7 @@ export function useTodayItems(): UseTodayItemsResult {
     tasks: [], events: [], reminders: [], completed: [],
   });
   const [loading, setLoading] = useState(true);
+  const dismissedRef = useRef<Map<string, Reminder>>(new Map());
 
   const refresh = useCallback(async () => {
     try {
@@ -86,14 +88,86 @@ export function useTodayItems(): UseTodayItemsResult {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Listen for cross-component refresh signals (e.g. after chat creates a reminder)
+  // Optimistic insert when chat creates an item — avoids full re-fetch delay
   useEffect(() => {
-    const handler = () => {
+    const handleCreated = (e: Event) => {
+      const action = (e as CustomEvent).detail;
+      if (!action?.id || !action?.title) return;
+      console.log("[today-items] optimistic insert:", action.type, action.title);
+
+      const now = new Date().toISOString();
+
+      if (action.type === "reminder") {
+        const newReminder: Reminder = {
+          id: action.id,
+          user_id: "",
+          title: action.title,
+          body: action.title,
+          reminder_type: "manual",
+          status: "pending",
+          task_id: null,
+          memory_id: null,
+          scheduled_for: action.scheduled_for ?? null,
+          scheduled_date: action.date ?? null,
+          recurrence: null,
+          why_shown: null,
+          gentle: false,
+          domains: [],
+          metadata: {
+            display_time: action.time ?? undefined,
+            display_date: action.date ?? undefined,
+          },
+          created_at: now,
+          updated_at: now,
+        };
+        setItems((prev) => ({
+          ...prev,
+          reminders: [...prev.reminders, newReminder],
+        }));
+      } else {
+        const newTask: Task = {
+          id: action.id,
+          user_id: "",
+          title: action.title,
+          description: null,
+          task_type: action.type === "event" ? "event" : "soft",
+          status: "open",
+          confidence: 1,
+          due_date: action.date ?? null,
+          due_at: action.scheduled_for ?? null,
+          domains: [],
+          source_type: "conversation",
+          source_id: null,
+          memory_id: null,
+          conversation_id: null,
+          postpone_count: 0,
+          metadata: {
+            display_time: action.time ?? undefined,
+            display_date: action.date ?? undefined,
+          },
+          created_at: now,
+          updated_at: now,
+        };
+        setItems((prev) => ({
+          ...prev,
+          ...(action.type === "event"
+            ? { events: [...prev.events, newTask] }
+            : { tasks: [...prev.tasks, newTask] }),
+        }));
+      }
+    };
+
+    const handleRefresh = () => {
       console.log("[today-items] received meridian:todayRefresh");
       refresh();
     };
-    window.addEventListener("meridian:todayRefresh", handler);
-    return () => window.removeEventListener("meridian:todayRefresh", handler);
+
+    window.addEventListener("meridian:todayItemCreated", handleCreated);
+    window.addEventListener("meridian:todayRefresh", handleRefresh);
+    return () => {
+      window.removeEventListener("meridian:todayItemCreated", handleCreated);
+      window.removeEventListener("meridian:todayRefresh", handleRefresh);
+    };
   }, [refresh]);
 
   const completeTask = useCallback(async (id: string) => {
@@ -143,16 +217,37 @@ export function useTodayItems(): UseTodayItemsResult {
   }, []);
 
   const dismissReminder = useCallback(async (id: string) => {
-    setItems((prev) => ({
-      ...prev,
-      reminders: prev.reminders.filter((r) => r.id !== id),
-    }));
+    setItems((prev) => {
+      const reminder = prev.reminders.find((r) => r.id === id);
+      if (reminder) dismissedRef.current.set(id, reminder);
+      return { ...prev, reminders: prev.reminders.filter((r) => r.id !== id) };
+    });
+    console.log("[today-items] reminder dismissed:", id);
     await fetch(`/api/reminders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "dismissed" }),
     });
   }, []);
+
+  const restoreReminder = useCallback(async (id: string) => {
+    const stashed = dismissedRef.current.get(id);
+    if (stashed) {
+      dismissedRef.current.delete(id);
+      setItems((prev) => ({
+        ...prev,
+        reminders: [...prev.reminders, { ...stashed, status: "pending" as const }],
+      }));
+      console.log("[today-items] reminder restored (optimistic):", id);
+    }
+    const res = await fetch(`/api/reminders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "pending" }),
+    });
+    console.log("[today-items] reminder restore API:", res.ok ? "ok" : "failed");
+    if (!res.ok) refresh();
+  }, [refresh]);
 
   const deleteReminder = useCallback(async (id: string) => {
     setItems((prev) => ({
@@ -164,6 +259,7 @@ export function useTodayItems(): UseTodayItemsResult {
 
   return {
     items, loading, refresh,
-    completeTask, reopenTask, deleteTask, dismissReminder, deleteReminder,
+    completeTask, reopenTask, deleteTask,
+    dismissReminder, restoreReminder, deleteReminder,
   };
 }

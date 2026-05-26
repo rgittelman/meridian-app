@@ -57,22 +57,22 @@ export default function UndoToast({ action, duration = 4000 }: UndoToastProps) {
         bottom: "calc(60px + env(safe-area-inset-bottom, 0px) + 90px)",
         left: "50%",
         zIndex: 80,
-        background: "rgba(28,26,46,0.88)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        background: "rgba(44,43,61,0.85)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
         color: "#FFFFFF",
-        borderRadius: 22,
-        padding: "8px 8px 8px 16px",
+        borderRadius: 24,
+        padding: "9px 10px 9px 18px",
         display: "flex",
         alignItems: "center",
-        gap: 8,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.06) inset",
+        gap: 10,
+        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
         maxWidth: "min(320px, calc(100vw - 48px))",
         width: "auto",
-        transform: exiting ? "translateX(-50%) translateY(8px)" : "translateX(-50%) translateY(0)",
+        transform: exiting ? "translateX(-50%) translateY(6px)" : "translateX(-50%) translateY(0)",
         opacity: exiting ? 0 : 1,
-        transition: "transform 0.2s ease, opacity 0.2s ease",
-        animation: exiting ? undefined : "toast-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both",
+        transition: "transform 0.25s ease, opacity 0.25s ease",
+        animation: exiting ? undefined : "toast-in 0.25s cubic-bezier(0.25, 1, 0.5, 1) both",
       }}
     >
       <span style={{
@@ -85,12 +85,12 @@ export default function UndoToast({ action, duration = 4000 }: UndoToastProps) {
       <button
         onClick={handleUndo}
         style={{
-          background: "rgba(168,166,255,0.15)",
+          background: "rgba(255,255,255,0.12)",
           border: "none", cursor: "pointer",
-          color: "#C4C2FF", fontSize: 12, fontWeight: 700,
-          padding: "5px 12px", flexShrink: 0,
-          borderRadius: 14,
-          letterSpacing: "0.02em",
+          color: "#E0DFFF", fontSize: 12, fontWeight: 600,
+          padding: "5px 14px", flexShrink: 0,
+          borderRadius: 16,
+          letterSpacing: "0.01em",
         }}
       >
         Undo

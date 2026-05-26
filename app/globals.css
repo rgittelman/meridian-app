@@ -1,70 +1,66 @@
 @import "tailwindcss";
 
-/* ─── Design tokens ─────────────────────────────────────────────────────────
-   Palette: luminous light — Meridian default.
-   Warm pearl foundation. Soft indigo/periwinkle accent. Frosted surfaces.
-   Target feel: "A beautifully organized mind."
+/* ─── Meridian Design System ─────────────────────────────────────────────────
+   A thoughtful life companion.
+   Canonical tokens live in lib/design/tokens.ts.
+   CSS custom properties below mirror them for non-React contexts.
    ─────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  /* Page canvas — three surface levels */
-  --bg:        #F7F6FA;              /* faint lavender-tinted near-white — the room */
-  --surface:   #FFFFFF;             /* white card — sits above */
-  --surface-2: #EEEDFB;             /* soft lavender tint — elevated */
+  --bg:        #F8F7FB;
+  --surface:   #FFFFFF;
+  --surface-2: #F0EEFA;
+  --recessed:  #F3F2F8;
 
-  /* Borders */
-  --border:    rgba(0,0,0,0.07);    /* visible but gentle */
-  --border-2:  rgba(0,0,0,0.04);   /* subtle separator */
+  --border:    rgba(0,0,0,0.05);
+  --border-2:  rgba(0,0,0,0.03);
 
-  /* Text hierarchy */
-  --ink:       #1C1A2E;             /* near-black with indigo tint — primary */
-  --ink-2:     #64627A;             /* muted purple-gray — secondary */
-  --ink-3:     #9E9CB0;             /* soft gray-purple — dim labels */
+  --ink:       #2C2B3D;
+  --ink-2:     #6E6D82;
+  --ink-3:     #A09EB4;
+  --ink-4:     #C8C6D8;
 
-  /* Anchor surfaces */
-  --user-bubble: #EEEDFB;           /* soft lavender — elevated surface */
-  --nav-bg:    rgba(255,255,255,0.94); /* frosted white nav */
-
-  /* Nav text */
-  --nav-active:   #6C69E0;          /* soft indigo/periwinkle — present tab */
-  --nav-inactive: #A8A6BC;          /* readable warm gray-purple */
-
-  /* Shadows — light mode (layered for atmospheric depth) */
-  --shadow-card:   0 1px 1px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
-  --shadow-raised: 0 2px 4px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.09), 0 1px 0 rgba(255,255,255,0.8) inset;
-  --shadow-focus:  0 2px 4px rgba(0,0,0,0.04), 0 8px 32px rgba(108,105,224,0.10);
-  --shadow-amber:  0 2px 4px rgba(0,0,0,0.04), 0 8px 32px rgba(212,129,10,0.10);
-  --shadow-nav:    0 -1px 0 rgba(0,0,0,0.06), 0 -6px 32px rgba(108,105,224,0.07);
-
-  /* ─── Accent — soft indigo/periwinkle ───────────────────────────────────── */
   --accent:        #6C69E0;
-  --accent-soft:   rgba(108,105,224,0.10);
-  --accent-border: rgba(108,105,224,0.35);
+  --accent-soft:   rgba(108,105,224,0.08);
+  --accent-border: rgba(108,105,224,0.20);
 
-  /* ─── Semantic color tokens ─────────────────────────────────────────────── */
-  --color-canvas:           #F7F6FA;
-  --color-surface:          #FFFFFF;
-  --color-surface-elevated: #EEEDFB;
-  --color-border:           rgba(0,0,0,0.09);
-  --color-border-subtle:    rgba(0,0,0,0.05);
+  --success:    #5BA88A;
+  --warning:    #D49A3A;
+  --overdue:    #C9736C;
+  --destructive:#D4635C;
 
-  --color-text-primary:   #1C1A2E;
-  --color-text-secondary: #64627A;
-  --color-text-dim:       #9E9CB0;
-  --color-text-ghost:     #C4C2D4;
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.02), 0 4px 16px rgba(0,0,0,0.025);
+  --shadow-raised:  0 2px 6px rgba(0,0,0,0.03), 0 8px 32px rgba(0,0,0,0.045);
+  --shadow-overlay: 0 4px 12px rgba(0,0,0,0.04), 0 16px 48px rgba(0,0,0,0.07);
+  --shadow-nav:     0 -1px 0 rgba(0,0,0,0.03), 0 -6px 32px rgba(0,0,0,0.04);
 
-  --color-accent:     rgba(108,105,224,0.85);
-  --color-accent-dim: rgba(108,105,224,0.40);
+  --nav-bg:        rgba(255,255,255,0.96);
+  --nav-active:    #6C69E0;
+  --nav-inactive:  #B0AEC4;
 
-  /* ─── Chat light surface tokens ─────────────────────────────────────────── */
-  --chat-bg:       #F7F6FA;
+  --chat-bg:       #F8F7FB;
   --chat-surface:  #FFFFFF;
-  --chat-raised:   #EEEDFB;
-  --chat-text:     #FFFFFF;              /* user bubble text — on indigo bg */
-  --chat-text-ai:  #4A4870;             /* AI text — dark indigo-gray */
-  --chat-user-bg:  #6C69E0;             /* user pill — soft indigo */
-  --chat-text-dim: #9E9CB0;             /* dim metadata */
-  --chat-border:   rgba(0,0,0,0.07);
-  --chat-accent:   #6C69E0;             /* indigo — the one accent */
+  --chat-raised:   #F0EEFA;
+  --chat-text:     #FFFFFF;
+  --chat-text-ai:  #4A4870;
+  --chat-user-bg:  #6C69E0;
+  --chat-text-dim: #A09EB4;
+  --chat-border:   rgba(0,0,0,0.05);
+  --chat-accent:   #6C69E0;
+
+  /* Legacy aliases (used by some components) */
+  --color-canvas:           var(--bg);
+  --color-surface:          var(--surface);
+  --color-surface-elevated: var(--surface-2);
+  --color-border:           var(--border);
+  --color-border-subtle:    var(--border-2);
+  --color-text-primary:     var(--ink);
+  --color-text-secondary:   var(--ink-2);
+  --color-text-dim:         var(--ink-3);
+  --color-text-ghost:       var(--ink-4);
+  --color-accent:           rgba(108,105,224,0.85);
+  --color-accent-dim:       rgba(108,105,224,0.35);
+  --user-bubble:            var(--surface-2);
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────────── */
@@ -75,6 +71,7 @@ body {
   font-family:
     -apple-system,
     BlinkMacSystemFont,
+    "SF Pro Display",
     "Segoe UI",
     system-ui,
     sans-serif;
@@ -82,16 +79,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 15px;
   line-height: 1.5;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.008em;
 }
 
-html,
-body {
+html, body {
   overscroll-behavior: none;
 }
 
 html {
-  /* Reserve scrollbar space so its appearance never causes layout shifts */
   scrollbar-gutter: stable;
 }
 
@@ -105,7 +100,6 @@ html {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
 }
 
-/* Hide textarea scrollbars — auto-resize handles height */
 textarea {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -114,60 +108,37 @@ textarea::-webkit-scrollbar {
   display: none;
 }
 
-/* Chat composer placeholder color */
 textarea::placeholder {
-  color: #B0AEC4;
+  color: #B8B6CC;
   opacity: 1;
 }
-
-/* Elevated card surface */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  box-shadow: var(--shadow-card);
-}
-
-/* ─── Micro-interactions ───────────────────────────────────────────────────── */
 
 button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Legacy card class */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+/* ─── Tap interactions ────────────────────────────────────────────────────── */
+
 .tap-scale {
-  transition: transform 0.1s ease;
+  transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .tap-scale:active {
-  transform: scale(0.97);
+  transform: scale(0.975);
 }
 
-.section-enter {
-  animation: section-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes section-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.item-dismiss {
-  animation: item-out 0.25s ease forwards;
-}
-
-@keyframes item-out {
-  to { opacity: 0; transform: translateX(-12px); height: 0; padding: 0; margin: 0; overflow: hidden; }
-}
-
-/* ─── Animations ───────────────────────────────────────────────────────────── */
+/* ─── CSS keyframes (for non-Framer contexts) ─────────────────────────────── */
 
 @keyframes pulse-dot {
-  0%, 80%, 100% {
-    opacity: 0.25;
-    transform: scale(0.8);
-  }
-  40% {
-    opacity: 0.85;
-    transform: scale(1);
-  }
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+  40%           { opacity: 0.85; transform: scale(1); }
 }
 
 .animate-pulse-dot {
@@ -175,49 +146,13 @@ button {
 }
 
 @keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-up {
   animation: fade-up 0.2s ease-out forwards;
 }
-
-/* ─── Card entrance — staggered via animation-delay ─────────────────────────── */
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-card-in {
-  animation: card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-/* ─── Ambient pulse for live indicators ──────────────────────────────────────── */
-
-@keyframes ambient-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(1);    }
-  50%       { opacity: 0.7; transform: scale(1.15); }
-}
-
-.animate-ambient-pulse {
-  animation: ambient-pulse 2.8s ease-in-out infinite;
-}
-
-/* ─── Progress bar shimmer ───────────────────────────────────────────────────── */
 
 @keyframes shimmer {
   from { background-position: -200% center; }
@@ -229,52 +164,35 @@ button {
   animation: shimmer 2.4s linear infinite;
 }
 
-/* ─── Bottom sheet entrance ────────────────────────────────────────────────── */
-
-@keyframes sheet-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-/* Transform-free sheet entrance for QuickAddSheet.
-   Android Chrome positions native date/time picker dialogs relative to the
-   nearest ancestor with a CSS transform — any transform causes the picker's
-   action buttons to overflow off-screen on narrow viewports. */
 @keyframes sheet-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
-/* ─── Toast animation ─────────────────────────────────────────────────────── */
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.96); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
-/* ─── Row completion animation ────────────────────────────────────────────── */
-
 @keyframes check-pop {
-  0%   { transform: scale(0.7); opacity: 0; }
-  50%  { transform: scale(1.15); }
+  0%   { transform: scale(0.75); opacity: 0; }
+  50%  { transform: scale(1.1); }
   100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-check-pop {
+  animation: check-pop 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 @keyframes row-complete {
   0%   { opacity: 1; max-height: 80px; transform: translateX(0); }
-  40%  { opacity: 0.5; transform: translateX(8px); }
+  50%  { opacity: 0.4; transform: translateX(6px); }
   100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
 }
 
-.animate-check-pop {
-  animation: check-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
 .animate-row-complete {
-  animation: row-complete 0.35s 0.15s ease forwards;
+  animation: row-complete 0.4s 0.12s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
-
-/* ─── Swipe row action tracks ─────────────────────────────────────────────── */
 
 @keyframes reveal-in {
   from { opacity: 0; transform: scale(0.85); }
@@ -296,40 +214,21 @@ button {
 }
 
 @media (min-width: 640px) {
-  .quick-add-sheet {
-    max-width: 560px;
-  }
-  .quick-add-sheet-body {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
+  .quick-add-sheet { max-width: 560px; }
+  .quick-add-sheet-body { padding-left: 24px; padding-right: 24px; }
 }
 
 @media (min-width: 1024px) {
-  .quick-add-sheet {
-    max-width: 720px;
-    border-radius: 20px 20px 0 0;
-  }
-  .quick-add-sheet-body {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
+  .quick-add-sheet { max-width: 720px; border-radius: 24px 24px 0 0; }
+  .quick-add-sheet-body { padding-left: 32px; padding-right: 32px; }
 }
 
 /* ─── Responsive: FAB on mobile, inline card on desktop ───────────────────── */
 
-.desktop-only-add {
-  display: none;
-}
-.mobile-only-fab {
-  display: flex;
-}
+.desktop-only-add { display: none; }
+.mobile-only-fab  { display: flex; }
 
 @media (min-width: 768px) {
-  .desktop-only-add {
-    display: flex;
-  }
-  .mobile-only-fab {
-    display: none;
-  }
+  .desktop-only-add { display: flex; }
+  .mobile-only-fab  { display: none; }
 }

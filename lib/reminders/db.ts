@@ -100,6 +100,10 @@ export async function persistReminderCandidates(
     });
     if (existing) continue;
 
+    const meta: Record<string, unknown> = {};
+    if (c.display_time) meta.display_time = c.display_time;
+    if (c.display_date) meta.display_date = c.display_date;
+
     const reminder = await insertReminder(userId, {
       title:          c.title,
       body:           c.body ?? null,
@@ -108,12 +112,12 @@ export async function persistReminderCandidates(
       task_id:        c.task_id ?? null,
       memory_id:      c.memory_id ?? null,
       scheduled_for:  c.scheduled_for ?? null,
-      scheduled_date: null,
+      scheduled_date: c.display_date ?? null,
       recurrence:     null,
       why_shown:      c.why_shown,
       gentle:         true,
       domains:        (c.domains ?? []) as LifeDomain[],
-      metadata:       {},
+      metadata:       meta,
     });
 
     if (reminder) created.push(reminder);

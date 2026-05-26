@@ -1,13 +1,4 @@
-/**
- * PageHeader — compact editorial identity header used across all pages.
- *
- * Layout matches the reference section cards:
- *   [icon chip]  Title
- *                Subtitle in muted gray
- *
- * The icon chip sits to the LEFT of the title on the same baseline.
- * The subtitle runs full-width below the icon+title row.
- */
+import { space, color, textStyle, radius } from "@/lib/design/tokens";
 
 interface PageHeaderProps {
   icon:     React.ReactNode;
@@ -24,41 +15,13 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <div style={{ paddingBottom: mb }}>
-      {/* ── Icon + Title row ─────────────────────────────────────── */}
-      <div
-        style={{
-          display:     "flex",
-          alignItems:  "center",
-          gap:         10,
-          marginBottom: 5,
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", gap: space[3], marginBottom: space[1] }}>
         {icon}
-
-        <h1
-          style={{
-            fontSize:      24,
-            fontWeight:    700,
-            color:         "#1C1A2E",
-            letterSpacing: "-0.025em",
-            lineHeight:    1,
-            margin:        0,
-          }}
-        >
+        <h1 style={{ ...textStyle("display"), color: color.ink, margin: 0 }}>
           {title}
         </h1>
       </div>
-
-      {/* ── Subtitle — full-width below ───────────────────────────── */}
-      <p
-        style={{
-          fontSize:   13,
-          fontWeight: 400,
-          color:      "#9E9CB0",
-          lineHeight: 1.5,
-          margin:     0,
-        }}
-      >
+      <p style={{ ...textStyle("caption"), color: color.tertiary, margin: 0 }}>
         {subtitle}
       </p>
     </div>
@@ -189,7 +152,7 @@ function Chip({ bg, children }: { bg: string; children: React.ReactNode }) {
       style={{
         width:          32,
         height:         32,
-        borderRadius:   10,
+        borderRadius:   radius.sm,
         background:     bg,
         display:        "flex",
         alignItems:     "center",

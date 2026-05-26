@@ -218,12 +218,15 @@ export function useConversation(): UseConversationResult {
           const loop = data?.os_loop;
           const action = data?.chat_action;
 
-          if (loop && (loop.tasksCreated > 0 || loop.remindersCreated > 0)) {
-            console.log("[chat] items created — broadcasting refresh", loop);
+          // Show confirmation based on ACTUAL persistence, not AI text
+          if (action?.persisted && action.reason === "created") {
+            window.dispatchEvent(new CustomEvent("meridian:todayItemCreated", {
+              detail: action,
+            }));
+          } else if (loop && (loop.tasksCreated > 0 || loop.remindersCreated > 0)) {
             window.dispatchEvent(new CustomEvent("meridian:todayRefresh"));
           }
 
-          // Show confirmation based on ACTUAL persistence, not AI text
           if (action?.persisted && action.reason === "created") {
             const label = action.type === "reminder" ? "Reminder" : action.type === "event" ? "Event" : "Task";
             let confirm = `${label} saved: "${action.title}"`;

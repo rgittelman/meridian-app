@@ -32,6 +32,17 @@ export function buildReminderCandidates(input: {
   // Task-based reminders
   for (const task of input.tasks.filter((t) => t.status === "open")) {
     if (task.due_date === today || task.due_date === tomorrowStr) {
+      // Use the task's actual due time, not current time
+      let scheduled: string;
+      if (task.due_date === tomorrowStr) {
+        scheduled = tomorrowMorning();
+      } else if (task.due_at) {
+        scheduled = task.due_at;
+      } else {
+        scheduled = new Date().toISOString();
+      }
+
+      const meta = (task.metadata ?? {}) as Record<string, unknown>;
       candidates.push({
         title:         task.title,
         body:          task.due_date === tomorrowStr
@@ -39,9 +50,11 @@ export function buildReminderCandidates(input: {
           : "Due today.",
         reminder_type: "task",
         task_id:       task.id,
-        scheduled_for: task.due_date === tomorrowStr ? tomorrowMorning() : new Date().toISOString(),
+        scheduled_for: scheduled,
         why_shown:     `You mentioned: "${task.title.slice(0, 60)}"`,
         domains:       task.domains,
+        display_time:  typeof meta.display_time === "string" ? meta.display_time : undefined,
+        display_date:  typeof meta.display_date === "string" ? meta.display_date : undefined,
       });
     }
 

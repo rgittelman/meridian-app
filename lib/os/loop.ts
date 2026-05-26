@@ -58,7 +58,7 @@ export async function runOSLoop(input: OSLoopInput): Promise<OSLoopResult> {
       }
     }
 
-    // Canonical chat action extraction — single structured result
+    // Chat Intent Router — single canonical classification
     try {
       const action = extractChatAction(input.messages);
       if (action) {
@@ -68,10 +68,10 @@ export async function runOSLoop(input: OSLoopInput): Promise<OSLoopResult> {
           if (persistResult.type === "reminder") result.remindersCreated++;
           else result.tasksCreated++;
         }
-        console.log("[os/loop] chat action:", persistResult);
+        console.log("[os/loop] chat action persisted:", persistResult);
       }
     } catch (err) {
-      console.error("[os/loop] chat action error:", err instanceof Error ? err.message : err);
+      console.error("[os/loop] chat router error:", err instanceof Error ? err.message : err);
     }
 
     // Contextual reminder generation (for due tasks, patterns, etc.)

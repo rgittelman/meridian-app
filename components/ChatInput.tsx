@@ -160,14 +160,14 @@ export default function ChatInput({
             display:   "flex",
             alignItems: "flex-end",
             background: "#FFFFFF",
-            borderRadius: 30,
+            borderRadius: 24,
             border: focused
-              ? "1px solid rgba(108,105,224,0.40)"
-              : "1px solid rgba(0,0,0,0.08)",
+              ? "1px solid rgba(108,105,224,0.30)"
+              : "1px solid rgba(0,0,0,0.05)",
             boxShadow: focused
-              ? "0 0 0 3px rgba(108,105,224,0.08), 0 2px 12px rgba(0,0,0,0.06)"
-              : "0 2px 10px rgba(0,0,0,0.06)",
-            transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+              ? "0 0 0 3px rgba(108,105,224,0.06), 0 2px 16px rgba(0,0,0,0.04)"
+              : "0 2px 12px rgba(0,0,0,0.04)",
+            transition: "border-color 0.25s ease, box-shadow 0.25s ease",
             minHeight:  50,
             overflow:   "hidden",
           }}
@@ -208,7 +208,7 @@ export default function ChatInput({
             style={{
               fontSize:    15,
               lineHeight:  1.5,
-              color:       "#1C1A2E",
+              color:       "#2C2B3D",
               caretColor:  "#6C69E0",
               padding:     "13px 10px 13px 10px",
               minHeight:   50,
@@ -257,12 +257,12 @@ export default function ChatInput({
           onTouchStart={(e) => e.preventDefault()}
           onClick={handleSendTap}
           style={{
-            width:        46,
-            height:       46,
-            borderRadius: "50%",
+            width:        44,
+            height:       44,
+            borderRadius: 14,
             background:   hasText && !disabled
               ? "#6C69E0"
-              : "rgba(108,105,224,0.18)",
+              : "rgba(108,105,224,0.10)",
             display:      "flex",
             alignItems:   "center",
             justifyContent: "center",
