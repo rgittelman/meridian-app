@@ -82,7 +82,18 @@ export default function ChatMessageBubble({
             {message.content || "Something went wrong."}
           </p>
         ) : message.status === "streaming" && !message.content ? (
-          <span style={{ color: "#C4C2D4", fontSize: 15 }}>…</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0", minHeight: 11 }}>
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{
+                  width: 7, height: 7, borderRadius: "50%", background: "#C4C2D4",
+                  display: "block",
+                  animation: `pulse-dot 1.2s ease-in-out ${i * 0.22}s infinite`,
+                }}
+              />
+            ))}
+          </div>
         ) : (
           <MarkdownContent
             content={message.content}
@@ -93,14 +104,16 @@ export default function ChatMessageBubble({
         {isError && onRetry && (
           <button
             onClick={onRetry}
+            className="tap-scale"
             style={{
-              marginTop: 8, fontSize: 12, fontWeight: 600,
+              marginTop: 8, fontSize: 14, fontWeight: 600,
               color: "#6C69E0", background: "rgba(108,105,224,0.08)",
               border: "1px solid rgba(108,105,224,0.15)",
-              borderRadius: 16, padding: "4px 12px", cursor: "pointer",
+              borderRadius: 18, padding: "8px 18px", cursor: "pointer",
+              minHeight: 36,
             }}
           >
-            Retry
+            Try again
           </button>
         )}
       </div>

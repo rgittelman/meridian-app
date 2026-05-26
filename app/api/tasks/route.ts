@@ -25,7 +25,14 @@ export const POST = safeHandler(async function POST(req: NextRequest) {
   const auth = await requireApiAuth();
   if (auth.error) return auth.error;
 
-  let body: { title?: string; task_type?: "hard" | "soft"; due_date?: string; domains?: string[] };
+  let body: {
+    title?:       string;
+    description?: string;
+    task_type?:   "hard" | "soft" | "event";
+    due_date?:    string;
+    due_at?:      string;
+    domains?:     string[];
+  };
   try {
     body = await req.json();
   } catch {
@@ -36,12 +43,12 @@ export const POST = safeHandler(async function POST(req: NextRequest) {
 
   const task = await insertTask(auth.user.id, {
     title:           body.title.trim(),
-    description:     null,
+    description:     body.description?.trim() || null,
     task_type:       body.task_type ?? "soft",
     status:          "open",
     confidence:      1,
     due_date:        body.due_date ?? null,
-    due_at:          null,
+    due_at:          body.due_at ?? null,
     domains:         (body.domains ?? ["productivity"]) as never,
     source_type:     "manual",
     source_id:       null,

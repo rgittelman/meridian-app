@@ -1,13 +1,12 @@
 /**
- * Today — calm intelligence surface.
+ * Today — real items + calm intelligence surface.
  *
- * Data: GET /api/today/intelligence (client fetch with skeleton)
- * Auth: server-side guards; profile name passed to client greeting.
+ * Primary: tasks, reminders, events with quick-add
+ * Secondary: AI intelligence insights
  */
 
 import PageShell from "@/components/PageShell";
-import PageHeader from "@/components/PageHeader";
-import { TodayIcon } from "@/components/PageHeader";
+import TodayItemsList from "@/components/today/TodayItemsList";
 import TodayIntelligenceSurface from "@/components/today/TodayIntelligenceSurface";
 import { getProfileFirstName, requireOnboarding } from "@/lib/auth";
 
@@ -17,13 +16,10 @@ export default async function TodayPage() {
 
   return (
     <PageShell>
-      <PageHeader
-        icon={<TodayIcon />}
-        title="Today"
-        subtitle="Your day, at a glance."
-        mb={16}
-      />
-      <TodayIntelligenceSurface userName={firstName} />
+      <TodayItemsList userName={firstName} />
+      <div style={{ marginTop: 20 }}>
+        <TodayIntelligenceSurface userName={firstName} />
+      </div>
     </PageShell>
   );
 }

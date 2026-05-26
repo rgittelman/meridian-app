@@ -8,6 +8,8 @@
 --   4. supabase/migrations/003_life_os.sql       — tasks, reminders, domain cols
 --   5. supabase/migrations/004_profile_hardening.sql — profile columns + OAuth trigger
 --   6. supabase/migrations/005_delete_cascade_hardening.sql — FK + policy fixes
+--   7. supabase/migrations/006_events_and_manual_reminders.sql — events + manual reminders
+--   8. supabase/migrations/007_memories_is_active.sql — ensure is_active column
 --
 -- Run in Supabase SQL editor or via CLI:
 --   supabase db query < supabase/schema.sql

@@ -71,6 +71,21 @@ export async function updateTaskStatus(
   return !error;
 }
 
+export async function updateTask(
+  userId: string,
+  taskId: string,
+  fields: Record<string, unknown>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tasks")
+    .update(fields)
+    .eq("id", taskId)
+    .eq("user_id", userId);
+
+  return !error;
+}
+
 export async function findSimilarOpenTask(
   userId: string,
   title:  string,

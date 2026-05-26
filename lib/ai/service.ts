@@ -33,11 +33,14 @@ async function resolveProvider(preferred?: AIProvider): Promise<AIProviderInterf
     ? [preferred, ...FALLBACK_ORDER.filter((p) => p !== preferred)]
     : [AI_CONFIG.primaryProvider, ...FALLBACK_ORDER.filter((p) => p !== AI_CONFIG.primaryProvider)];
 
+  const tried: string[] = [];
   for (const name of order) {
     const provider = providers[name];
     if (await provider.isAvailable()) return provider;
+    tried.push(name);
   }
 
+  console.error(`[ai] No provider available. Tried: ${tried.join(", ")}. Set AI_PROVIDER and the corresponding API key.`);
   throw new Error("[ai] No AI provider available");
 }
 
@@ -61,7 +64,12 @@ export async function aiStream(
   preferred?: AIProvider,
 ): Promise<AIStreamResult> {
   const provider = await resolveProvider(preferred);
-  return provider.stream(options);
+  try {
+    return await provider.stream(options);
+  } catch (err) {
+    console.error(`[ai] ${provider.name} stream error:`, err instanceof Error ? err.message : err);
+    throw err;
+  }
 }
 
 /** Convert AI stream to a Web ReadableStream for API responses. */

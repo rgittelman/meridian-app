@@ -4,7 +4,7 @@
 
 import type { LifeDomain } from "@/lib/domains/types";
 
-export type TaskType   = "hard" | "soft";
+export type TaskType   = "hard" | "soft" | "event";
 export type TaskStatus = "open" | "done" | "dismissed" | "snoozed";
 
 export interface Task {

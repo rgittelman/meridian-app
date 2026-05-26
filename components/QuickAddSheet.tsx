@@ -1,0 +1,296 @@
+"use client";
+
+/**
+ * QuickAddSheet — Mobile-first bottom sheet for creating tasks, reminders, and events.
+ * Optimized for one-handed use and fast entry.
+ */
+
+import { useState, useRef, useEffect, useCallback } from "react";
+
+type ItemType = "task" | "reminder" | "event";
+
+export interface EditTarget {
+  id:        string;
+  kind:      "task" | "reminder";
+  title:     string;
+  date?:     string;
+  time?:     string;
+  itemType?: ItemType;
+}
+
+interface QuickAddSheetProps {
+  open:       boolean;
+  onClose:    () => void;
+  onCreated?: () => void;
+  editTarget?: EditTarget | null;
+}
+
+const TYPE_CONFIG: Record<ItemType, { label: string; color: string; placeholder: string }> = {
+  task:     { label: "Task",     color: "#6C69E0", placeholder: "What needs doing?" },
+  reminder: { label: "Reminder", color: "#D4810A", placeholder: "What should you remember?" },
+  event:    { label: "Event",    color: "#3D9A7A", placeholder: "What\u2019s happening?" },
+};
+
+function formatDateForInput(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatTimeForInput(d: Date): string {
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+export default function QuickAddSheet({ open, onClose, onCreated, editTarget }: QuickAddSheetProps) {
+  const [type, setType]       = useState<ItemType>("task");
+  const [title, setTitle]     = useState("");
+  const [date, setDate]       = useState("");
+  const [time, setTime]       = useState("");
+  const [saving, setSaving]   = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isEdit = Boolean(editTarget);
+
+  useEffect(() => {
+    if (open) {
+      if (editTarget) {
+        setTitle(editTarget.title);
+        setDate(editTarget.date || formatDateForInput(new Date()));
+        setTime(editTarget.time || "");
+        setType(editTarget.itemType || (editTarget.kind === "reminder" ? "reminder" : "task"));
+      } else {
+        setTitle("");
+        setDate(formatDateForInput(new Date()));
+        setTime("");
+      }
+      setFeedback(null);
+      setSaving(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open, editTarget]);
+
+  const handleSave = useCallback(async () => {
+    const trimmed = title.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+
+    try {
+      let due_at: string | null = null;
+      if (date && time) {
+        due_at = new Date(`${date}T${time}`).toISOString();
+      }
+
+      if (isEdit && editTarget) {
+        const endpoint = editTarget.kind === "task"
+          ? `/api/tasks/${editTarget.id}`
+          : `/api/reminders/${editTarget.id}`;
+
+        if (editTarget.kind === "task") {
+          const res = await fetch(endpoint, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: trimmed, due_date: date || null, due_at }),
+          });
+          if (!res.ok) throw new Error("Failed to save");
+        } else {
+          await fetch(`/api/reminders/${editTarget.id}`, { method: "DELETE" });
+          const res = await fetch("/api/reminders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: trimmed, scheduled_for: due_at, scheduled_date: date || null,
+            }),
+          });
+          if (!res.ok) throw new Error("Failed to save");
+        }
+
+        setFeedback("Saved");
+      } else if (type === "task" || type === "event") {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title:     trimmed,
+            task_type: type === "event" ? "event" : "soft",
+            due_date:  date || null,
+            due_at:    due_at,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        setFeedback(`${TYPE_CONFIG[type].label} added`);
+      } else {
+        const res = await fetch("/api/reminders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title:          trimmed,
+            scheduled_for:  due_at,
+            scheduled_date: date || null,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        setFeedback(`${TYPE_CONFIG[type].label} added`);
+      }
+
+      onCreated?.();
+      setTimeout(() => {
+        onClose();
+        setFeedback(null);
+      }, 600);
+    } catch {
+      setFeedback("Something went wrong");
+      setSaving(false);
+    }
+  }, [title, type, date, time, saving, onClose, onCreated, isEdit, editTarget]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
+  if (!open) return null;
+
+  const cfg = TYPE_CONFIG[type];
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 90,
+          background: "rgba(0,0,0,0.25)",
+          animation: "fade-up 0.15s ease both",
+        }}
+      />
+
+      {/* Sheet */}
+      <div
+        style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 91,
+          background: "#FFFFFF",
+          borderRadius: "20px 20px 0 0",
+          boxShadow: "0 -4px 32px rgba(0,0,0,0.12)",
+          paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+          animation: "sheet-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both",
+        }}
+      >
+        {/* Handle */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
+          <div style={{
+            width: 36, height: 4, borderRadius: 2,
+            background: "rgba(0,0,0,0.10)",
+          }} />
+        </div>
+
+        <div style={{ padding: "0 20px" }}>
+          {/* Type selector */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {(["task", "reminder", "event"] as ItemType[]).map((t) => {
+              const c = TYPE_CONFIG[t];
+              const active = type === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setType(t)}
+                  className="tap-scale"
+                  style={{
+                    flex: 1, padding: "10px 0",
+                    borderRadius: 12,
+                    border: active ? `1.5px solid ${c.color}` : "1.5px solid rgba(0,0,0,0.08)",
+                    background: active ? `${c.color}10` : "transparent",
+                    color: active ? c.color : "#9E9CB0",
+                    fontSize: 13, fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Title input */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={cfg.placeholder}
+            autoComplete="off"
+            autoCapitalize="sentences"
+            style={{
+              width: "100%", fontSize: 17, fontWeight: 500,
+              color: "#1C1A2E", caretColor: cfg.color,
+              padding: "14px 0", border: "none",
+              borderBottom: "1px solid rgba(0,0,0,0.06)",
+              outline: "none", background: "transparent",
+              letterSpacing: "-0.01em",
+            }}
+          />
+
+          {/* Date + Time row */}
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
+                Date
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                style={{
+                  width: "100%", fontSize: 15, color: "#1C1A2E",
+                  padding: "10px 12px", borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  background: "rgba(0,0,0,0.02)", outline: "none",
+                }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#B0AEC4", fontWeight: 500, display: "block", marginBottom: 4 }}>
+                Time <span style={{ color: "#C4C2D4" }}>(optional)</span>
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                style={{
+                  width: "100%", fontSize: 15, color: "#1C1A2E",
+                  padding: "10px 12px", borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  background: "rgba(0,0,0,0.02)", outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Save button */}
+          <button
+            onClick={handleSave}
+            disabled={!title.trim() || saving}
+            className="tap-scale"
+            style={{
+              width: "100%", marginTop: 18,
+              padding: "14px 0", borderRadius: 14,
+              background: title.trim() ? cfg.color : "rgba(0,0,0,0.06)",
+              color: title.trim() ? "#FFFFFF" : "#C4C2D4",
+              fontSize: 16, fontWeight: 600,
+              border: "none", cursor: title.trim() ? "pointer" : "default",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {feedback ?? (saving ? "Saving…" : isEdit ? "Save changes" : `Add ${cfg.label}`)}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}

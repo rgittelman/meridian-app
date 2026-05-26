@@ -108,6 +108,7 @@ export async function persistReminderCandidates(
       task_id:        c.task_id ?? null,
       memory_id:      c.memory_id ?? null,
       scheduled_for:  c.scheduled_for ?? null,
+      scheduled_date: null,
       recurrence:     null,
       why_shown:      c.why_shown,
       gentle:         true,

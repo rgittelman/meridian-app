@@ -112,11 +112,7 @@ export default function ChatPage() {
               );
             })}
 
-            {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
-              <div style={{ marginTop: 18 }}>
-                <ThinkingIndicator />
-              </div>
-            )}
+            {/* Thinking dots now render inside the streaming assistant bubble */}
           </div>
 
           <div ref={bottomRef} style={{ height: 8 }} />

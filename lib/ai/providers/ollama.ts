@@ -17,9 +17,14 @@ export class OllamaProvider implements AIProviderInterface {
   private baseUrl = AI_CONFIG.ollama.baseUrl;
 
   async isAvailable(): Promise<boolean> {
+    if (this.baseUrl.includes("localhost") || this.baseUrl.includes("127.0.0.1")) {
+      if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+        return false;
+      }
+    }
     try {
       const res = await fetch(`${this.baseUrl}/api/tags`, {
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(1500),
       });
       return res.ok;
     } catch {

@@ -32,7 +32,7 @@ export const AI_CONFIG = {
   maxContextMessages: 30,
 
   /** Timeout for non-streaming AI calls (ms). */
-  timeoutMs: Number(process.env.AI_TIMEOUT_MS ?? 8000),
+  timeoutMs: Number(process.env.AI_TIMEOUT_MS ?? 15000),
 
   /** Max tokens for memory extraction prompts. */
   memoryExtractMaxTokens: 600,

@@ -425,13 +425,8 @@ interface Props {
   userName: string;
 }
 
-export default function TodayIntelligenceSurface({ userName }: Props) {
-  const {
-    data, loading, error,
-    dismissReminder, snoozeReminder, completeReminder, completeTask,
-  } = useTodayIntelligence();
-
-  const name = userName || "there";
+export default function TodayIntelligenceSurface({ userName: _userName }: Props) {
+  const { data, loading, error } = useTodayIntelligence();
 
   if (loading) return <TodaySkeleton />;
 
@@ -445,18 +440,26 @@ export default function TodayIntelligenceSurface({ userName }: Props) {
     );
   }
 
+  const hasInsights =
+    data.gentleObservations.length > 0 ||
+    data.activePriorities.length > 0 ||
+    data.recurringThemes.length > 0 ||
+    data.proactiveObservations.some((o) => o.prompt && o.prompt.length > 15) ||
+    data.emotionalWeatherLabel;
+
+  if (!hasInsights) return null;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <GreetingHeader data={data} userName={name} />
+      <p style={{
+        ...sectionLabel,
+        marginBottom: 0,
+        fontSize: 10,
+        color: "#C4C2D4",
+      }}>
+        MERIDIAN INSIGHTS
+      </p>
       <EmotionalWeatherBar data={data} />
-      <MorningFocusSection items={data.morningFocusItems} onComplete={completeTask} />
-      <ActiveCommitments data={data} onComplete={completeTask} />
-      <ReminderStream
-        reminders={data.pendingReminders}
-        onDismiss={dismissReminder}
-        onSnooze={snoozeReminder}
-        onComplete={completeReminder}
-      />
       <GentleObservations observations={data.gentleObservations} />
       <ActivePriorities priorities={data.activePriorities} />
       <RecurringThemes themes={data.recurringThemes} />

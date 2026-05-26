@@ -39,7 +39,23 @@ export async function getMemoriesForUser(
   if (options.domains?.length)      query = query.overlaps("domains", options.domains);
   if (options.limit)                query = query.limit(options.limit);
 
-  const { data, error } = await query;
+  let { data, error } = await query;
+
+  if (error?.message?.includes("is_active")) {
+    console.warn("[memory/db] is_active column missing, retrying without filter. Run migration 007.");
+    let fallback = supabase
+      .from("memories")
+      .select("*")
+      .eq("user_id", userId)
+      .order("last_reinforced_at", { ascending: false });
+    if (options.categories?.length) fallback = fallback.in("category", options.categories);
+    if (options.domains?.length)    fallback = fallback.overlaps("domains", options.domains);
+    if (options.limit)              fallback = fallback.limit(options.limit);
+    const res = await fallback;
+    data = res.data;
+    error = res.error;
+  }
+
   if (error) {
     console.error("[memory/db] getMemoriesForUser:", error.message);
     return [];

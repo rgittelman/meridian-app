@@ -198,7 +198,6 @@ export default function ChatInput({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            disabled={disabled}
             placeholder=""
             autoFocus
             autoComplete="off"

@@ -1,20 +1,12 @@
 /**
  * Today Insight Generator — Phase 1
  *
- * Calls Ollama server-side at page render time to generate a single
- * ambient insight for the Today page. Falls back silently if Ollama
- * is unavailable or too slow — the page renders fine without it.
- *
- * Timeout is deliberately short (4 s) so it never blocks the page.
+ * Uses the centralized AI service to generate a single ambient insight
+ * for the Today page. Falls back silently if no AI provider is available.
  */
 
 import type { TodayData } from "./today-data";
-
-const OLLAMA_URL = process.env.OLLAMA_URL   ?? "http://localhost:11434";
-const MODEL      = process.env.OLLAMA_MODEL ?? "llama3.2:3b";
-const TIMEOUT_MS = 4_000;
-
-// ─── Prompt ───────────────────────────────────────────────────────────────────
+import { aiComplete, isAIAvailable } from "./ai/service";
 
 function buildPrompt(data: TodayData): string {
   const h       = new Date().getHours();
@@ -47,9 +39,6 @@ Rules:
 - Return ONLY the insight text — no quotes, no preamble.`;
 }
 
-// ─── Fallback pool ────────────────────────────────────────────────────────────
-// Used when Ollama is unavailable. Rotated by hour so it doesn't feel static.
-
 const FALLBACKS = [
   "Your mornings tend to support deeper thinking.",
   "You've protected more uninterrupted time lately.",
@@ -65,31 +54,21 @@ function getFallback(): string {
   return FALLBACKS[new Date().getHours() % FALLBACKS.length];
 }
 
-// ─── Generator ────────────────────────────────────────────────────────────────
-
 /**
  * Returns an AI-generated insight, or a contextual fallback.
  * Never throws — always returns a string.
  */
 export async function generateTodayInsight(data: TodayData): Promise<string> {
   try {
-    const controller = new AbortController();
-    const timer      = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    if (!(await isAIAvailable())) return getFallback();
 
-    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ model: MODEL, prompt: buildPrompt(data), stream: false }),
-      signal:  controller.signal,
+    const result = await aiComplete({
+      messages:    [{ role: "user", content: buildPrompt(data) }],
+      maxTokens:   60,
+      temperature: 0.4,
     });
 
-    clearTimeout(timer);
-
-    if (!res.ok) return getFallback();
-
-    const json = await res.json() as { response?: string };
-    const text = (json.response ?? "").trim().replace(/^["']|["']$/g, "");
-
+    const text = result.content.trim().replace(/^["']|["']$/g, "");
     return text.length > 4 ? text : getFallback();
   } catch {
     return getFallback();

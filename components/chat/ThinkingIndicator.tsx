@@ -2,7 +2,7 @@
 
 export default function ThinkingIndicator() {
   return (
-    <div className="flex items-start" style={{ animation: "fade-up 0.25s ease both" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", animation: "fade-up 0.25s ease both" }}>
       <div style={{
         background: "#FFFFFF",
         borderRadius: "18px 18px 18px 4px",
@@ -14,10 +14,10 @@ export default function ThinkingIndicator() {
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="rounded-full animate-pulse-dot"
             style={{
-              width: 7, height: 7, background: "#C4C2D4",
-              display: "block", animationDelay: `${i * 0.22}s`,
+              width: 7, height: 7, borderRadius: "50%", background: "#C4C2D4",
+              display: "block",
+              animation: `pulse-dot 1.2s ease-in-out ${i * 0.22}s infinite`,
             }}
           />
         ))}

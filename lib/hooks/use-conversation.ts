@@ -105,7 +105,10 @@ export function useConversation(): UseConversationResult {
     });
 
     fetch("/api/conversations?active=true")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load conversations");
+        return r.json();
+      })
       .then((data) => {
         if (data.conversation) {
           setConversationId(data.conversation.id);
@@ -113,13 +116,16 @@ export function useConversation(): UseConversationResult {
           setMessages((data.messages ?? []).map(toChatMessage));
         }
       })
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 
   const ensureConversation = useCallback(async (): Promise<string> => {
     if (conversationId) return conversationId;
-    const res  = await fetch("/api/conversations", { method: "POST" });
+    const res = await fetch("/api/conversations", { method: "POST" });
+    if (!res.ok) throw new Error("Could not start a conversation. Try refreshing.");
     const data = await res.json();
+    if (!data.conversation?.id) throw new Error("Could not start a conversation. Try refreshing.");
     setConversationId(data.conversation.id);
     setConversationTitle(data.conversation.title);
     return data.conversation.id;
@@ -130,15 +136,34 @@ export function useConversation(): UseConversationResult {
     history:   { role: "user" | "assistant"; content: string }[],
     assistantId: string,
   ) => {
-    const res = await fetch("/api/chat", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ conversationId: convId, messages: history }),
-    });
+    setIsStreaming(true);
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: "assistant", content: "", createdAt: new Date(), status: "streaming" },
+    ]);
+
+    let res: Response;
+    try {
+      res = await fetch("/api/chat", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ conversationId: convId, messages: history }),
+        signal:  AbortSignal.timeout(90_000),
+      });
+    } catch (fetchErr) {
+      setIsStreaming(false);
+      const msg = fetchErr instanceof DOMException && fetchErr.name === "TimeoutError"
+        ? "Request timed out. Try again."
+        : "Network error — check your connection.";
+      throw new Error(msg);
+    }
 
     if (!res.ok || !res.body) {
+      setIsStreaming(false);
       const errBody = await res.json().catch(() => null);
-      throw new Error(errBody?.error ?? "Stream failed");
+      if (res.status === 401) throw new Error("Session expired. Please sign in again.");
+      if (res.status === 503) throw new Error(errBody?.error ?? "AI service is temporarily unavailable.");
+      throw new Error(errBody?.error ?? "Something went wrong. Try again.");
     }
 
     setMemoryMeta({
@@ -149,22 +174,23 @@ export function useConversation(): UseConversationResult {
       patternCount: Number(res.headers.get("X-Pattern-Count") ?? 0) || undefined,
     });
 
-    setIsStreaming(true);
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantId, role: "assistant", content: "", createdAt: new Date(), status: "streaming" },
-    ]);
-
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
     let finalContent = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const token = decoder.decode(value, { stream: true });
-      finalContent += token;
-      append(assistantId, token);
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const token = decoder.decode(value, { stream: true });
+        finalContent += token;
+        append(assistantId, token);
+      }
+    } catch {
+      if (!finalContent.trim()) {
+        setIsStreaming(false);
+        throw new Error("Connection interrupted. Try again.");
+      }
     }
 
     flush();
@@ -180,7 +206,6 @@ export function useConversation(): UseConversationResult {
 
     setIsStreaming(false);
 
-    // Memory ingestion (fire-and-forget)
     const forIngest = [...history, { role: "assistant" as const, content: finalContent }];
     if (forIngest.length >= 2) {
       fetch("/api/memory/ingest", {
@@ -189,9 +214,6 @@ export function useConversation(): UseConversationResult {
         body:    JSON.stringify({ messages: forIngest, conversationId: convId }),
       })
         .then((r) => r.json())
-        .then((d) => {
-          if (process.env.NODE_ENV === "development") console.log("[memory:ingest]", d);
-        })
         .catch(() => {});
     }
 
@@ -215,12 +237,15 @@ export function useConversation(): UseConversationResult {
     try {
       const convId = await ensureConversation();
 
-      // Persist user message
-      await fetch(`/api/conversations/${convId}/messages`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ role: "user", content: trimmed }),
-      });
+      try {
+        await fetch(`/api/conversations/${convId}/messages`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ role: "user", content: trimmed }),
+        });
+      } catch {
+        // Message persist failed, but we can still try to get a response
+      }
 
       setMessages((prev) =>
         prev.map((m) => m.id === userId ? { ...m, status: "sent" } : m),
@@ -231,13 +256,14 @@ export function useConversation(): UseConversationResult {
         .map((m) => ({ role: m.role, content: m.content }));
 
       await streamResponse(convId, history, crypto.randomUUID());
-    } catch {
+    } catch (err) {
       setIsStreaming(false);
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Try again.";
       setMessages((prev) => [
         ...prev.filter((m) => m.status !== "streaming"),
         {
           id: crypto.randomUUID(), role: "assistant",
-          content: "I couldn't connect right now. Try again in a moment.",
+          content: errorMessage,
           createdAt: new Date(), status: "error",
           retryPayload: trimmed,
         },
@@ -248,23 +274,30 @@ export function useConversation(): UseConversationResult {
   const retryLast = useCallback(async () => {
     const text = lastUserTextRef.current;
     if (!text) return;
+    setIsStreaming(false);
     setMessages((prev) => prev.filter((m) => m.status !== "error"));
     await sendMessage(text);
   }, [sendMessage]);
 
   const loadConversation = useCallback(async (id: string) => {
     setIsLoading(true);
-    const res  = await fetch(`/api/conversations/${id}`);
-    const data = await res.json();
-    setConversationId(data.conversation.id);
-    setConversationTitle(data.conversation.title);
-    setMessages((data.messages ?? []).map(toChatMessage));
-    await fetch(`/api/conversations/${id}`, {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ set_active: true }),
-    });
-    setIsLoading(false);
+    try {
+      const res  = await fetch(`/api/conversations/${id}`);
+      if (!res.ok) throw new Error("Failed to load conversation");
+      const data = await res.json();
+      setConversationId(data.conversation.id);
+      setConversationTitle(data.conversation.title);
+      setMessages((data.messages ?? []).map(toChatMessage));
+      fetch(`/api/conversations/${id}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ set_active: true }),
+      }).catch(() => {});
+    } catch {
+      // Conversation load failed — stay on current state
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const startNewChat = useCallback(async () => {
