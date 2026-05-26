@@ -9,12 +9,20 @@
  *   The redirect URL to whitelist is: {SITE_URL}/auth/callback
  */
 
-import { useState }        from "react";
+import { Suspense, useState } from "react";
 import Link                 from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient }     from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const supabase     = createClient();
