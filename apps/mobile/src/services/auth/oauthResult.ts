@@ -1,5 +1,7 @@
 import * as Linking from 'expo-linking';
 import type * as AuthSession from 'expo-auth-session';
+import { WebBrowserResultType } from 'expo-web-browser';
+import type { WebBrowserAuthSessionResult } from 'expo-web-browser';
 
 import { logCalendarDebug } from '@/services/calendar/calendarDebug';
 
@@ -92,26 +94,18 @@ export function parseGoogleOAuthCallback(
 
 export function mapWebBrowserResult(
   request: AuthSession.AuthRequest,
-  result: AuthSession.AuthSessionResult,
+  result: WebBrowserAuthSessionResult,
 ): GoogleOAuthPromptResult {
-  if (result.type === 'cancel' || result.type === 'dismiss' || result.type === 'locked') {
-    return { outcome: result.type };
-  }
-
-  if (result.type === 'success' && result.url) {
+  // WebBrowserRedirectResult — the browser returned a redirect URL
+  if (result.type === 'success') {
     return parseGoogleOAuthCallback(request, result.url);
   }
 
-  if (result.type === 'error' && result.url) {
-    const parsed = parseGoogleOAuthCallback(request, result.url);
-    if (parsed.outcome === 'success') {
-      return parsed;
-    }
-  }
+  // WebBrowserResult — non-redirect outcomes (enum-typed)
+  if (result.type === WebBrowserResultType.CANCEL) return { outcome: 'cancel' };
+  if (result.type === WebBrowserResultType.DISMISS) return { outcome: 'dismiss' };
+  if (result.type === WebBrowserResultType.LOCKED) return { outcome: 'locked' };
 
-  const message =
-    result.type === 'error'
-      ? result.error?.message ?? result.params?.error ?? 'OAuth error'
-      : `OAuth ${result.type}`;
-  return { outcome: 'error', message };
+  // OPENED is handled before this function is called in googleOAuth.ts
+  return { outcome: 'error', message: `OAuth closed unexpectedly (${String(result.type)})` };
 }
