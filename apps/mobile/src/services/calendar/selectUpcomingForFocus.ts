@@ -21,7 +21,7 @@ function isChildFamilyEvent(event: MeridianCalendarEvent): boolean {
 
 function isHockeyOrChildSports(event: MeridianCalendarEvent): boolean {
   const blob = `${event.rawTitle ?? ''} ${event.title} ${event.displayTitle ?? ''}`;
-  return /\bhockey\b/i.test(blob) || /\b(?:hudson|quinn)\b/i.test(blob);
+  return /\bhockey\b/i.test(blob) || /\b(?:grace|reagan|hudson|quinn)\b/i.test(blob);
 }
 
 function scoreEvent(event: MeridianCalendarEvent, now: number): number {

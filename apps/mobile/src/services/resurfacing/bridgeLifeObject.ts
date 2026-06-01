@@ -144,7 +144,10 @@ export function bridgeLifeObject(
   const isFamilyCommitment =
     parse.category?.value === 'family' && parse.people.length > 0;
 
-  const isFinancial = parse.category?.value === 'financial';
+  const FINANCIAL_KEYWORDS = /\b(?:expense[s]?|reimbursement|invoice[s]?|payment[s]?|receipt[s]?)\b/i;
+  const isFinancial =
+    parse.category?.value === 'financial' ||
+    FINANCIAL_KEYWORDS.test(obj.raw);
 
   // Stress prevention: high emotional weight item due within a week
   const isStressPrevention =

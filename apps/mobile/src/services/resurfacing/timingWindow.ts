@@ -61,9 +61,10 @@ export function deriveDueWindow(
   for (const [day, idx] of Object.entries(DAY_INDEX)) {
     if (label.includes(day)) {
       const today = new Date().getDay();
-      const daysUntil = ((idx - today + 7) % 7) || 7;
-      if (daysUntil <= 1) return 'TOMORROW';
-      if (daysUntil <= 5) return 'THIS_WEEK';
+      // rawDays === 0 means same-day capture; treat as TODAY, not next week.
+      const rawDays = (idx - today + 7) % 7;
+      if (rawDays === 0) return 'TODAY';
+      if (rawDays === 1) return 'TOMORROW';
       return 'THIS_WEEK';
     }
   }
@@ -133,6 +134,7 @@ export function getTimingWindow(input: TimingWindowInput): ResurfacingTimingWind
     currentHour,
     isFamilyCommitment,
     isFinancial,
+    isStressPrevention,
     ageHours,
     isChildMorningCommitment = false,
   } = input;
@@ -162,6 +164,8 @@ export function getTimingWindow(input: TimingWindowInput): ResurfacingTimingWind
     if (isChildMorningCommitment && currentHour >= 18) return 'prep';
     // Family logistics due tomorrow — afternoon today is the prep window
     if (isFamilyCommitment && currentHour >= 13 && currentHour <= 18) return 'prep';
+    // Stress-prevention items surface in prep even outside standard hours
+    if (isStressPrevention) return 'prep';
     // Evening → still a good prep window for tomorrow
     if (currentHour >= 7 && currentHour <= 22) return 'prep';
     return 'today'; // fallback — still worth surfacing
@@ -169,6 +173,8 @@ export function getTimingWindow(input: TimingWindowInput): ResurfacingTimingWind
 
   // THIS_WEEK items
   if (dueWindow === 'THIS_WEEK') {
+    // Stress-prevention items: widen the surfacing window beyond financial-only
+    if (isStressPrevention && currentHour >= 7 && currentHour <= 21) return 'low-pressure';
     // Financial in morning → good low-stress moment
     if (isFinancial && currentHour >= 8 && currentHour <= 12) return 'low-pressure';
     // Older items (captured > 24h ago) → time to resurface

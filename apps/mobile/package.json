@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "test:capture": "npx tsx --test src/services/capture/captureIntelligenceAudit.test.ts",
-    "test:calendar": "npx tsx --test src/services/calendar/calendarIntelligenceCorrection.test.ts"
+    "test:calendar": "npx tsx --test src/services/calendar/calendarIntelligenceCorrection.test.ts",
+    "test:focus": "npx tsx --test src/services/resurfacing/focusIntelligenceV1.test.ts"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
