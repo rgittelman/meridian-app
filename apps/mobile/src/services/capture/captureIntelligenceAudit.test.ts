@@ -242,4 +242,184 @@ describe('capture intelligence QA fixtures', () => {
     const audit = auditCaptureIntelligence(item, fridayAfternoon);
     assert.equal(audit.propagatedToFocus, true);
   });
+
+  // ── Fix 1: "reminder to" is a dictation prefix, not recurrence ─────────────
+
+  it('Fix 1 — "reminder to" prefix does not set isRoutine, capture promotes normally', () => {
+    const pickupAudit = auditRawCaptureText(
+      'Reminder to pick up Grace Friday at 5',
+      CAPTURE_QA_REFERENCE,
+      'reminder-pickup',
+    );
+    assert.equal(pickupAudit.promotionEligible, true, 'pickup should promote');
+    assert.equal(pickupAudit.propagatedToPlan, true, 'should appear on Plan');
+    assert.equal(pickupAudit.promotionRejectionReason, null, 'no rejection reason');
+    assert.equal(pickupAudit.inferredDomain, 'family', 'domain=family');
+
+    const expenseAudit = auditRawCaptureText(
+      'Reminder to submit expense report before Thursday',
+      CAPTURE_QA_REFERENCE,
+      'reminder-expense',
+    );
+    assert.equal(expenseAudit.promotionEligible, true, 'expense report should promote');
+    assert.equal(expenseAudit.propagatedToPlan, true, 'should appear on Plan');
+    assert.equal(expenseAudit.promotionRejectionReason, null, 'no rejection reason');
+
+    // True recurrence signals must still block promotion
+    const trueRecurring = auditRawCaptureText(
+      'Bring Hudson skates every Monday',
+      CAPTURE_QA_REFERENCE,
+      'recurring-check',
+    );
+    assert.equal(trueRecurring.promotionEligible, false, 'every Monday is recurring');
+    assert.equal(
+      trueRecurring.promotionRejectionReason,
+      'recurring_not_specific_instance',
+      'rejected as recurring',
+    );
+  });
+
+  // ── Fix 2: "started [word]" without health vocabulary is not Health ─────────
+
+  it('Fix 2 — "started planning/working/reviewing" does not classify as Health', () => {
+    const cases = [
+      { id: 'started-planning', raw: 'Started planning the Q3 budget review' },
+      { id: 'started-working', raw: 'I started working on the store visit deck' },
+      { id: 'started-reviewing', raw: 'We started reviewing invoices this week' },
+    ];
+    for (const { id, raw } of cases) {
+      const audit = auditRawCaptureText(raw, CAPTURE_QA_REFERENCE, id);
+      assert.notEqual(audit.inferredDomain, 'health', `${id}: should not be health`);
+    }
+
+    // Medical co-signal must still trigger Health
+    const medAudit = auditRawCaptureText(
+      'Started new medication Friday',
+      CAPTURE_QA_REFERENCE,
+      'started-medication',
+    );
+    assert.equal(medAudit.inferredDomain, 'health', 'started medication → health');
+    assert.equal(medAudit.promotionEligible, true, 'started medication + named day should promote');
+
+    // Domain check only — "started therapy" is a note-style entry; action verb not required
+    const therapyAudit = auditRawCaptureText(
+      'Started physical therapy Monday',
+      CAPTURE_QA_REFERENCE,
+      'started-therapy',
+    );
+    assert.equal(therapyAudit.inferredDomain, 'health', 'started physical therapy → health');
+  });
+
+  // ── Fix 3: bare "board" does not override Work with Community ───────────────
+
+  it('Fix 3 — work "board" contexts stay Work domain; BFSC/swim board stays Community', () => {
+    const workCases = [
+      {
+        id: 'board-presentation',
+        raw: 'Board presentation to leadership team next Wednesday at 9am',
+      },
+      { id: 'bloomingdales-board', raw: "Bloomingdale's board call Friday at 2pm" },
+      { id: 'board-deck', raw: 'Review board deck before Monday' },
+    ];
+    for (const { id, raw } of workCases) {
+      const audit = auditRawCaptureText(raw, CAPTURE_QA_REFERENCE, id);
+      assert.notEqual(audit.inferredDomain, 'community', `${id}: must not be community`);
+    }
+
+    // BFSC/swim board still → Community
+    const bfsc = auditRawCaptureText(
+      'BFSC board meeting Tuesday at 7pm',
+      CAPTURE_QA_REFERENCE,
+      'bfsc-board',
+    );
+    assert.equal(bfsc.inferredDomain, 'community', 'BFSC board → community');
+
+    const swimClub = auditRawCaptureText(
+      'Swim club board meeting Tuesday at 7pm',
+      CAPTURE_QA_REFERENCE,
+      'swim-club-board',
+    );
+    assert.equal(swimClub.inferredDomain, 'community', 'swim club board → community');
+  });
+
+  // ── Fix 4: bare "appointment" without medical context is not Health ─────────
+
+  it('Fix 4 — work/client appointments are not Health; doctor/dentist appointments are', () => {
+    const nonHealthCases = [
+      { id: 'sales-appt', raw: 'Sales appointment Monday at 2pm' },
+      { id: 'client-appt', raw: 'Client appointment Wednesday at 10' },
+      { id: 'store-appt', raw: 'Store appointment Thursday morning' },
+    ];
+    for (const { id, raw } of nonHealthCases) {
+      const audit = auditRawCaptureText(raw, CAPTURE_QA_REFERENCE, id);
+      assert.notEqual(audit.inferredDomain, 'health', `${id}: must not be health`);
+    }
+
+    // Medical appointments still → Health
+    const dentist = auditRawCaptureText(
+      'Dentist appointment next Tuesday at 9am',
+      CAPTURE_QA_REFERENCE,
+      'dentist-appt',
+    );
+    assert.equal(dentist.inferredDomain, 'health', 'dentist appointment → health');
+
+    const doctor = auditRawCaptureText(
+      'Doctor appointment Monday at 11',
+      CAPTURE_QA_REFERENCE,
+      'doctor-appt',
+    );
+    assert.equal(doctor.inferredDomain, 'health', 'doctor appointment → health');
+  });
+
+  // ── Fix 5: weekday + time-of-day window captures approximate clock ──────────
+
+  it('Fix 5 — weekday morning/afternoon/evening resolved with correct approximate time', () => {
+    const afternoon = auditRawCaptureText(
+      'Reagan cheer practice Friday afternoon',
+      CAPTURE_QA_REFERENCE,
+      'reagan-cheer-afternoon',
+    );
+    assert.equal(afternoon.promotionEligible, true, 'afternoon capture should promote');
+    assert.equal(afternoon.propagatedToPlan, true, 'should appear on Plan');
+    assert.equal(afternoon.inferredDomain, 'family', 'domain=family');
+    assert.ok(
+      afternoon.parsedTime?.includes('2:'),
+      `afternoon parsedTime "${afternoon.parsedTime}" should include 2: (2:00 PM ~)`,
+    );
+
+    const morning = auditRawCaptureText(
+      'Grace volleyball Tuesday morning',
+      CAPTURE_QA_REFERENCE,
+      'grace-volleyball-morning',
+    );
+    assert.equal(morning.promotionEligible, true, 'morning capture should promote');
+    assert.ok(
+      morning.parsedTime?.includes('9:'),
+      `morning parsedTime "${morning.parsedTime}" should include 9: (9:00 AM ~)`,
+    );
+
+    const evening = auditRawCaptureText(
+      'BFSC board meeting Thursday evening',
+      CAPTURE_QA_REFERENCE,
+      'bfsc-thursday-evening',
+    );
+    assert.equal(evening.promotionEligible, true, 'evening capture should promote');
+    assert.equal(evening.inferredDomain, 'community', 'domain=community');
+    assert.ok(
+      evening.parsedTime?.includes('6:'),
+      `evening parsedTime "${evening.parsedTime}" should include 6: (6:00 PM ~)`,
+    );
+
+    // "night" already worked; confirm it's unaffected by the new pattern
+    const night = auditRawCaptureText(
+      'Reagan cheer Thursday night',
+      CAPTURE_QA_REFERENCE,
+      'reagan-cheer-night',
+    );
+    assert.equal(night.promotionEligible, true, 'night capture should still promote');
+    assert.ok(
+      night.parsedTime?.includes('7:'),
+      `night parsedTime "${night.parsedTime}" should include 7: (7:00 PM ~)`,
+    );
+  });
 });

@@ -38,6 +38,15 @@ const PATTERNS: TimingPattern[] = [
     label: (m) => `${m[1].toLowerCase()} night`,
   },
 
+  // Weekday + time-of-day window — "Friday afternoon", "Tuesday morning", "Wednesday evening"
+  // Placed after "Weekday night" (which is already handled) and before standalone day names.
+  {
+    regex:
+      /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(morning|afternoon|evening)\b/i,
+    confidence: 'high',
+    label: (m) => `${m[1].toLowerCase()} ${m[2].toLowerCase()}`,
+  },
+
   // Day at noon
   {
     regex:

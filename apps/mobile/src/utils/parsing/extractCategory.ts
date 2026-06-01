@@ -44,7 +44,7 @@ const SIGNALS: CategorySignals = {
   health: [
     'doctor', 'dentist', 'gym', 'workout', 'exercise', 'medicine',
     'prescription', 'refill', 'therapy', 'therapist', 'checkup', 'lab',
-    'blood', 'physical', 'appointment', 'vitamin', 'sleep',
+    'blood', 'physical', 'vitamin', 'sleep',
   ],
   personal: [
     'birthday', 'gift', 'present', 'friend', 'read', 'book', 'movie',

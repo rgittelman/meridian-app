@@ -286,4 +286,145 @@ export const CAPTURE_INTELLIGENCE_FIXTURES: CaptureQaFixture[] = [
       rejectionReason: 'no_timing',
     },
   },
+
+  // ── Fix 1: "reminder to" is a dictation prefix, not recurrence ───────────────
+
+  {
+    id: 'reminder-to-pickup',
+    group: 'family',
+    raw: 'Reminder to pick up Grace Friday at 5',
+    expect: {
+      inferredDomain: 'family',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      inferredPeople: ['Grace'],
+      rejectionReason: null,
+    },
+  },
+  {
+    id: 'reminder-to-expense-report',
+    group: 'work',
+    raw: 'Reminder to submit expense report before Thursday',
+    expect: {
+      inferredDomain: 'work',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      rejectionReason: null,
+    },
+  },
+
+  // ── Fix 2: "started [verb/noun]" without health co-signal is not Health ───────
+
+  {
+    id: 'work-started-planning-not-health',
+    group: 'work',
+    raw: 'Started planning the Q3 budget review',
+    expect: {
+      inferredDomain: 'work',
+      promotionEligible: false,
+      propagatedToPlan: false,
+      propagatedToLife: true,
+      rejectionReason: 'no_timing',
+    },
+  },
+  {
+    id: 'health-started-medication',
+    group: 'health',
+    raw: 'Started new medication Friday',
+    expect: {
+      inferredDomain: 'health',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      rejectionReason: null,
+    },
+  },
+
+  // ── Fix 3: bare "board" without BFSC/swim/pool co-signal is Work, not Community
+
+  {
+    id: 'work-board-presentation',
+    group: 'work',
+    raw: 'Board presentation to leadership team next Wednesday at 9am',
+    expect: {
+      inferredDomain: 'work',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      rejectionReason: null,
+    },
+  },
+  {
+    id: 'community-swim-club-board',
+    group: 'community',
+    raw: 'Swim club board meeting Tuesday at 7pm',
+    expect: {
+      inferredDomain: 'community',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      rejectionReason: null,
+    },
+  },
+
+  // ── Fix 4: bare "appointment" without medical co-signal is not Health ─────────
+
+  {
+    id: 'work-sales-appointment',
+    group: 'work',
+    raw: 'Sales appointment Monday at 2pm',
+    expect: {
+      inferredDomain: 'work',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      parsedTimeIncludes: '2:',
+      rejectionReason: null,
+    },
+  },
+
+  // ── Fix 5: weekday + time-of-day window ──────────────────────────────────────
+
+  {
+    id: 'family-reagan-cheer-afternoon',
+    group: 'family',
+    raw: 'Reagan cheer practice Friday afternoon',
+    expect: {
+      inferredDomain: 'family',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      inferredPeople: ['Reagan'],
+      parsedTimeIncludes: '2:',
+      rejectionReason: null,
+    },
+  },
+  {
+    id: 'family-grace-volleyball-tuesday-morning',
+    group: 'family',
+    raw: 'Grace volleyball Tuesday morning',
+    expect: {
+      inferredDomain: 'family',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      inferredPeople: ['Grace'],
+      parsedTimeIncludes: '9:',
+      rejectionReason: null,
+    },
+  },
+  {
+    id: 'community-bfsc-thursday-evening',
+    group: 'community',
+    raw: 'BFSC board meeting Thursday evening',
+    expect: {
+      inferredDomain: 'community',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      rejectionReason: null,
+    },
+  },
 ];

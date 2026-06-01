@@ -9,7 +9,7 @@ import { extractEmotionalWeight, extractUrgency } from './extractUrgency';
 
 const ROUTINE_SIGNALS = [
   'every week', 'every day', 'every month', 'weekly', 'daily', 'monthly',
-  'each week', 'each day', 'recurring', 'reminder to', 'always need',
+  'each week', 'each day', 'recurring', 'always need',
   'every monday', 'every tuesday', 'every wednesday', 'every thursday',
   'every friday', 'every saturday', 'every sunday', 'on mondays', 'on monday',
 ];
