@@ -3,14 +3,16 @@
 /**
  * TodayItemsList — The Today screen.
  *
- * "What matters right now?" — glanceable, calm, premium.
- * Uses Meridian design system tokens and Framer Motion throughout.
+ * "What matters right now?" — emotionally intelligent daily operating system.
+ * DailyBriefing header + date-grouped items + momentum feedback.
  */
 
 import { useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTodayItems } from "@/lib/hooks/use-today-items";
+import { useTodayIntelligence } from "@/lib/hooks/use-today-intelligence";
+import DailyBriefing, { getItemIcon } from "@/components/today/DailyBriefing";
 import QuickAddSheet from "@/components/QuickAddSheet";
 import type { EditTarget } from "@/components/QuickAddSheet";
 import UndoToast from "@/components/UndoToast";
@@ -20,10 +22,10 @@ import type { Task } from "@/lib/tasks/types";
 import type { Reminder } from "@/lib/reminders/types";
 import {
   space, color, shadow, radius, motion as m,
-  textStyle, kindColor, bucketStyle,
+  textStyle, kindColor,
 } from "@/lib/design/tokens";
 import {
-  Text, Surface, Section, CheckCircle, KindDot, PillButton, Backdrop,
+  Text, Surface, CheckCircle, KindDot, PillButton, Backdrop,
 } from "@/lib/design/primitives";
 
 // ── Delete confirmation ──────────────────────────────────────────────────────
@@ -273,6 +275,52 @@ function groupByDate(items: TodayItem[]): DateGroup[] {
     .map((b) => ({ bucket: b, label: BUCKET_LABELS[b], items: buckets.get(b)! }));
 }
 
+// ── Section accent colors ────────────────────────────────────────────────────
+
+const SECTION_STYLE: Record<DateBucket, {
+  labelColor: string;
+  cardBg: string;
+  cardBorder: string;
+  opacity: number;
+}> = {
+  overdue: {
+    labelColor: color.overdue,
+    cardBg:     color.overdueSoft,
+    cardBorder: "rgba(201,115,108,0.15)",
+    opacity:    1,
+  },
+  today: {
+    labelColor: color.ink,
+    cardBg:     color.surface,
+    cardBorder: color.borderSubtle,
+    opacity:    1,
+  },
+  tomorrow: {
+    labelColor: color.secondary,
+    cardBg:     color.surface,
+    cardBorder: color.borderSubtle,
+    opacity:    1,
+  },
+  this_week: {
+    labelColor: color.tertiary,
+    cardBg:     color.surface,
+    cardBorder: color.borderSubtle,
+    opacity:    0.96,
+  },
+  later: {
+    labelColor: color.ghost,
+    cardBg:     color.surface,
+    cardBorder: color.borderSubtle,
+    opacity:    0.9,
+  },
+  no_date: {
+    labelColor: color.ghost,
+    cardBg:     color.surface,
+    cardBorder: color.borderSubtle,
+    opacity:    0.9,
+  },
+};
+
 // ── SwipeRow ─────────────────────────────────────────────────────────────────
 
 const SWIPE_COMMIT = 72;
@@ -467,12 +515,6 @@ function SwipeRow({ children, onSwipeRight, onEdit, onDelete }: {
 
 // ── Item Row ─────────────────────────────────────────────────────────────────
 
-const KIND_LABELS: Record<TodayItem["kind"], string> = {
-  task: "to do",
-  event: "event",
-  reminder: "reminder",
-};
-
 function ItemRow({ item, timeLabel, onAction, onDelete, onEdit, completing }: {
   item: TodayItem;
   timeLabel: string | null;
@@ -483,6 +525,7 @@ function ItemRow({ item, timeLabel, onAction, onDelete, onEdit, completing }: {
 }) {
   const kc = kindColor[item.kind];
   const isReminder = item.kind === "reminder";
+  const icon = getItemIcon(item.title);
 
   return (
     <SwipeRow onSwipeRight={onAction} onEdit={onEdit} onDelete={onDelete}>
@@ -495,35 +538,35 @@ function ItemRow({ item, timeLabel, onAction, onDelete, onEdit, completing }: {
           padding: `${space[3]}px ${space[4]}px`,
           display: "flex", alignItems: "center", gap: space[3],
           cursor: onEdit ? "pointer" : undefined,
+          minHeight: 52,
         }}
       >
-        {isReminder ? (
-          <KindDot color={kc.dot} />
-        ) : item.kind === "event" ? (
+        {/* Leading indicator */}
+        {isReminder || item.kind === "event" ? (
           <KindDot color={kc.dot} />
         ) : (
           <CheckCircle checked={false} completing={completing} onToggle={onAction} />
         )}
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Text as="p" style="callout" color={color.ink} css={{ fontWeight: 500 }}>
-            {item.title}
-          </Text>
-          {timeLabel ? (
-            <Text style="footnote" color={color.tertiary}>
-              {timeLabel}
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: space[2] }}>
+            {icon && (
+              <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+            )}
+            <Text as="p" style="body" color={color.ink} truncate css={{ fontWeight: 450 }}>
+              {item.title}
             </Text>
-          ) : (
-            <Text style="micro" color={color.ghost}>
-              {KIND_LABELS[item.kind]}
-            </Text>
+          </div>
+          {timeLabel && (
+            <Text style="footnote" color={color.tertiary}>{timeLabel}</Text>
           )}
         </div>
 
+        {/* Trailing action */}
         {isReminder && (
           <PillButton label="Done" color={color.accent} onClick={(e) => { e.stopPropagation(); onAction(); }} />
         )}
-
         {item.kind === "event" && (
           <CheckCircle checked={false} completing={completing} onToggle={onAction} accentColor={color.success} />
         )}
@@ -542,6 +585,7 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: string) =
         padding: `${space[3]}px ${space[4]}px`,
         display: "flex", alignItems: "center", gap: space[3],
         cursor: "pointer",
+        minHeight: 44,
       }}
     >
       <CheckCircle checked={true} onToggle={() => onReopen(task.id)} />
@@ -557,18 +601,30 @@ function CompletedRow({ task, onReopen }: { task: Task; onReopen: (id: string) =
 
 function SkeletonList() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: space[3] }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: space[4] }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: space[2] }}>
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ background: color.accentSoft, borderRadius: radius.sm, height: 14, width: 120 }}
+        />
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}
+          style={{ background: color.accentSoft, borderRadius: radius.sm, height: 24, width: 220 }}
+        />
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+          style={{ background: color.accentSoft, borderRadius: radius.sm, height: 14, width: 260 }}
+        />
+      </div>
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: i * 0.08 }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 + i * 0.06 }}
           style={{
             background: color.accentSoft,
-            borderRadius: radius.md,
-            height: 52,
-            animation: "shimmer 1.6s ease-in-out infinite",
+            borderRadius: radius.lg,
+            height: 56,
           }}
         />
       ))}
@@ -576,22 +632,32 @@ function SkeletonList() {
   );
 }
 
+// ── Momentum feedback toast ──────────────────────────────────────────────────
+
+function MomentumFeedback({ message }: { message: string | null }) {
+  return (
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={m.spring.gentle}
+          style={{
+            textAlign: "center",
+            padding: `${space[2]}px ${space[4]}px`,
+          }}
+        >
+          <Text style="caption" color={color.accent} css={{ fontWeight: 600 }}>
+            {message}
+          </Text>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ── Main Component ───────────────────────────────────────────────────────────
-
-function greeting(name: string): string {
-  const h = new Date().getHours();
-  if (h < 5)  return `Still up, ${name}?`;
-  if (h < 12) return `Good morning, ${name}.`;
-  if (h < 17) return `Good afternoon, ${name}.`;
-  if (h < 21) return `Good evening, ${name}.`;
-  return `Winding down, ${name}.`;
-}
-
-function formatDate(): string {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
-}
 
 export default function TodayItemsList({ userName }: { userName: string }) {
   const {
@@ -599,11 +665,31 @@ export default function TodayItemsList({ userName }: { userName: string }) {
     completeTask, reopenTask, deleteTask,
     dismissReminder, restoreReminder, deleteReminder,
   } = useTodayItems();
+  const { data: intelligence } = useTodayIntelligence();
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
+  const [momentumMsg, setMomentumMsg] = useState<string | null>(null);
+
+  // ── Momentum feedback messages ──────────────────────────────────────────
+
+  const showMomentum = useCallback((completed: number, total: number) => {
+    const ratio = total > 0 ? completed / total : 0;
+    let msg: string | null = null;
+
+    if (ratio >= 1 && total >= 3) msg = "Everything cleared ✓";
+    else if (ratio >= 0.75 && total >= 3) msg = "Almost there";
+    else if (ratio >= 0.5 && completed >= 3) msg = "Strong momentum";
+    else if (completed === 1 && total >= 3) msg = "First one down";
+
+    if (msg) {
+      setMomentumMsg(msg);
+      setTimeout(() => setMomentumMsg(null), 2200);
+    }
+  }, []);
 
   // ── Handlers ────────────────────────────────────────────────────────────
 
@@ -614,6 +700,9 @@ export default function TodayItemsList({ userName }: { userName: string }) {
     setTimeout(() => {
       completeTask(id);
       setCompletingIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      const newDone = items.completed.length + 1;
+      const total = items.tasks.length + items.events.length + items.reminders.length + newDone;
+      showMomentum(newDone, total);
     }, 400);
     if (task) {
       setUndoAction({
@@ -622,7 +711,7 @@ export default function TodayItemsList({ userName }: { userName: string }) {
         onUndo: () => { reopenTask(id); setUndoAction(null); },
       });
     }
-  }, [items.tasks, items.events, completeTask, reopenTask]);
+  }, [items, completeTask, reopenTask, showMomentum]);
 
   const handleDismiss = useCallback((id: string) => {
     const reminder = items.reminders.find((r) => r.id === id);
@@ -719,11 +808,9 @@ export default function TodayItemsList({ userName }: { userName: string }) {
     else openEdit(item.original as Task);
   }, [openEditReminder, openEdit]);
 
-  // ── Derived state ──────────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────
 
-  const name = userName || "there";
   const totalOpen = items.tasks.length + items.events.length + items.reminders.length;
-
   const allItems: TodayItem[] = [
     ...items.tasks.map(taskToItem),
     ...items.events.map(taskToItem),
@@ -740,22 +827,20 @@ export default function TodayItemsList({ userName }: { userName: string }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={m.ease.default}
-      style={{ display: "flex", flexDirection: "column", gap: space[4] }}
+      style={{ display: "flex", flexDirection: "column", gap: space[5] }}
     >
-      {/* Greeting */}
-      <div style={{ padding: `${space[5]}px ${space[1]}px ${space[2]}px` }}>
-        <Text as="p" style="caption" color={color.placeholder} css={{ marginBottom: space[1] }}>
-          {formatDate()}
-        </Text>
-        <Text as="h1" style="display" color={color.ink} css={{ marginBottom: space[1] }}>
-          {greeting(name)}
-        </Text>
-        <Text as="p" style="callout" color={color.tertiary}>
-          {totalOpen === 0
-            ? "Your day is clear."
-            : `${totalOpen} ${totalOpen === 1 ? "thing" : "things"} on your mind.`}
-        </Text>
-      </div>
+      {/* Daily Briefing header */}
+      <DailyBriefing
+        userName={userName}
+        tasks={items.tasks}
+        events={items.events}
+        reminders={items.reminders}
+        completed={items.completed}
+        intelligence={intelligence}
+      />
+
+      {/* Momentum feedback */}
+      <MomentumFeedback message={momentumMsg} />
 
       {/* Quick add — desktop only */}
       <motion.button
@@ -785,60 +870,64 @@ export default function TodayItemsList({ userName }: { userName: string }) {
       </motion.button>
 
       {/* Date-grouped items */}
-      <AnimatePresence mode="popLayout">
-        {dateGroups.map((group, gi) => {
-          const bs = bucketStyle[group.bucket];
-          return (
-            <motion.section
-              key={group.bucket}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...m.ease.default, delay: gi * 0.04 }}
-            >
-              <div style={{
-                display: "flex", alignItems: "baseline",
-                paddingLeft: space[1], marginBottom: space[2],
-              }}>
-                <Text style="caption" color={bs.label}>
-                  {group.label}
-                  {group.bucket === "overdue" && (
-                    <Text as="span" style="caption" color={bs.label} css={{ fontWeight: 400, opacity: 0.7 }}>
-                      {" "}· needs attention
-                    </Text>
-                  )}
-                </Text>
-              </div>
-
-              <Surface
-                elevation="card"
-                rounded="lg"
-                css={{
-                  opacity: bs.opacity,
-                  ...(group.bucket === "overdue" ? {
-                    border: `1px solid ${color.overdueSoft.replace("0.06", "0.15")}`,
-                    background: color.overdueSoft,
-                  } : {}),
-                }}
+      <div style={{ display: "flex", flexDirection: "column", gap: space[5] }}>
+        <AnimatePresence mode="popLayout">
+          {dateGroups.map((group, gi) => {
+            const ss = SECTION_STYLE[group.bucket];
+            return (
+              <motion.section
+                key={group.bucket}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...m.ease.default, delay: gi * 0.04 }}
               >
-                {group.items.map((item, i) => (
-                  <div key={item.id} style={{
-                    borderBottom: i < group.items.length - 1 ? `1px solid ${color.borderSubtle}` : "none",
-                  }}>
-                    <ItemRow
-                      item={item}
-                      timeLabel={group.bucket === "today" ? getItemTimeOnly(item) : getItemTimeContextual(item)}
-                      onAction={() => handleItemAction(item)}
-                      onDelete={() => handleItemDelete(item)}
-                      onEdit={() => handleItemEdit(item)}
-                      completing={completingIds.has(item.id)}
-                    />
-                  </div>
-                ))}
-              </Surface>
-            </motion.section>
-          );
-        })}
-      </AnimatePresence>
+                <div style={{
+                  display: "flex", alignItems: "baseline",
+                  paddingLeft: space[1], marginBottom: space[2],
+                }}>
+                  <Text style="caption" color={ss.labelColor}>
+                    {group.label}
+                    {group.bucket === "overdue" && (
+                      <Text as="span" style="caption" color={ss.labelColor} css={{ fontWeight: 400, opacity: 0.7 }}>
+                        {" "}· needs attention
+                      </Text>
+                    )}
+                  </Text>
+                  <div style={{ flex: 1 }} />
+                  <Text style="micro" color={color.ghost}>
+                    {group.items.length}
+                  </Text>
+                </div>
+
+                <Surface
+                  elevation="card"
+                  rounded="lg"
+                  bg={ss.cardBg}
+                  css={{
+                    opacity: ss.opacity,
+                    border: `1px solid ${ss.cardBorder}`,
+                  }}
+                >
+                  {group.items.map((item, i) => (
+                    <div key={item.id} style={{
+                      borderBottom: i < group.items.length - 1 ? `1px solid ${color.borderSubtle}` : "none",
+                    }}>
+                      <ItemRow
+                        item={item}
+                        timeLabel={group.bucket === "today" ? getItemTimeOnly(item) : getItemTimeContextual(item)}
+                        onAction={() => handleItemAction(item)}
+                        onDelete={() => handleItemDelete(item)}
+                        onEdit={() => handleItemEdit(item)}
+                        completing={completingIds.has(item.id)}
+                      />
+                    </div>
+                  ))}
+                </Surface>
+              </motion.section>
+            );
+          })}
+        </AnimatePresence>
+      </div>
 
       {/* Empty state */}
       {totalOpen === 0 && items.completed.length === 0 && (
@@ -858,8 +947,25 @@ export default function TodayItemsList({ userName }: { userName: string }) {
 
       {/* Completed */}
       {items.completed.length > 0 && (
-        <Section label="Done today" labelColor={color.ghost}>
-          <Surface>
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ ...m.ease.default, delay: 0.1 }}
+        >
+          <div style={{
+            display: "flex", alignItems: "baseline",
+            paddingLeft: space[1], marginBottom: space[2],
+          }}>
+            <Text style="caption" color={color.ghost}>Done today</Text>
+            <div style={{ flex: 1 }} />
+            <Text style="micro" color={color.ghost}>{items.completed.length}</Text>
+          </div>
+          <Surface
+            elevation="subtle"
+            rounded="lg"
+            bg="rgba(91,168,138,0.025)"
+            css={{ border: `1px solid rgba(91,168,138,0.08)` }}
+          >
             {items.completed.map((task, i) => (
               <div key={task.id} style={{
                 borderBottom: i < items.completed.length - 1 ? `1px solid ${color.borderSubtle}` : "none",
@@ -868,7 +974,7 @@ export default function TodayItemsList({ userName }: { userName: string }) {
               </div>
             ))}
           </Surface>
-        </Section>
+        </motion.section>
       )}
 
       {/* Quick-add sheet */}
@@ -889,32 +995,7 @@ export default function TodayItemsList({ userName }: { userName: string }) {
         />
       )}
 
-      {/* FAB — mobile only */}
-      {!sheetOpen && (
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => { setEditTarget(null); haptic.light(); setSheetOpen(true); }}
-          aria-label="Quick add"
-          className="mobile-only-fab"
-          style={{
-            position: "fixed",
-            bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + ${space[5] * 4}px)`,
-            right: space[4],
-            zIndex: 45,
-            width: 48, height: 48,
-            borderRadius: radius.md,
-            background: color.accent,
-            border: "none",
-            boxShadow: `0 4px 20px rgba(108,105,224,0.25), 0 2px 6px rgba(0,0,0,0.06)`,
-            alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </motion.button>
-      )}
+      {/* Mobile FAB is now unified in ChatFab (PageShell) */}
     </motion.div>
   );
 }

@@ -1,13 +1,12 @@
 /**
- * Today — real items + calm intelligence surface.
+ * Today — the emotional + contextual anchor of the app.
  *
- * Primary: tasks, reminders, events with quick-add
- * Secondary: AI intelligence insights
+ * DailyBriefing + date-grouped items + momentum feedback.
+ * Intelligence is now integrated directly into the briefing header.
  */
 
 import PageShell from "@/components/PageShell";
 import TodayItemsList from "@/components/today/TodayItemsList";
-import TodayIntelligenceSurface from "@/components/today/TodayIntelligenceSurface";
 import { getProfileFirstName, requireOnboarding } from "@/lib/auth";
 
 export default async function TodayPage() {
@@ -17,9 +16,6 @@ export default async function TodayPage() {
   return (
     <PageShell>
       <TodayItemsList userName={firstName} />
-      <div style={{ marginTop: 20 }}>
-        <TodayIntelligenceSurface userName={firstName} />
-      </div>
     </PageShell>
   );
 }
