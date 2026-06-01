@@ -368,4 +368,18 @@ describe('vague-week guard — tests label, not raw text', () => {
     assert.equal(audit.promotionEligible, true);
     assert.notEqual(audit.promotionRejectionReason, 'vague_timing');
   });
+
+  it('rejects "Think about the mortgage options Monday" — vague framing blocks financial+day path', () => {
+    // "mortgage" would match FINANCIAL_COMMITMENT_SIGNALS and "Monday" gives exactDayDetected,
+    // but "think about" is in VAGUE_ONLY_PATTERN — the guard inside the financial deadline path
+    // blocks promotion. Final reason is vague_intent (not vague_timing).
+    const audit = auditRawCaptureText('Think about the mortgage options Monday', JUNE_1_2026);
+    assert.equal(audit.promotionEligible, false);
+    assert.equal(audit.promotionRejectionReason, 'vague_intent');
+  });
+
+  it('"Review payment due tomorrow" still promotes — not regressed', () => {
+    const audit = auditRawCaptureText('Review payment due tomorrow', JUNE_1_2026);
+    assert.equal(audit.promotionEligible, true);
+  });
 });

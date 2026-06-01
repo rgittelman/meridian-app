@@ -12,6 +12,7 @@ import {
   resolveDayStartFromScheduleText,
   scheduleTextFor,
   timingLabel,
+  FINANCIAL_COMMITMENT_SIGNALS,
   VAGUE_ONLY_PATTERN,
   type PromotionEligibilitySignals,
   type PromotionRejectionReason,
@@ -113,6 +114,14 @@ function qualifiesForPromotion(
     if (signals.healthSelfManagement && signals.exactDayDetected) return true;
     if (confidence === 'high' && signals.exactDayDetected && signals.exactClockDetected) return true;
     if (signals.highConfidenceDayOnly) return true;
+    // Financial deadline + named day — "due Thursday", "payment before Friday", "invoice Tuesday".
+    // Medium-confidence day-only captures promote when a financial commitment signal anchors
+    // the intent, provided the capture is not also flagged as vague ("maybe", "think about").
+    if (
+      FINANCIAL_COMMITMENT_SIGNALS.test(item.raw) &&
+      signals.exactDayDetected &&
+      !VAGUE_ONLY_PATTERN.test(item.raw)
+    ) return true;
     if (detectActionableIntent(item)) return true;
     return false;
   }
