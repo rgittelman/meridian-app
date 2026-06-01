@@ -84,6 +84,32 @@ const PATTERNS: TimingPattern[] = [
     label: (m) => `${m[1].toLowerCase()} ${m[2].toLowerCase()}`,
   },
 
+  // Day directly followed by clock+meridiem, no "at/by" connector
+  // e.g. "Saturday 9am", "tomorrow 8pm", "Friday 5:15pm"
+  // Must run before standalone-day patterns so the clock is not swallowed first.
+  {
+    regex:
+      /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i,
+    confidence: 'high',
+    label: (m) => `${m[1].toLowerCase()} at ${m[2].trim()}`,
+  },
+
+  // "before Friday" / "before Monday" — deadline day, clock not required
+  {
+    regex:
+      /\bbefore\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow)\b/i,
+    confidence: 'high',
+    label: (m) => `before ${m[1].toLowerCase()}`,
+  },
+
+  // "by Friday" / "by Monday" — deadline day (distinct from "by 5pm" which uses a digit)
+  {
+    regex:
+      /\bby\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow)(?!\s*\d)\b/i,
+    confidence: 'high',
+    label: (m) => `by ${m[1].toLowerCase()}`,
+  },
+
   // Named relative days
   {
     regex: /\b(today|tonight|this morning|this afternoon|this evening)\b/i,

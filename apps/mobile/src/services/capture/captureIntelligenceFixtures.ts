@@ -194,4 +194,96 @@ export const CAPTURE_INTELLIGENCE_FIXTURES: CaptureQaFixture[] = [
       propagatedToLife: true,
     },
   },
+
+  // ── Natural language hardening — v1 ───────────────────────────────────────
+
+  {
+    id: 'family-grace-volleyball',
+    group: 'family',
+    raw: 'Grace volleyball tournament Saturday 9am',
+    expect: {
+      inferredDomain: 'family',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      inferredPeople: ['Grace'],
+      parsedTimeIncludes: '9:00 AM',
+    },
+  },
+  {
+    id: 'family-hudson-football',
+    group: 'family',
+    raw: 'Hudson football registration opens Monday',
+    expect: {
+      inferredDomain: 'family',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      inferredPeople: ['Hudson'],
+    },
+  },
+  {
+    id: 'work-expense-report',
+    group: 'work',
+    raw: 'Submit expense report before Friday',
+    expect: {
+      inferredDomain: 'work',
+      promotionEligible: true,
+      propagatedToPlan: true,
+      propagatedToLife: true,
+      planTitleIncludes: 'Submit Expense Report',
+      parsedTimeIncludes: 'Friday',
+    },
+  },
+
+  // ── Should NOT promote — no timing ────────────────────────────────────────
+
+  {
+    id: 'no-promote-hvac',
+    group: 'work',
+    raw: 'Remember to call the HVAC company',
+    expect: {
+      inferredDomain: 'personal',
+      promotionEligible: false,
+      propagatedToPlan: false,
+      propagatedToLife: true,
+      rejectionReason: 'no_timing',
+    },
+  },
+  {
+    id: 'no-promote-milk',
+    group: 'family',
+    raw: 'Buy milk',
+    expect: {
+      inferredDomain: 'personal',
+      promotionEligible: false,
+      propagatedToPlan: false,
+      propagatedToLife: true,
+      rejectionReason: 'no_timing',
+    },
+  },
+  {
+    id: 'no-promote-dentist-schedule',
+    group: 'health',
+    raw: 'Schedule dentist appointment',
+    expect: {
+      inferredDomain: 'health',
+      promotionEligible: false,
+      propagatedToPlan: false,
+      propagatedToLife: true,
+      rejectionReason: 'no_timing',
+    },
+  },
+  {
+    id: 'no-promote-pool-chemicals',
+    group: 'community',
+    raw: 'Order pool chemicals for BFSC',
+    expect: {
+      inferredDomain: 'community',
+      promotionEligible: false,
+      propagatedToPlan: false,
+      propagatedToLife: true,
+      rejectionReason: 'no_timing',
+    },
+  },
 ];

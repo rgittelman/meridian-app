@@ -13,6 +13,9 @@ const SIGNALS: CategorySignals = {
     'swim', 'swimming', 'sport', 'sports', 'league', 'season',
     'class', 'classes', 'lesson', 'lessons', 'registration', 'enroll',
     'pediatrician', 'playdate', 'carpool', 'permission slip', 'field trip',
+    // child sports — specific sports not covered by generic 'sports'/'game'
+    'football', 'volleyball', 'basketball', 'lacrosse', 'baseball',
+    'tournament', 'tryout', 'tryouts',
   ],
   financial: [
     'pay ', 'payment', 'bill ', 'bills', 'invoice', 'deposit', 'fee', 'fees',
@@ -29,7 +32,8 @@ const SIGNALS: CategorySignals = {
   ],
   work: [
     'meeting', 'call with', 'deck', 'presentation', 'proposal', 'report',
-    'deadline', 'project', 'client', 'boss', 'team', 'standup', 'review',
+    'expense report', 'expense', 'submit', 'deadline', 'project', 'client',
+    'boss', 'team', 'standup', 'review',
     'quarterly', 'budget', 'strategy', 'follow up', 'follow-up', 'slack',
     'email to', 'send to', 'board', 'board call', 'board meeting',
     'annual', 'staff', 'executive', 'director', 'leadership', 'rug sales',

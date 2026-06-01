@@ -10,8 +10,12 @@ const URGENCY_HIGH_SIGNALS = [
 ];
 
 const URGENCY_MEDIUM_SIGNALS = [
-  'soon', 'this week', 'need to', 'need', 'have to', 'should', 'by friday',
-  'by monday', 'due', 'deadline', 'before the', 'before my',
+  'soon', 'this week', 'need to', 'need', 'have to', 'should',
+  'by friday', 'by monday', 'by tuesday', 'by wednesday',
+  'by thursday', 'by saturday', 'by sunday', 'by tomorrow',
+  'before friday', 'before monday', 'before tuesday', 'before wednesday',
+  'before thursday', 'before saturday', 'before sunday', 'before tomorrow',
+  'due', 'deadline', 'before the', 'before my',
 ];
 
 const URGENCY_LOW_SIGNALS = [

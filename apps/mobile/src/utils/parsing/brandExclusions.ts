@@ -74,9 +74,8 @@ export function brandDomainBoosts(text: string): BrandDomainBoost[] {
   if (WORK_BRAND_PATTERN.test(lower)) {
     boosts.push({ category: 'work', amount: 3, source: 'retail_brand' });
   }
-  if (COMMUNITY_VENUE_PATTERN.test(lower)) {
-    boosts.push({ category: 'personal', amount: 2, source: 'bfsc_venue' });
-  }
+  // BFSC/community venues are handled by assignCaptureDomain's community path.
+  // No category boost here — BFSC items are not 'personal' items.
 
   return boosts;
 }

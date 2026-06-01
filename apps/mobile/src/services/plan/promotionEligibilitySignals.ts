@@ -1,5 +1,6 @@
 import type { Confidence, LifeObject } from '@/types/capture';
 import { isHouseholdChildPerson } from '@/services/life/householdDomain';
+import { textSignalsCommunity } from '@/services/life/domainSignals';
 import { inferImplicitMeridiem } from '@/utils/parsing/inferImplicitMeridiem';
 
 const DAY_INDEX: Record<string, number> = {
@@ -16,7 +17,7 @@ export const ACTION_VERBS =
   /\b(call|email|text|pay|pick\s*up|pickup|drop\s*off|dropoff|schedule|book|send|buy|register|confirm|remind|ask|review|submit|return|renew|bring|take|attend|meet)\b/i;
 
 export const LOGISTICS_SIGNALS =
-  /\b(pick\s*up|pickup|drop\s*off|dropoff|game|practice|class|lesson|hockey|soccer|swim|dentist|doctor|appointment|cheer|recital|lifeguard|training|skates|summit|meeting|visit|board\s+meeting|refill|medication)\b/i;
+  /\b(pick\s*up|pickup|drop\s*off|dropoff|game|practice|class|lesson|hockey|soccer|swim|football|volleyball|basketball|lacrosse|baseball|tournament|registration|dentist|doctor|appointment|cheer|recital|lifeguard|training|skates|summit|meeting|visit|board\s+meeting|refill|medication)\b/i;
 
 export const EVENT_WORK_SIGNALS =
   /\b(summit|leadership|conference|symposium|forum|offsite|workshop|seminar|keynote|presentation|board\s+meeting|team\s+meeting|client\s+meeting|site\s+visit|store\s+visit|tradeshow|expo|home\s+leadership)\b/i;
@@ -56,7 +57,12 @@ export type PromotedBecause =
   | 'event_work_signal'
   | 'high_confidence_day_only'
   | 'health_self_management'
-  | 'scheduling_intent';
+  | 'scheduling_intent'
+  | 'child_activity_signal'   // household child detected + sport/activity logistics
+  | 'action_with_day'         // strong action verb + named day (no domain signal needed)
+  | 'community_signal'        // BFSC/board/swim-club + named day
+  | 'deadline_day'            // "before [day]" / "by [day]" deadline framing
+  | 'sports_registration';    // sports registration opens/deadline on named day
 
 export type PromotionRejectionReason =
   | 'done_or_archived'
@@ -235,6 +241,9 @@ export function detectMeaningfulDomainSignal(item: LifeObject): boolean {
   if (HEALTH_SELF_MANAGEMENT.test(text)) return true;
   if (FINANCIAL_COMMITMENT_SIGNALS.test(text)) return true;
 
+  // Community signals — BFSC, board, swim club, volunteer, membership
+  if (textSignalsCommunity(text)) return true;
+
   if (
     item.parse.people.some(
       (p) => p.confidence !== 'low' && isHouseholdChildPerson(p.value),
@@ -325,6 +334,11 @@ export function derivePromotedBecause(
   signals: PromotionEligibilitySignals,
   confidence: Confidence,
 ): PromotedBecause | null {
+  const label = timingLabel(item).toLowerCase();
+  const isDeadlineLabel =
+    label.startsWith('before ') ||
+    (label.startsWith('by ') && !/^by \d/.test(label));
+
   if (item.parse.schedulingIntent) return 'scheduling_intent';
   if (signals.healthSelfManagement && signals.exactDayDetected) {
     return 'health_self_management';
@@ -338,7 +352,30 @@ export function derivePromotedBecause(
     return 'exact_day_exact_clock';
   }
   if (signals.highConfidenceDayOnly && signals.meaningfulDomainSignal) {
-    return 'high_confidence_day_only';
+    return isDeadlineLabel ? 'deadline_day' : 'high_confidence_day_only';
+  }
+  // Community-specific day promotion
+  if (textSignalsCommunity(item.raw) && signals.exactDayDetected) {
+    return 'community_signal';
+  }
+  // Sports registration on a named day
+  if (
+    /\b(registration|tryout|tryouts)\b/i.test(item.raw) &&
+    LOGISTICS_SIGNALS.test(item.raw) &&
+    signals.exactDayDetected
+  ) {
+    return 'sports_registration';
+  }
+  // Household child + activity signal
+  if (
+    item.parse.people.some((p) => p.confidence !== 'low' && isHouseholdChildPerson(p.value)) &&
+    LOGISTICS_SIGNALS.test(item.raw)
+  ) {
+    return 'child_activity_signal';
+  }
+  // Action verb + named day path (no domain signal required)
+  if (!signals.meaningfulDomainSignal && signals.exactDayDetected && signals.actionableIntentDetected) {
+    return isDeadlineLabel ? 'deadline_day' : 'action_with_day';
   }
   if (ACTION_VERBS.test(item.raw)) return 'action_signal';
   if (LOGISTICS_SIGNALS.test(item.raw)) return 'logistics_signal';

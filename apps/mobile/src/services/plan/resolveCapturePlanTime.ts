@@ -58,6 +58,17 @@ function formatSoftDayDisplay(
   reference: Date,
 ): string {
   const lower = label.toLowerCase();
+
+  // Deadline framing — "before [day]" or "by [day]"
+  const isDeadline =
+    lower.startsWith('before ') || (lower.startsWith('by ') && !/^by \d/.test(lower));
+  if (isDeadline) {
+    if (/\btomorrow\b/.test(lower)) return 'By tomorrow';
+    if (/\btoday\b/.test(lower)) return 'By today';
+    const weekday = dayStart.toLocaleDateString(undefined, { weekday: 'long' });
+    return `By ${weekday}`;
+  }
+
   if (/\btomorrow\b/.test(lower)) return 'Tomorrow · flexible';
   if (/\btoday\b/.test(lower) || /\btonight\b/.test(lower)) return 'Today · flexible';
 
@@ -97,25 +108,21 @@ function qualifiesForPromotion(
   signals: PromotionEligibilitySignals,
   confidence: Confidence,
 ): boolean {
-  if (!signals.meaningfulDomainSignal) return false;
-
-  if (signals.healthSelfManagement && signals.exactDayDetected) {
-    return true;
+  // Primary path — meaningful domain signal unlocks all promotion routes
+  if (signals.meaningfulDomainSignal) {
+    if (signals.healthSelfManagement && signals.exactDayDetected) return true;
+    if (confidence === 'high' && signals.exactDayDetected && signals.exactClockDetected) return true;
+    if (signals.highConfidenceDayOnly) return true;
+    if (detectActionableIntent(item)) return true;
+    return false;
   }
 
-  if (
-    confidence === 'high' &&
-    signals.exactDayDetected &&
-    signals.exactClockDetected
-  ) {
-    return true;
-  }
-
-  if (signals.highConfidenceDayOnly) {
-    return true;
-  }
-
-  if (detectActionableIntent(item)) {
+  // Secondary path — strong action verb + named day is sufficient even without a
+  // domain signal. This handles clear work/personal deadlines like
+  // "Submit expense report before Friday" where category confidence is weak.
+  // Guard: vague captures ("think about budget", "maybe call someday") are rejected
+  // by the VAGUE_ONLY_PATTERN gate earlier in evaluatePromotionEligibility.
+  if (signals.exactDayDetected && detectActionableIntent(item)) {
     return true;
   }
 

@@ -91,6 +91,107 @@ describe('capture intelligence QA fixtures', () => {
     }
   });
 
+  // ── Natural language hardening v1 ─────────────────────────────────────────
+
+  it('day+time without "at" — Saturday 9am parses as Saturday at 9am', () => {
+    const audit = auditRawCaptureText(
+      'Grace volleyball tournament Saturday 9am',
+      CAPTURE_QA_REFERENCE,
+      'family-grace-volleyball',
+    );
+    assert.equal(audit.promotionEligible, true, 'should promote');
+    assert.equal(audit.inferredDomain, 'family', 'domain=family');
+    assert.equal(audit.exactDayDetected, true, 'exactDayDetected');
+    assert.equal(audit.exactClockDetected, true, 'exactClockDetected (9am is exact)');
+    assert.ok(audit.parsedTime?.includes('9:00 AM'), `parsedTime "${audit.parsedTime}" should include 9:00 AM`);
+    assert.ok(
+      audit.inferredPeople.some((p) => p.toLowerCase() === 'grace'),
+      `inferredPeople ${JSON.stringify(audit.inferredPeople)} should include Grace`,
+    );
+    assert.equal(audit.promotionRejectionReason, null);
+  });
+
+  it('first-word child name — Hudson football registration promotes to Plan', () => {
+    const audit = auditRawCaptureText(
+      'Hudson football registration opens Monday',
+      CAPTURE_QA_REFERENCE,
+      'family-hudson-football',
+    );
+    assert.equal(audit.promotionEligible, true, 'should promote');
+    assert.equal(audit.inferredDomain, 'family', 'domain=family');
+    assert.equal(audit.exactDayDetected, true, 'exactDayDetected');
+    assert.equal(audit.meaningfulDomainSignal, true, 'meaningfulDomainSignal');
+    assert.ok(
+      audit.inferredPeople.some((p) => p.toLowerCase() === 'hudson'),
+      `inferredPeople ${JSON.stringify(audit.inferredPeople)} should include Hudson`,
+    );
+    assert.equal(audit.promotionRejectionReason, null);
+  });
+
+  it('"before [day]" deadline — Submit expense report before Friday promotes', () => {
+    const audit = auditRawCaptureText(
+      'Submit expense report before Friday',
+      CAPTURE_QA_REFERENCE,
+      'work-expense-report',
+    );
+    assert.equal(audit.promotionEligible, true, 'should promote');
+    assert.equal(audit.exactDayDetected, true, 'exactDayDetected');
+    assert.equal(audit.actionableIntentDetected, true, 'actionableIntentDetected');
+    assert.ok(audit.parsedTime?.includes('Friday'), `parsedTime "${audit.parsedTime}" should mention Friday`);
+    assert.equal(audit.promotionRejectionReason, null);
+  });
+
+  it('"by [day]" deadline — Send form by Friday promotes', () => {
+    const audit = auditRawCaptureText(
+      'Send form by Friday',
+      CAPTURE_QA_REFERENCE,
+      'work-send-form',
+    );
+    assert.equal(audit.promotionEligible, true, 'should promote');
+    assert.equal(audit.exactDayDetected, true, 'exactDayDetected');
+    assert.equal(audit.actionableIntentDetected, true, 'actionableIntentDetected');
+    assert.equal(audit.promotionRejectionReason, null);
+  });
+
+  it('should NOT promote — no timing blocks Plan regardless of action/domain', () => {
+    const noTimingCases = [
+      { id: 'hvac', raw: 'Remember to call the HVAC company' },
+      { id: 'milk', raw: 'Buy milk' },
+      { id: 'dentist', raw: 'Schedule dentist appointment' },
+      { id: 'pool', raw: 'Order pool chemicals for BFSC' },
+    ];
+
+    for (const { id, raw } of noTimingCases) {
+      const audit = auditRawCaptureText(raw, CAPTURE_QA_REFERENCE, id);
+      assert.equal(audit.promotionEligible, false, `${id}: should not promote`);
+      assert.equal(audit.propagatedToPlan, false, `${id}: not on Plan`);
+      assert.equal(
+        audit.promotionRejectionReason,
+        'no_timing',
+        `${id}: rejection=no_timing`,
+      );
+    }
+  });
+
+  it('BFSC community signal — BFSC board meeting promotes, pool chemicals do not', () => {
+    const boardMeeting = auditRawCaptureText(
+      'BFSC board meeting Tuesday at 7pm',
+      CAPTURE_QA_REFERENCE,
+      'community-bfsc-board',
+    );
+    assert.equal(boardMeeting.promotionEligible, true, 'board meeting should promote');
+    assert.equal(boardMeeting.inferredDomain, 'community', 'domain=community');
+    assert.equal(boardMeeting.meaningfulDomainSignal, true, 'meaningfulDomainSignal');
+
+    const poolChemicals = auditRawCaptureText(
+      'Order pool chemicals for BFSC',
+      CAPTURE_QA_REFERENCE,
+      'no-promote-pool',
+    );
+    assert.equal(poolChemicals.promotionEligible, false, 'pool chemicals should not promote');
+    assert.equal(poolChemicals.promotionRejectionReason, 'no_timing');
+  });
+
   it('minute-precision clocks are exact (no tilde)', () => {
     const audit = auditRawCaptureText(
       'Pick up Grace Friday at 5:15',

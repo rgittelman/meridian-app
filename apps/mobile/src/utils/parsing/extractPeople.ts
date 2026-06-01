@@ -41,7 +41,15 @@ const PICKUP_PATTERN =
 
 // Name followed by activity context — "Grace pickup", "Emma practice", "Jake game"
 const NAME_ACTIVITY_PATTERN =
-  /\b([A-Z][a-z]{2,20})\s+(?:pickup|practice|game|class|appointment|meeting|birthday|recital|lesson|lifeguard|training|hockey|soccer|cheer|skates)\b/gi;
+  /\b([A-Z][a-z]{2,20})\s+(?:pickup|practice|game|class|appointment|meeting|birthday|recital|lesson|lifeguard|training|hockey|soccer|football|volleyball|basketball|lacrosse|baseball|tournament|registration|league|season|tryout|tryouts|cheer|skates)\b/gi;
+
+// Known household children — eligible for first-word name detection
+// Only children (not parents) to avoid "Ryan" / "Crystal" false positives
+const HOUSEHOLD_CHILD_NAMES = new Set(['grace', 'reagan', 'quinn', 'hudson']);
+
+// Activity signals that confirm a leading child name is acting as a person reference
+const CHILD_FIRST_WORD_ACTIVITY =
+  /\b(practice|game|class|lesson|tournament|registration|league|season|tryout|tryouts|hockey|soccer|football|volleyball|basketball|lacrosse|baseball|cheer|recital|swim|swimming|training|lifeguard|skates|school|dentist|doctor|appointment|pickup|pick\s*up|drop\s*off|dropoff|birthday|party|camp|performance)\b/i;
 
 /**
  * Extract person references from natural language text.
@@ -108,9 +116,21 @@ export function extractPeople(text: string): ParsedField<string>[] {
     }
   }
 
+  // Known household child as first word + meaningful activity signal
+  // "Grace volleyball tournament Saturday", "Hudson football registration Monday"
+  // Restricted to known child names only — never arbitrary title-case first words.
+  const firstWordCapture = text.match(/^([A-Z][a-z]{2,20})\b/);
+  if (
+    firstWordCapture?.[1] &&
+    HOUSEHOLD_CHILD_NAMES.has(firstWordCapture[1].toLowerCase()) &&
+    CHILD_FIRST_WORD_ACTIVITY.test(text)
+  ) {
+    add(firstWordCapture[1], 'high', firstWordCapture[0]);
+  }
+
   // Leading household child name — "Grace lifeguard training tomorrow"
   const leadChild = text.match(
-    /^([A-Z][a-z]{2,20})\s+(?:lifeguard|training|practice|pickup|hockey|soccer|game|class|lesson)\b/i,
+    /^([A-Z][a-z]{2,20})\s+(?:lifeguard|training|practice|pickup|hockey|soccer|football|volleyball|basketball|lacrosse|baseball|tournament|registration|game|class|lesson|cheer|tryout|tryouts)\b/i,
   );
   if (leadChild?.[1] && !NON_PERSON_WORDS.has(leadChild[1])) {
     add(leadChild[1], 'high', leadChild[0]);
