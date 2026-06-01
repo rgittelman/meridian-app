@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/typography/Text';
-import { planAccentForCategory } from '@/components/calendar/planEventAccent';
+import { planAccentForEventDomain } from '@/components/calendar/planEventAccent';
 import type { MeridianCalendarEvent } from '@/types/calendar';
 import { useTheme } from '@/hooks/useTheme';
 import { makeStyles, radius, spacing } from '@/theme';
@@ -26,8 +26,9 @@ export function PlanEventCard({
         style={[
           styles.dot,
           {
-            backgroundColor: planAccentForCategory(
+            backgroundColor: planAccentForEventDomain(
               colors,
+              event.attribution?.inferredDomain ?? null,
               event.inferredCategory,
               event.inferredOwnerLabel,
             ),

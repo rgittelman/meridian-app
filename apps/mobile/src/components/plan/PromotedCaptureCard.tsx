@@ -1,8 +1,10 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/typography/Text';
+import { planAccentForDomain } from '@/components/calendar/planEventAccent';
 import { formatPlanPeopleLine } from '@/services/plan/humanizePlanTitle';
 import type { PlanPromotedCapture } from '@/types/plan';
+import { useTheme } from '@/hooks/useTheme';
 import { makeStyles, radius, spacing } from '@/theme';
 
 const ATTRIBUTION = 'From your captures';
@@ -18,13 +20,18 @@ type PromotedCaptureCardProps = {
  */
 export function PromotedCaptureCard({ capture, onPress }: PromotedCaptureCardProps) {
   const styles = useStyles();
+  const { colors } = useTheme();
   const isHeld = capture.status === 'held';
+  const markerColor = planAccentForDomain(colors, capture.inferredDomain);
   const peopleLine =
     formatPlanPeopleLine(capture.inferredPeople) ?? capture.personLabel ?? null;
 
   const content = (
     <>
-      <View style={styles.marker} accessibilityElementsHidden />
+      <View
+        style={[styles.marker, { backgroundColor: markerColor }]}
+        accessibilityElementsHidden
+      />
       <View style={styles.content}>
         {peopleLine ? (
           <Text
@@ -130,8 +137,8 @@ const useStyles = makeStyles((c) => ({
     height: 5,
     borderRadius: radius.full,
     marginTop: 6,
-    backgroundColor: c.planCaptureMarker,
-    opacity: 0.65,
+    // backgroundColor is applied inline from planAccentForDomain
+    opacity: 0.7,
   },
   content: {
     flex: 1,

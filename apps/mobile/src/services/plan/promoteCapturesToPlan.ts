@@ -103,6 +103,7 @@ export function promoteCapturesToPlan(
       displayTime: resolved.displayTime,
       timingLabel: timing.value.label,
       isApproximate: resolved.isApproximate,
+      placementTier: resolved.placementTier,
       personLabel: personLabelForCapture(item),
       location: item.parse.location?.value ?? null,
     };

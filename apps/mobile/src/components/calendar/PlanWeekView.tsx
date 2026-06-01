@@ -198,7 +198,7 @@ export function PlanWeekView({
       </Text>
       <Text variant="display" color="ink" style={styles.headline}>
         {allEmpty
-          ? 'Your week looks open so far.'
+          ? 'This week still has breathing room.'
           : hasCapturePlan && planEvents.length === 0
             ? 'Captured plans are showing up here.'
             : "Here's the shape of your week."}

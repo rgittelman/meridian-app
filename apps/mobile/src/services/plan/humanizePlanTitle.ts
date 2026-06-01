@@ -31,15 +31,39 @@ const LEADING_PHRASES = [
 ];
 
 const TIMING_TAIL_PATTERNS = [
+  // "next Thursday ..." — relative weekday with optional trailing context
   /\s+next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b[^.]*$/i,
+
+  // "tomorrow around 1pm", "today about 3pm"
   /\s+(?:today|tomorrow|tonight)\s+(?:around|about)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*$/i,
+
+  // "tomorrow at 6:15am", "today at 11:30"
   /\s+(?:today|tomorrow|tonight)\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*$/i,
+
+  // "tomorrow morning", "tonight evening"
   /\s+(?:today|tomorrow|tonight)\s+(?:morning|afternoon|evening)\s*$/i,
+
+  // "Saturday at 9am", "Tuesday at 6pm" — DayName + "at" + time
   /\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*$/i,
-  /\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*$/i,
-  /\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*$/i,
-  /\s+(?:today|tomorrow|tonight)\s*$/i,
+
+  // F1 — "Saturday 9am", "Tuesday 6pm", "Wednesday 8:30am"
+  // DayName directly followed by time+meridiem, no "at" connector required.
+  // Runs before bare-DayName so the clock is stripped as a unit with the day name.
+  /\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*$/i,
+
+  // F2 — "before Friday", "before Monday", "before the board"
+  // Moved BEFORE bare-DayName: previously the bare-DayName pattern fired first,
+  // stripping only "Friday" and leaving "before" dangling.
   /\s+before\s+(?:the\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|board|meeting)\b[^.]*$/i,
+
+  // Bare DayName at end — "Tuesday", "on Saturday"
+  /\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*$/i,
+
+  // "at 6pm", "at 11:30am" — standalone time at end
+  /\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*$/i,
+
+  // "today", "tomorrow", "tonight" at end
+  /\s+(?:today|tomorrow|tonight)\s*$/i,
 ];
 
 const LOCATION_TAIL_PATTERN =

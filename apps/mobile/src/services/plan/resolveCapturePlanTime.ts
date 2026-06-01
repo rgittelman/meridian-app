@@ -249,7 +249,10 @@ export function evaluatePromotionEligibility(
     };
   }
 
-  if (VAGUE_WEEK_PATTERN.test(item.raw) && countClockMentionsInLabel(label) === 0) {
+  // Guard: reject when the resolved timing label is itself vague ("this week", "next month").
+  // Tests the resolved label — NOT item.raw — so that vague language in the capture body
+  // (e.g. "costs this week. Due Thursday") does not poison a concretely resolved day.
+  if (VAGUE_WEEK_PATTERN.test(label) && countClockMentionsInLabel(label) === 0) {
     return {
       eligible: false,
       reason: 'vague_week_window',

@@ -1,3 +1,14 @@
+/**
+ * @deprecated GuidedPlanState is not wired into PlanScreen.
+ *
+ * The empty-state copy ("This week still has breathing room.") was lifted into
+ * PlanWeekView during Plan Correction Pass v1. GuidedPlanState assumes a Mon–Fri
+ * dot row that is incompatible with PlanWeekView's today-forward open-ended week
+ * structure. If this component is needed in the future, it must be redesigned to
+ * match the live week model before being wired in.
+ *
+ * Do not import this component until it is updated.
+ */
 import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/typography/Text';

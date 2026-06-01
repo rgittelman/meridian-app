@@ -28,6 +28,14 @@ export type PromotedPlanItem = {
   personLabel: string | null;
   /** Parsed place phrase — not a calendar venue */
   location: string | null;
+  /**
+   * Placement resolution tier:
+   * - 'exact'    — high-confidence day + clock time (may still be approximate if fuzzy).
+   * - 'soft_day' — day-level only; plannedStartTime defaults to 09:00 as a placeholder.
+   *
+   * Soft-day captures span the full day and must NOT be expired by a clock-time check.
+   */
+  placementTier: 'exact' | 'soft_day';
 };
 
 /** Timeline row alias — same shape as PromotedPlanItem. */
