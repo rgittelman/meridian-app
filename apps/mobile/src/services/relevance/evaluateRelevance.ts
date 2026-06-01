@@ -156,7 +156,7 @@ export function evaluateEventRelevance(event: MeridianCalendarEvent): EventRelev
 
   if (
     teamSnapSource &&
-    (sportsChild || isGenericLeagueScheduleTitle(title) || sportsActivity === 'hockey')
+    (sportsChild || isGenericLeagueScheduleTitle(title) || sportsActivity !== null)
   ) {
     const household = sportsChild
       ? [sportsChild.name, 'Ryan', 'Crystal']

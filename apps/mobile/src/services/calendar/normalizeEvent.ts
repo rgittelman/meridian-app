@@ -67,7 +67,9 @@ function parseGoogleDate(
 ): { startTime: Date; endTime: Date; allDay: boolean } {
   const allDay = Boolean(start?.date && !start?.dateTime);
   const startIso = start?.dateTime ?? (start?.date ? `${start.date}T00:00:00` : null);
-  const endIso = end?.dateTime ?? (end?.date ? `${end.date}T23:59:59` : null);
+  // Google all-day end.date is exclusive (e.g. a June 15 event has end.date = "2026-06-16").
+  // Use T00:00:00 so the event spans exactly its stated days without bleeding into the next day.
+  const endIso = end?.dateTime ?? (end?.date ? `${end.date}T00:00:00` : null);
 
   const startTime = startIso ? new Date(startIso) : new Date();
   const endTime = endIso ? new Date(endIso) : new Date(startTime.getTime() + 3600_000);

@@ -104,7 +104,12 @@ export function classifyEventSignal(
     event.peopleImpact === 'NONE' &&
     event.confidence === 'low'
   ) {
-    return 'low_signal';
+    // Community obligations (e.g. BFSC board from a subscribed reader calendar) must
+    // remain visible even when the general signal is weak.
+    const isExplicitCommunity =
+      event.inferredLifeDomain === 'community' ||
+      event.attribution?.inferredDomain === 'community';
+    if (!isExplicitCommunity) return 'low_signal';
   }
 
   if (event.relevance && !event.relevance.isRelevant) {

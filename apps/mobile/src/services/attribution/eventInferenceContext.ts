@@ -39,14 +39,14 @@ export function buildEventInferenceContext(input: {
   );
   const isYouthSports =
     Boolean(sportsChild) ||
-    (teamSnap && (activity === 'hockey' || isGenericLeagueScheduleTitle(rawTitle)));
+    (teamSnap && (activity !== null || isGenericLeagueScheduleTitle(rawTitle)));
 
   let inferenceTitle = rawTitle;
 
   if (sportsChild && (isGenericLeagueScheduleTitle(rawTitle) || teamSnap)) {
     inferenceTitle = formatChildSportsDisplayTitle(
       sportsChild.name,
-      activity ?? 'hockey',
+      activity ?? 'game',
     );
   } else {
     const dot = rawTitle.match(/^([A-Za-z]+)\s*[·•]\s*/);
@@ -62,7 +62,7 @@ export function buildEventInferenceContext(input: {
   if (namedChildren.length === 1 && inferenceTitle === rawTitle && isYouthSports) {
     inferenceTitle = formatChildSportsDisplayTitle(
       namedChildren[0].name,
-      activity ?? 'hockey',
+      activity ?? 'game',
     );
   }
 

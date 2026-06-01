@@ -15,6 +15,7 @@ import type { EventInferenceContext } from './eventInferenceContext';
 import { inferChildFromSportsTitle } from '@/services/relevance/childSportsContext';
 import { HOUSEHOLD_CHILDREN, matchingChildrenInText } from '@/services/relevance/householdContext';
 import { isSchoolCalendarSource } from '@/services/relevance/isSchoolSource';
+import { textSignalsCommunity } from '@/services/life/domainSignals';
 import { safeLower, safeTrim } from '@/utils/safeString';
 
 const CHILD_PERSON_IDS = new Set(HOUSEHOLD_CHILDREN.map((c) => c.personId));
@@ -344,11 +345,7 @@ export function inferEventOwner(input: {
     }
   }
 
-  if (
-    lower.includes('board') ||
-    lower.includes('bfsc') ||
-    sourceLower.includes('bfsc')
-  ) {
+  if (textSignalsCommunity(text) || sourceLower.includes('bfsc')) {
     const ryanBoard = textPeople.find(
       (p) => safeLower(p.name) === 'ryan' && lower.includes('board'),
     );

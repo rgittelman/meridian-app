@@ -144,8 +144,12 @@ export async function fetchGoogleCalendarList(
 }
 
 type PerCalendarResult =
-  | { ok: true; items: GoogleApiEvent[] }
+  | { ok: true; items: GoogleApiEvent[]; truncated: boolean }
   | { ok: false; calendarId: string; status: number };
+
+// Google Calendar API max per page; hard cap on pages to prevent infinite loops.
+const CALENDAR_MAX_RESULTS_PER_PAGE = 250;
+const CALENDAR_MAX_PAGES = 10;
 
 async function fetchEventsForCalendar(
   accessToken: string,
@@ -153,40 +157,60 @@ async function fetchEventsForCalendar(
   timeMin: string,
   timeMax: string,
 ): Promise<PerCalendarResult> {
-  const params = new URLSearchParams({
-    timeMin,
-    timeMax,
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    maxResults: '80',
-    showDeleted: 'false',
-  });
-
   const calId = encodeURIComponent(calendar.sourceCalendarId);
-  const path = `/calendars/${calId}/events?${params.toString()}`;
+  const allItems: GoogleApiEvent[] = [];
+  let pageToken: string | undefined;
+  let page = 0;
 
-  const { ok, status, body } = await calendarFetch(accessToken, path);
+  do {
+    const params = new URLSearchParams({
+      timeMin,
+      timeMax,
+      singleEvents: 'true',
+      orderBy: 'startTime',
+      maxResults: String(CALENDAR_MAX_RESULTS_PER_PAGE),
+      showDeleted: 'false',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
 
-  if (status === 401) {
-    throw new CalendarFetchError('CALENDAR_AUTH_EXPIRED', status, body);
+    const path = `/calendars/${calId}/events?${params.toString()}`;
+    const { ok, status, body } = await calendarFetch(accessToken, path);
+
+    if (status === 401) {
+      throw new CalendarFetchError('CALENDAR_AUTH_EXPIRED', status, body);
+    }
+    if (status === 403 || status === 404) {
+      return { ok: false, calendarId: calendar.sourceCalendarId, status };
+    }
+    if (!ok) {
+      return { ok: false, calendarId: calendar.sourceCalendarId, status };
+    }
+
+    let json: { items?: GoogleApiEvent[]; nextPageToken?: string };
+    try {
+      json = JSON.parse(body) as { items?: GoogleApiEvent[]; nextPageToken?: string };
+    } catch {
+      return { ok: false, calendarId: calendar.sourceCalendarId, status };
+    }
+
+    allItems.push(...(json.items ?? []));
+    pageToken = json.nextPageToken;
+    page += 1;
+  } while (pageToken && page < CALENDAR_MAX_PAGES);
+
+  // Truncation: loop exited because MAX_PAGES was reached while nextPageToken still exists.
+  const truncated = Boolean(pageToken) && page >= CALENDAR_MAX_PAGES;
+  if (truncated) {
+    logCalendarDebug('pagination truncated — events beyond MAX_PAGES dropped', {
+      calendarId: calendar.sourceCalendarId,
+      calendarName: calendar.sourceCalendarName,
+      pagesLoaded: page,
+      itemsLoaded: allItems.length,
+      maxPages: CALENDAR_MAX_PAGES,
+    });
   }
 
-  if (status === 403 || status === 404) {
-    return { ok: false, calendarId: calendar.sourceCalendarId, status };
-  }
-
-  if (!ok) {
-    return { ok: false, calendarId: calendar.sourceCalendarId, status };
-  }
-
-  let json: { items?: GoogleApiEvent[] };
-  try {
-    json = JSON.parse(body) as { items?: GoogleApiEvent[] };
-  } catch {
-    return { ok: false, calendarId: calendar.sourceCalendarId, status };
-  }
-
-  return { ok: true, items: json.items ?? [] };
+  return { ok: true, items: allItems, truncated };
 }
 
 export type MultiCalendarSyncResult = {
@@ -205,6 +229,7 @@ async function syncEventsInRange(
   let calendarsSkipped = 0;
   let calendarsFailed = 0;
   const failedCalendarIds: string[] = [];
+  const paginationTruncatedCalendarIds: string[] = [];
   const rawByCalendar: Array<{ calendar: SourceCalendarMeta; items: GoogleApiEvent[] }> =
     [];
 
@@ -216,6 +241,9 @@ async function syncEventsInRange(
     const result = results[i];
     if (result.ok) {
       rawByCalendar.push({ calendar: calendars[i], items: result.items });
+      if (result.truncated) {
+        paginationTruncatedCalendarIds.push(calendars[i].sourceCalendarId);
+      }
     } else {
       if (result.status === 403 || result.status === 404) {
         calendarsSkipped += 1;
@@ -227,7 +255,10 @@ async function syncEventsInRange(
   }
 
   const pipeline = processCalendarEvents(rawByCalendar);
-  const partial = calendarsFailed > 0 || failedCalendarIds.length > 0;
+  const partial =
+    calendarsFailed > 0 ||
+    failedCalendarIds.length > 0 ||
+    paginationTruncatedCalendarIds.length > 0;
 
   const diagnostics: CalendarSyncDiagnostics = {
     calendarsFetched: calendars.length,
@@ -237,6 +268,7 @@ async function syncEventsInRange(
     eventsNormalized: pipeline.allRetained.length,
     eventsDeduped: pipeline.planEvents.length,
     failedCalendarIds,
+    paginationTruncatedCalendarIds,
     ...pipeline.diagnostics,
   };
 

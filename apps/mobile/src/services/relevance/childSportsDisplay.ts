@@ -17,7 +17,7 @@ const CHILD_PERSON_IDS = new Set(['grace', 'hudson', 'quinn', 'reagan']);
 
 /** Household-readable activity label (e.g. hockey → Hockey Game). */
 export function sportsActivityLabel(activity: string | null | undefined): string {
-  if (!activity) return 'Hockey Game';
+  if (!activity) return 'Game';
   const map: Record<string, string> = {
     hockey: 'Hockey Game',
     soccer: 'Soccer',
@@ -26,6 +26,8 @@ export function sportsActivityLabel(activity: string | null | undefined): string
     cheer: 'Cheer',
     swim: 'Swim',
     lacrosse: 'Lacrosse',
+    basketball: 'Basketball',
+    baseball: 'Baseball',
     game: 'Game',
   };
   return map[activity] ?? activity.charAt(0).toUpperCase() + activity.slice(1);
@@ -139,7 +141,7 @@ export function buildChildSportsDisplayTitle(
   const childName = resolveChildForSportsDisplay(event, sportsChild);
   const activity =
     detectSportsActivityType(rawTitle, event.location, event.sourceCalendarName) ??
-    'hockey';
+    'game';
 
   if (
     !shouldHumanizeChildSportsTitle({

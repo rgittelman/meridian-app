@@ -83,10 +83,9 @@ export function buildEventDisplayFields(event: MeridianCalendarEvent): EventDisp
 
       if (
         teamSnap &&
-        (isGenericLeagueScheduleTitle(rawTitle) || sportsChild) &&
-        (activity === 'hockey' || teamSnap)
+        (isGenericLeagueScheduleTitle(rawTitle) || sportsChild)
       ) {
-        displayActivityType = displayActivityType ?? 'hockey';
+        displayActivityType = displayActivityType ?? 'game';
         if (sportsChild) {
           displayPersonLabel = sportsChild.name;
           displayTitle = formatChildSportsDisplayTitle(

@@ -56,9 +56,10 @@ export function detectSportsActivityType(
   if (text.includes('cheer')) return 'cheer';
   if (text.includes('swim')) return 'swim';
   if (text.includes('lacrosse')) return 'lacrosse';
+  if (text.includes('basketball')) return 'basketball';
+  if (text.includes('baseball')) return 'baseball';
   if (/\b(game|practice|tournament)\b/.test(text)) return 'game';
 
-  if (isTeamSnapOrSportsCalendar(sourceName ?? '', sourceName)) return 'hockey';
-
+  // Do not default unknown TeamSnap events to 'hockey' — return null when sport is unknown.
   return null;
 }

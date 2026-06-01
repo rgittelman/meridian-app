@@ -10,7 +10,7 @@ type WindowSpec = {
 
 const SPECS: Record<PreparationWindowProfile, WindowSpec> = {
   pickup: { profile: 'pickup', opensHoursBefore: 3, closesHoursBefore: 0 },
-  sports: { profile: 'sports', opensHoursBefore: 12, closesHoursBefore: 0 },
+  sports: { profile: 'sports', opensHoursBefore: 18, closesHoursBefore: 0 },
   board: { profile: 'board', opensHoursBefore: 48, closesHoursBefore: 0 },
   work_prep: { profile: 'work_prep', opensHoursBefore: 72, closesHoursBefore: 0 },
   school: { profile: 'school', opensHoursBefore: 48, closesHoursBefore: 0 },
@@ -74,8 +74,7 @@ function inferWindowProfile(event: MeridianCalendarEvent): PreparationWindowProf
   }
 
   if (
-    /\b(?:vacation|travel|trip|resort|flight|hotel)\b/.test(text) &&
-    domain === 'family'
+    /\b(?:vacation|travel|trip|resort|flight|hotel|summit|offsite|conference)\b/.test(text)
   ) {
     return 'travel';
   }

@@ -9,13 +9,20 @@ import {
 } from '@/services/people/knownPeople';
 import { safeLower, safeTrim } from '@/utils/safeString';
 
-const COMMUNITY_SIGNALS = ['board', 'bfsc', 'community', 'nonprofit', 'volunteer'];
+const COMMUNITY_SIGNALS = ['bfsc', 'community', 'nonprofit', 'volunteer'];
 const WORK_SIGNALS = [
   'budget', 'sales', 'meeting', 'review', 'standup', 'sync', 'qbr', 'pipeline',
 ];
 const SPORTS_SIGNALS = ['soccer', 'hockey', 'swim', 'practice', 'game', 'tournament'];
-const HEALTH_SIGNALS = ['dentist', 'doctor', 'pediatrician', 'appointment', 'checkup'];
+// 'appointment' removed — bare appointment fires for sales/client/store contexts.
+// Medical appointment requires a co-signal (see MEDICAL_APPOINTMENT_CO_SIGNALS below).
+const HEALTH_SIGNALS = ['dentist', 'doctor', 'pediatrician', 'checkup'];
 const PICKUP_SIGNALS = ['pickup', 'pick up', 'drop off', 'dropoff'];
+const MEDICAL_APPOINTMENT_CO_SIGNALS = [
+  'doctor', 'dentist', 'pediatrician', 'therapy', 'therapist', 'medical',
+  'health', 'checkup', 'specialist', 'prescription', 'pharmacy',
+  'lab', 'physical', 'immunization', 'vaccine',
+];
 
 export type EventInference = {
   inferredPeople: Array<{ name: string; confidence: Confidence }>;
@@ -99,6 +106,12 @@ export function inferFromEventTitle(title: string | null | undefined): EventInfe
       inferredCategory = 'work';
       categoryConfidence = 'medium';
     } else if (HEALTH_SIGNALS.some((s) => lower.includes(s))) {
+      inferredCategory = 'health';
+      categoryConfidence = 'medium';
+    } else if (
+      lower.includes('appointment') &&
+      MEDICAL_APPOINTMENT_CO_SIGNALS.some((s) => lower.includes(s))
+    ) {
       inferredCategory = 'health';
       categoryConfidence = 'medium';
     }

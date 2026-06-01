@@ -70,6 +70,8 @@ export type CalendarSyncDiagnostics = {
   eventsNormalized: number;
   eventsDeduped: number;
   failedCalendarIds: string[];
+  /** Calendars where MAX_PAGES was reached with a remaining nextPageToken — events beyond 2500 were silently dropped. */
+  paginationTruncatedCalendarIds?: string[];
   rawEventsFetched?: number;
   cancelledEventsFiltered?: number;
   declinedEventsFiltered?: number;

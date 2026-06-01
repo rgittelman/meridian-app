@@ -6,7 +6,7 @@ import {
   textSignalsCommunity,
   textSignalsHealth,
   textSignalsPersonalMedical,
-} from '@/services/life/constants';
+} from '@/services/life/domainSignals';
 import { isSchoolCalendarSource } from '@/services/relevance/isSchoolSource';
 import {
   evaluateSchoolHouseholdConnection,
@@ -95,12 +95,7 @@ export function inferEventDomain(input: {
     return { domain: 'health', confidence: 'high', reason: 'health_category' };
   }
 
-  if (
-    textSignalsCommunity(text) ||
-    lower.includes('board') ||
-    lower.includes('bfsc') ||
-    sourceLower.includes('bfsc')
-  ) {
+  if (textSignalsCommunity(text) || sourceLower.includes('bfsc')) {
     return { domain: 'community', confidence: 'high', reason: 'community_signal' };
   }
 
@@ -137,7 +132,7 @@ export function inferEventDomain(input: {
     isGenericLeagueScheduleTitle(input.title);
   const isYouthSports =
     Boolean(sportsChild) ||
-    (teamSnap && (activity === 'hockey' || isGenericLeagueScheduleTitle(input.title)));
+    (teamSnap && (activity !== null || isGenericLeagueScheduleTitle(input.title)));
 
   if (isYouthSports || (sportsChild && youthActivity)) {
     return { domain: 'family', confidence: 'high', reason: 'child_youth_sports_commitment' };

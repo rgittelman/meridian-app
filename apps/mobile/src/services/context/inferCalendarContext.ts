@@ -20,9 +20,12 @@ const FAMILY_CALENDAR_NAMES = [
   'family', 'kids', 'children', 'home', 'household',
 ];
 const WORK_CALENDAR_NAMES = ['work', 'office', 'professional', 'meridian'];
-const COMMUNITY_CALENDAR_NAMES = ['bfsc', 'board', 'community', 'nonprofit', 'volunteer'];
+const COMMUNITY_CALENDAR_NAMES = ['bfsc', 'swim club', 'community', 'nonprofit', 'volunteer'];
 const SCHOOL_CALENDAR_NAMES = ['school', 'classroom', 'pta'];
-const SPORTS_HINTS = ['hockey', 'soccer', 'swim', 'sports', 'athletics', 'lacrosse'];
+const SPORTS_HINTS = [
+  'hockey', 'soccer', 'swim', 'sports', 'athletics', 'lacrosse',
+  'football', 'volleyball', 'cheer', 'basketball', 'baseball',
+];
 
 const KNOWN_PEOPLE = new Set([
   'ryan', 'crystal', 'grace', 'reagan', 'quinn', 'hudson',
