@@ -42,3 +42,27 @@ Total: 164 passing tests
 
 ## Rule
 No V1 intelligence behavior changes without a documented V2 proposal.
+
+## Post-Lock Corrections
+
+### Concrete Deadline Promotion
+
+Fixed an issue where vague timing language in the raw capture text could incorrectly block promotion of a concrete deadline.
+
+Example:
+
+"Work on repricing Kaleen Luxe with the 7% tariff costs this week. Due Thursday 6/4"
+
+Before:
+- rejected as vague_timing
+
+After:
+- promoted using the resolved timing label "Thursday"
+
+Implementation:
+- vague-week guard now evaluates the resolved timing label instead of the full raw capture text
+- added promotion path for financial-deadline captures with concrete day-level timing
+- protected by VAGUE_ONLY_PATTERN so vague financial intentions remain blocked
+
+Status:
+Locked and covered by automated tests.
