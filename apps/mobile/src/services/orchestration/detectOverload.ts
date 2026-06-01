@@ -59,10 +59,12 @@ export function detectOverload(
   const peopleStacking = peopleCount >= 3;
   if (peopleStacking) score += 1.5;
 
-  // Financial pressure: any financial item in a dense stack
-  const financialCount = items.filter((i) => i.visualUrgency === 'warm').length;
-  const financialPressure = financialCount >= 1 && items.length >= 3;
-  if (financialPressure) score += 1;
+  // Financial pressure: deferred — ResurfacedItem carries no domain field, so
+  // true financial detection is not possible here yet. The boolean is preserved
+  // in OverloadFactors for future use once domain flows through the resurfacing
+  // pipeline. Score contribution is intentionally zeroed until then.
+  // DO NOT substitute visualUrgency === 'warm' — that is emotionalStacking's signal.
+  const financialPressure = false;
 
   // Unresolved prep chains: items with groups (related context clusters)
   const prepChainCount = items.filter((i) => i.group !== null).length;

@@ -38,11 +38,13 @@ export function analyzeCalendarDay(
     safeLower(e?.displayLabel).includes('pickup'),
   );
 
+  // Bare "board" is intentionally excluded — work board meetings must not inflate
+  // community/prep overload signals. BFSC board meetings are covered by the bfsc
+  // and community-domain conditions below.
   const boardOrCommunitySoon = within4h.some((e) => {
     const titleLower = safeLower(e?.title ?? e?.displayLabel);
     const calLower = safeLower(e?.sourceCalendarName);
     return (
-      titleLower.includes('board') ||
       titleLower.includes('bfsc') ||
       calLower.includes('bfsc') ||
       e.attribution?.inferredDomain === 'community'
