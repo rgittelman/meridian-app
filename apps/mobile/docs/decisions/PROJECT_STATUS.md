@@ -29,7 +29,7 @@ Claude Code = Builder
 
 ## Current Phase
 
-Phase E — Leave Alerts
+Phase F — Morning Briefs & Evening Preview
 
 ## Completed
 
@@ -87,10 +87,26 @@ Deferred:
 - Capture detail deep links
 - In-app foreground banners
 
+### Phase E — Leave Alerts
+Status: PASSED
+Locked: Yes
+
+Completed:
+- leave_alert notification type added to pipeline
+- Generator fires 30 minutes before household-relevant events
+- Commitment-specific copy: "Grace's volleyball practice starts in 30 minutes."
+- Before Events setting respected (beforeEventsEnabled)
+- Daily cap: 5 (supports multi-child household days)
+- Cancel/reschedule handled via existing reconciliation lifecycle
+- Tap routes to Plan tab
+
+Deferred:
+- Geolocation-based leave timing (Phase G)
+- Traffic-aware departure times (Phase H)
+
 ## Future Roadmap
 
-Phase E — Leave Alerts (time-based only)
-Phase F — Morning Brief Scheduling
+Phase F — Morning Briefs & Evening Preview
 Phase G — Geolocation Intelligence
 Phase H — Traffic-Aware Routing
 Phase I — Background Fetch
