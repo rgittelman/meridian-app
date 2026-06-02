@@ -152,6 +152,37 @@ Deferred:
 - Distance Matrix API
 - Dynamic leave alert timing
 
+### Phase H.1 — Traffic Intelligence Data Plumbing
+Status: PASSED
+Locked: Yes
+
+Completed:
+- ETA provider abstraction (EtaProvider interface, NullEtaProvider, GoogleDistanceMatrixProvider)
+- Pure traffic intelligence helpers: baselineMinutes/trafficMinutes types, isHeavierTraffic,
+  isTrafficEstimateStale, buildTrafficCacheKey, formatEventDate
+- Non-persisted session-only traffic cache store (trafficCacheStore)
+- Traffic enrichment layer: 4-hour window guard, household-relevant filter, cache-first,
+  deduplication, degrades cleanly when venue coordinates absent or provider returns null
+- calendarStore: trafficEstimates + trafficVersion (non-persisted); version increments
+  on new data AND on stale-data clear
+- useNotificationDelivery: Trigger 4 watches trafficVersion — event-driven, zero polling
+- mapsApi.ts: reads EXPO_PUBLIC_GOOGLE_MAPS_API_KEY; NullEtaProvider fallback when absent
+- 21 pure tests: formatEventDate, buildTrafficCacheKey, isTrafficEstimateStale,
+  isHeavierTraffic, NullEtaProvider
+
+Guardrails:
+- Distance Matrix API only; no map/route/navigation behavior
+- 4-hour enrichment window — no API calls for distant events
+- 30-minute TTL cache — session-only, not persisted
+- No live GPS reads; origin is stored homeLocation only
+- No background tasks, no polling
+
+Not activated:
+- No leave alert timing changes
+- No leave alert copy changes
+- No dedupe key changes
+- H.2 blocked until dedupe/reschedule behavior is designed and approved
+
 ## Next: Meridian Intelligence Audit V1
 
 Before Phase G, evaluate:
