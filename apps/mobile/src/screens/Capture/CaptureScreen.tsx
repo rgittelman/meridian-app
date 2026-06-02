@@ -17,7 +17,7 @@ import { CaptureConfirmation } from '@/components/capture/CaptureConfirmation';
 import { CaptureIntelligenceDiagnostics } from '@/components/capture/CaptureIntelligenceDiagnostics';
 import { CaptureHeader } from '@/components/capture/CaptureHeader';
 // DEV ONLY — remove after verifying notification delivery
-import { NotificationSmokeTest } from '@/components/dev/NotificationSmokeTest';
+import { NotificationSmokeTest, BriefSmokeTest } from '@/components/dev/NotificationSmokeTest';
 import { CaptureInput } from '@/components/capture/CaptureInput';
 import { RecentCaptures } from '@/components/capture/RecentCaptures';
 import { SuggestedExamples } from '@/components/capture/SuggestedExamples';
@@ -106,6 +106,7 @@ export function CaptureScreen() {
           ) : null}
           {/* DEV ONLY — remove after verifying notification delivery */}
           {showDevDiagnostics ? <NotificationSmokeTest /> : null}
+          {showDevDiagnostics ? <BriefSmokeTest /> : null}
         </View>
 
         {/* Spacing: only show gap when confirmation is visible */}

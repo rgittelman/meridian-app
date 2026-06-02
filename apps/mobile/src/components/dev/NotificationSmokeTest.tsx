@@ -42,13 +42,14 @@
  */
 
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as ExpoNotifications from 'expo-notifications';
 import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { nanoid } from 'nanoid/non-secure';
 
 import { Text } from '@/components/typography/Text';
 import { requestNotificationPermissions } from '@/services/notifications/delivery';
+import { scheduleBriefDevTest } from '@/hooks/useNotificationBriefScheduler';
 import { useNotificationDeliveryStore } from '@/store/notificationDeliveryStore';
 import { makeStyles, radius, spacing } from '@/theme';
 
@@ -84,6 +85,8 @@ async function scheduleRaw(opts: {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
+
+const BRIEF_DELAY_SECONDS = 30;
 
 export function NotificationSmokeTest() {
   const styles = useStyles();
@@ -227,6 +230,83 @@ export function NotificationSmokeTest() {
   );
 }
 
+// ── Phase F brief diagnostic panel ───────────────────────────────────────────
+
+export function BriefSmokeTest() {
+  const styles = useStyles();
+  const [briefStatus, setBriefStatus] = useState<string>('');
+  const [recordsText, setRecordsText] = useState<string | null>(null);
+  const records = useNotificationDeliveryStore((s) => s.records);
+
+  const handleMorningBriefTest = async () => {
+    setBriefStatus('Scheduling Morning Brief…');
+    setRecordsText(null);
+    const result = await scheduleBriefDevTest('morning', BRIEF_DELAY_SECONDS);
+    if (result.ok && result.fireAt) {
+      const secs = Math.round((result.fireAt.getTime() - Date.now()) / 1000);
+      setBriefStatus(`Morning Brief ✓ fires in ~${secs}s. Background app.`);
+    } else {
+      setBriefStatus(`Morning Brief skipped: ${result.reason ?? 'unknown'}`);
+    }
+  };
+
+  const handleEveningPreviewTest = async () => {
+    setBriefStatus('Scheduling Evening Preview…');
+    setRecordsText(null);
+    const result = await scheduleBriefDevTest('evening', BRIEF_DELAY_SECONDS);
+    if (result.ok && result.fireAt) {
+      const secs = Math.round((result.fireAt.getTime() - Date.now()) / 1000);
+      setBriefStatus(`Evening Preview ✓ fires in ~${secs}s. Background app.`);
+    } else {
+      setBriefStatus(`Evening Preview skipped: ${result.reason ?? 'unknown'}`);
+    }
+  };
+
+  const handleInspectRecords = () => {
+    const scheduled = records.filter((r) => r.deliveryStatus === 'scheduled');
+    if (scheduled.length === 0) {
+      setRecordsText('No scheduled records.');
+      return;
+    }
+    const lines = scheduled.map((r) => {
+      const fireAt = new Date(r.scheduledFor).toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+      return `[${r.notificationType}]\n"${r.title}"\n@ ${fireAt}\n${r.bundleKey}`;
+    });
+    setRecordsText(lines.join('\n─\n'));
+  };
+
+  return (
+    <View style={styles.wrap}>
+      <Text variant="caption" color="inkGhost" style={styles.label}>
+        Morning Brief / Evening Preview (dev · Phase F)
+      </Text>
+
+      <View style={styles.grid}>
+        <SmokeButton label="Morning Brief" onPress={handleMorningBriefTest} />
+        <SmokeButton label="Evening Preview" onPress={handleEveningPreviewTest} />
+        <SmokeButton label="Inspect Records" onPress={handleInspectRecords} dim />
+      </View>
+
+      {briefStatus ? (
+        <Text variant="caption" color="inkGhost" style={styles.status}>
+          {briefStatus}
+        </Text>
+      ) : null}
+
+      {recordsText ? (
+        <ScrollView style={styles.recordsScroll} nestedScrollEnabled>
+          <Text variant="caption" color="inkTertiary" style={styles.records}>
+            {recordsText}
+          </Text>
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+}
+
 // ── Sub-component ─────────────────────────────────────────────────────────────
 
 function SmokeButton({
@@ -312,5 +392,13 @@ const useStyles = makeStyles((c) => ({
   },
   status: {
     lineHeight: 16,
+  },
+  recordsScroll: {
+    maxHeight: 180,
+    marginTop: spacing[1],
+  },
+  records: {
+    lineHeight: 18,
+    fontFamily: 'monospace' as const,
   },
 }));
