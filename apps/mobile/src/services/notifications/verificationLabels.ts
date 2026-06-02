@@ -9,6 +9,7 @@ const TYPE_LABELS: Record<NotificationCandidateType, string> = {
   evening_wind_down: 'Evening Wind-Down',
   critical_commitment_protection: 'Critical Commitment Protection',
   leave_alert: 'Leave Alert',
+  capture_reminder: 'Capture Reminder',
 };
 
 const SUPPRESSION_LABELS: Record<NotificationSuppressionReason, string> = {

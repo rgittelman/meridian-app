@@ -39,6 +39,13 @@ function evaluateSuppression(
     return null;
   }
 
+  // Capture reminders are user-requested — bypass all suppression heuristics.
+  // The only valid cancellation paths are: capture resolved (generator stops
+  // producing the candidate), time passed (scheduler gate), or duplicate (dedup gate).
+  if (candidate.type === 'capture_reminder') {
+    return null;
+  }
+
   if (ctx.recoveryWindowUntil && Date.now() < ctx.recoveryWindowUntil) {
     if (candidate.type !== 'critical_commitment_protection') {
       return 'inside_recovery_window';

@@ -29,6 +29,9 @@ export function shouldDeliverBundleForSettings(
       return settings.criticalAlertsEnabled;
     case 'leave_alert':
       return settings.beforeEventsEnabled;
+    case 'capture_reminder':
+      // User-requested — not gated by any category toggle in V1.
+      return true;
     default:
       return true;
   }

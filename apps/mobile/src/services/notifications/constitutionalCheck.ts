@@ -49,6 +49,12 @@ export function evaluateConstitutionalCompliance(
     openedWithinTwoWeeks: boolean;
   },
 ): ConstitutionalCheckResult {
+  // Capture reminders are explicitly user-requested — they are constitutional
+  // by definition. The user decided this interruption is worth it.
+  if (candidate.type === 'capture_reminder') {
+    return { pass: true, failureReason: null };
+  }
+
   const copy = allCopy(candidate);
 
   if (GUILT_PATTERNS.some((p) => p.test(copy))) {

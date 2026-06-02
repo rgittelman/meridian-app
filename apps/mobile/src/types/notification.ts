@@ -8,7 +8,8 @@ export type NotificationCandidateType =
   | 'transition_awareness'
   | 'evening_wind_down'
   | 'critical_commitment_protection'
-  | 'leave_alert';
+  | 'leave_alert'
+  | 'capture_reminder';
 
 export type NotificationSuppressionReason =
   | 'recently_opened_app'
@@ -121,6 +122,7 @@ export type NotificationDailyCaps = {
   transitionAwareness: number;
   criticalProtectionExempt: boolean;
   leaveAlert: number;
+  captureReminder: number;
 };
 
 export type NotificationIntelligenceSnapshot = {

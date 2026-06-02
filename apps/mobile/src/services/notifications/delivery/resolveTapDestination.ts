@@ -20,6 +20,10 @@ export function resolveNotificationTapDestination(input: {
     }
   }
 
+  if (input.primarySourceCaptureId && input.type === 'capture_reminder') {
+    return { screen: 'capture_detail', captureId: input.primarySourceCaptureId };
+  }
+
   if (input.primarySourceCaptureId && !input.primarySourceEventId) {
     return { screen: 'capture_detail', captureId: input.primarySourceCaptureId };
   }

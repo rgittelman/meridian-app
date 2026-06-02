@@ -20,6 +20,8 @@ function capForType(
       return caps.criticalProtectionExempt ? null : 1;
     case 'leave_alert':
       return caps.leaveAlert;
+    case 'capture_reminder':
+      return caps.captureReminder;
     default:
       return 1;
   }
