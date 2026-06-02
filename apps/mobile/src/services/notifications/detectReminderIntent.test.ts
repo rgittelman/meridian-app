@@ -157,3 +157,51 @@ describe('resolveReminderTime — relative expressions', () => {
     assert.equal(result, null);
   });
 });
+
+// ── detectReminderIntent — before-offset pattern ──────────────────────────────
+
+describe('detectReminderIntent — before-offset mid-sentence', () => {
+  it('detects "Remind me X minutes before" mid-sentence', () => {
+    const r = detectReminderIntent('Call mom at 2:00pm today. Remind me 5 minutes before.');
+    assert.equal(r.hasIntent, true);
+    if (r.hasIntent) {
+      assert.equal(r.beforeOffsetMs, 5 * 60 * 1000);
+      assert.ok(r.taskText.toLowerCase().includes('call mom'), `task: "${r.taskText}"`);
+    }
+  });
+
+  it('strips time from task text in before-offset case', () => {
+    const r = detectReminderIntent('Call mom at 2:00pm today. Remind me 5 minutes before.');
+    assert.ok(r.hasIntent);
+    if (r.hasIntent) {
+      assert.ok(
+        !r.taskText.toLowerCase().includes('2:00pm'),
+        `time leaked into task: "${r.taskText}"`,
+      );
+    }
+  });
+
+  it('handles "Remind me 15 minutes before"', () => {
+    const r = detectReminderIntent('Pick up Grace at 5:30pm. Remind me 15 minutes before.');
+    assert.equal(r.hasIntent, true);
+    if (r.hasIntent) {
+      assert.equal(r.beforeOffsetMs, 15 * 60 * 1000);
+    }
+  });
+
+  it('handles "Remind me 1 hour before"', () => {
+    const r = detectReminderIntent('BFSC board meeting at 7pm. Remind me 1 hour before.');
+    assert.equal(r.hasIntent, true);
+    if (r.hasIntent) {
+      assert.equal(r.beforeOffsetMs, 60 * 60 * 1000);
+    }
+  });
+
+  it('before-offset does not include beforeOffsetMs for start-trigger captures', () => {
+    const r = detectReminderIntent('Remind me to call Matt in 20 minutes');
+    assert.equal(r.hasIntent, true);
+    if (r.hasIntent) {
+      assert.equal(r.beforeOffsetMs, undefined);
+    }
+  });
+});

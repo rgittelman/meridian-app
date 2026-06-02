@@ -36,7 +36,7 @@ export function generateCaptureReminderCandidates(
     const intent = detectReminderIntent(capture.raw ?? '');
     if (!intent.hasIntent) continue;
 
-    const reminderTime = resolveReminderTime(capture, now);
+    const reminderTime = resolveReminderTime(capture, now, intent);
     if (!reminderTime) continue;
 
     const windowStart = reminderTime;
