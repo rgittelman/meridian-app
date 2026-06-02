@@ -152,6 +152,33 @@ Deferred:
 - Distance Matrix API
 - Dynamic leave alert timing
 
+### Phase H.3 — Real-World Validation
+Status: PARTIAL — static checks passed, device smoke test pending
+
+Static checks (code + tests):
+- All console output gated behind isDevEnvironment() — confirmed
+- API key never logged — confirmed
+- trafficCacheStore not persisted — confirmed
+- trafficEstimates not in calendarStore partialize — confirmed
+- No setInterval, BackgroundFetch, TaskManager, or defineTask in H files — confirmed
+- No live GPS reads in traffic path — confirmed
+- No locked notification systems modified — confirmed
+- 229/229 tests passing — confirmed
+- TypeScript clean — confirmed
+
+Notification scenarios verified in code:
+- Traffic key absent → NullEtaProvider → G.2 behavior — confirmed
+- Traffic disappears → trafficVersion increments → reconcile → T-30 fallback — confirmed
+- Timing drift > 5 min → reschedule_changed — confirmed
+- Timing drift ≤ 5 min → keep_existing — confirmed
+
+Device validation outstanding:
+- Cold launch with/without Maps key
+- Live traffic estimate populating in dev logs
+- OS notification scheduling at traffic-adjusted time
+- Confirming no key string in console output
+See PHASE_H_VALIDATION.md for full checklist.
+
 ### Phase H.2 — Traffic-Aware Leave Alerts
 Status: PASSED
 Locked: Yes
@@ -209,7 +236,16 @@ Not activated:
 - No dedupe key changes
 - H.2 blocked until dedupe/reschedule behavior is designed and approved
 
-## Next: Meridian Intelligence Audit V1
+## Next: Phase I — Confidence & Diagnostics
+
+Internal visibility layer (not user-facing):
+- Why a leave alert did or did not schedule
+- Whether venue coordinates existed for an event
+- Whether a traffic estimate existed and was used
+- Whether timing fell back to T-30
+- Whether reconciliation rescheduled or kept existing
+
+## Meridian Intelligence Audit V1
 
 Before Phase G, evaluate:
 - Does Meridian feel smarter every week?
