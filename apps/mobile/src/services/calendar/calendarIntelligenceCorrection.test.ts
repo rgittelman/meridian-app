@@ -653,3 +653,106 @@ describe('Pagination truncation diagnostic (Risk B)', () => {
     assert.equal(partial, false, 'clean sync must not set partial');
   });
 });
+
+describe('Fix 7 — financial category is a signal, not a domain override', () => {
+  // Root cause: inferredCategory === 'financial' returned personal immediately,
+  // before any family/youth/child signals were evaluated.
+  // Fix: hoist family-signal computation; financial gate checks for strong family
+  // signals first and falls through if found.
+
+  it('Grace volleyball tournament with inferredCategory=financial → family', () => {
+    // Reproduces: "BILL DUE" calendar, title is a family youth sports event
+    const result = inferEventDomain(
+      makeDomainInput('Grace volleyball tournament Saturday', {
+        inferredCategory: 'financial',
+      }),
+    );
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('Hudson football game Thursday with inferredCategory=financial → family', () => {
+    const result = inferEventDomain(
+      makeDomainInput('Hudson football game Thursday 6pm', {
+        inferredCategory: 'financial',
+      }),
+    );
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('Reagan cheer practice with inferredCategory=financial → family', () => {
+    const result = inferEventDomain(
+      makeDomainInput('Reagan cheer practice Tuesday', {
+        inferredCategory: 'financial',
+      }),
+    );
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('"payment" in description does not override youth sports title', () => {
+    // e.g. description = "Payment due: $45 registration fee"
+    // title = "Grace volleyball tournament"
+    // The regex /\bpayment\b/ fires on the combined text, but family signals win
+    const result = inferEventDomain({
+      ...makeDomainInput('Grace volleyball tournament'),
+      description: 'Payment due: $45 registration fee',
+    });
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('"bill" in description does not override child activity title', () => {
+    const result = inferEventDomain({
+      ...makeDomainInput('Quinn hockey game Saturday'),
+      description: 'Ice time bill included',
+    });
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('pure financial event with no family signals still resolves to personal', () => {
+    // Regression: real financial events must not be reclassified
+    const result = inferEventDomain(
+      makeDomainInput('Mortgage payment due', {
+        inferredCategory: 'financial',
+      }),
+    );
+    assert.equal(result.domain, 'personal', `Expected personal, got ${result.domain} (${result.reason})`);
+  });
+
+  it('"BILL DUE" as calendar name with family title → family', () => {
+    // Calendar name "BILL DUE" does not produce a workBoost/familyBoost,
+    // so categoryBoost=null. inferredCategory comes from title text scoring.
+    // Grace volleyball tournament scores family(2) > financial(0) → family category.
+    // Even if inferredCategory were coerced to financial, fix holds.
+    const result = inferEventDomain(
+      makeDomainInput('Grace volleyball tournament Saturday', {
+        sourceCalendarName: 'BILL DUE',
+        sourceCalendarDisplayLabel: 'BILL DUE',
+      }),
+    );
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('"invoice" keyword in title does not suppress youth sports domain', () => {
+    // e.g. event titled "Hockey invoice - Quinn game Saturday"
+    const result = inferEventDomain(
+      makeDomainInput('Hockey invoice - Quinn game Saturday', {
+        inferredCategory: 'financial',
+      }),
+    );
+    assert.equal(result.domain, 'family', `Expected family, got ${result.domain} (${result.reason})`);
+  });
+
+  it('"payment" alone with no family signals still resolves to personal', () => {
+    const result = inferEventDomain(makeDomainInput('Insurance payment due'));
+    assert.equal(result.domain, 'personal', `Expected personal, got ${result.domain} (${result.reason})`);
+  });
+
+  it('BFSC community event with inferredCategory=financial → community (community signal wins first)', () => {
+    // Community text signals fire before the financial gate — no regression here
+    const result = inferEventDomain(
+      makeDomainInput('BFSC annual dues payment', {
+        inferredCategory: 'financial',
+      }),
+    );
+    assert.equal(result.domain, 'community', `Expected community, got ${result.domain} (${result.reason})`);
+  });
+});

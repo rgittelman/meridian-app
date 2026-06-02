@@ -108,13 +108,9 @@ export function inferEventDomain(input: {
     return { domain: 'work', confidence: 'high', reason: 'work_signal' };
   }
 
-  if (
-    input.inferredCategory === 'financial' ||
-    /\b(?:bill|payment|invoice|mortgage|insurance premium)\b/.test(lower)
-  ) {
-    return { domain: 'personal', confidence: 'medium', reason: 'financial_personal' };
-  }
-
+  // Hoist family-signal computation so the financial gate can consult it.
+  // Financial category is a signal, not an override — it must not preempt
+  // strong family/youth/sports evidence in the event text.
   const namedChildren = matchingChildrenInText(text);
   const sportsChild = inferChildFromSportsTitle(input.title, input.location);
   const teamSnap = isTeamSnapOrSportsCalendar(
@@ -133,6 +129,20 @@ export function inferEventDomain(input: {
   const isYouthSports =
     Boolean(sportsChild) ||
     (teamSnap && (activity !== null || isGenericLeagueScheduleTitle(input.title)));
+
+  if (
+    input.inferredCategory === 'financial' ||
+    /\b(?:bill|payment|invoice|mortgage|insurance premium)\b/.test(lower)
+  ) {
+    // Only return personal when there are no stronger family/youth signals.
+    // e.g. "BILL DUE" calendar with title "Grace volleyball tournament Saturday"
+    // should resolve to family, not personal — the calendar category is noise.
+    const hasStrongFamilySignal = namedChildren.length > 0 || youthActivity || isYouthSports;
+    if (!hasStrongFamilySignal) {
+      return { domain: 'personal', confidence: 'medium', reason: 'financial_personal' };
+    }
+    // Fall through — family detection below will fire on the hoisted signals.
+  }
 
   if (isYouthSports || (sportsChild && youthActivity)) {
     return { domain: 'family', confidence: 'high', reason: 'child_youth_sports_commitment' };

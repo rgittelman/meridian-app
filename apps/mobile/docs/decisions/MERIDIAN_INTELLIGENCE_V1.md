@@ -66,3 +66,12 @@ Implementation:
 
 Status:
 Locked and covered by automated tests.
+
+## Engagement Quick Win v1.1
+
+Daily completion counts are now day-scoped.
+
+- completedIds reset on new local day
+- CalmWins reflects today's completions only
+- Focus clear state count reflects today's handled items only
+- Existing stale persisted counts are cleared on first hydration

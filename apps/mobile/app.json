@@ -16,7 +16,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.meridian.app"
+      "bundleIdentifier": "com.meridian.app",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "Meridian notifies you before family events and work deadlines — rarely, and only when it matters."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,6 +34,15 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-font"]
+    "plugins": [
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#1C1B19",
+          "iosDisplayInForeground": true
+        }
+      ]
+    ]
   }
 }
