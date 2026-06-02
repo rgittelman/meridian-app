@@ -158,12 +158,57 @@ Life screen header contains the gear entry point.
 
 ---
 
+---
+
+## Strategic Principle: Anticipation Over Reminders
+
+Status: Accepted
+
+Meridian's differentiation is anticipation, not reminders. Any notification,
+insight, or surface should be evaluated against this standard.
+
+Reminders say what. Meridian says what, why now, and what it means.
+
+Examples of the distinction:
+
+  Reminder: Grace volleyball at 5pm.
+  Meridian: Grace volleyball at 5pm. Traffic is usually heavy by 4:15.
+            Leaving around 4:00 gives you breathing room.
+
+  Reminder: BFSC board meeting tonight.
+  Meridian: BFSC board meeting tonight. Insurance renewal was mentioned
+            earlier this week and hasn't resurfaced yet.
+
+  Reminder: Expense report due Friday.
+  Meridian: Friday is getting tight. You have a clean window tomorrow
+            morning for the expense report.
+
+Phase roadmap in terms of this principle:
+
+  Phase E — Meridian reminds (time-based leave alerts)
+  Phase F — Meridian summarizes (morning brief scheduling)
+  Phase G — Meridian understands where you are (geolocation)
+  Phase H — Meridian understands how long things take (traffic-aware routing)
+  Phase I — Meridian stays current when closed (background fetch)
+
+After Phase F, before diving into location intelligence:
+  Engagement / Wow Layer sprint — observations that make users say
+  "How did it know that?" Examples: "This is the third Grace event this
+  week." "Your family schedule is unusually heavy Thursday." These are not
+  reminders. They are observations. Observations are what users share.
+
+Rule for future audits:
+  Before adding any notification or surface, ask: is this a reminder or an
+  anticipation? Prefer anticipation. If it cannot anticipate yet, make it
+  as calm and contextual as possible.
+
+---
+
 ## Current Next Priority
 
 Next likely systems to audit:
 
-1. Plan Intelligence / Plan Screen UX
-2. Notification Intelligence delivery
-3. Daily Briefing
-4. Settings / onboarding
-5. Real-world device testing
+1. Phase E — Leave Alerts (time-based)
+2. Phase F — Morning Brief Scheduling
+3. Engagement / Wow Layer sprint
+4. Phase G — Geolocation Intelligence

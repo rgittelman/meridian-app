@@ -89,6 +89,8 @@ Deferred:
 
 ## Future Roadmap
 
-Phase E — Leave Alerts
+Phase E — Leave Alerts (time-based only)
 Phase F — Morning Brief Scheduling
-V2 — Location Intelligence
+Phase G — Geolocation Intelligence
+Phase H — Traffic-Aware Routing
+Phase I — Background Fetch
