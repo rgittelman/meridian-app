@@ -204,11 +204,50 @@ Rule for future audits:
 
 ---
 
+---
+
+## ADR: Phase Lock Order and Expansion Constraints
+
+Status: Accepted
+
+Do not expand scope of any phase beyond its definition.
+Do not pull in geolocation, traffic, or background fetch early.
+Do not add location permissions before the user has experienced value.
+
+Rationale:
+Location permissions are one of the biggest trust asks on mobile. A user
+who has already received helpful leave alerts, morning briefs, and smart
+event protection is far more likely to grant location access than a new
+user with no prior context. Meridian must earn the right to ask.
+
+Lock order:
+
+  Phase E — Leave Alerts
+    First feature users actually feel. A notification that protects a
+    specific family commitment. Success criteria: fires, cancels, reschedules,
+    honors settings, survives restarts. Ship this before touching anything else.
+
+  Phase F — Morning Briefs and Evening Preview
+    First daily engagement loop. Not "Good morning." Something like:
+    "You have 2 family commitments before noon and one work item that may
+    get tight by Friday." Creates habit.
+
+  Pause — Meridian Intelligence Audit V1
+    Before Phase G: does Meridian feel smarter every week? Does it surface
+    insights users didn't already know? Is it anticipating or reminding?
+    Is there at least one "how did it know that?" moment per week?
+    If the answer is no, build more intelligence — not more infrastructure.
+
+  Phase G — Geolocation Intelligence
+  Phase H — Traffic-Aware Routing
+  Phase I — Background Fetch
+
+Rule for future sessions:
+  The shortest path from "interesting app" to "I rely on this" runs through
+  Phase E and Phase F, not through Phase G. Do not skip ahead.
+
+---
+
 ## Current Next Priority
 
-Next likely systems to audit:
-
-1. Phase E — Leave Alerts (time-based)
-2. Phase F — Morning Brief Scheduling
-3. Engagement / Wow Layer sprint
-4. Phase G — Geolocation Intelligence
+Phase E — Leave Alerts (time-based, no geolocation)
