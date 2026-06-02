@@ -74,12 +74,13 @@ Validation:
 Status: PASSED
 Locked: Yes
 
-Completed:
-- Notification response listener
-- Navigation ref
-- Pending tap queue for cold launch
-- V1 routing to Focus, Plan, and Capture tabs
-- Non-Meridian notifications ignored
+Validation:
+- Focus notification routes to Focus ✓
+- Plan notification routes to Plan ✓
+- Capture notification routes to Capture ✓
+- Non-Meridian notification ignored ✓
+- Cold-launch notification tap routes correctly ✓
+- Foreground notification handling is safe ✓
 
 Deferred:
 - Event detail deep links
