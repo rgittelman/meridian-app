@@ -170,4 +170,20 @@ export function useNotificationDelivery(): void {
     if (captureVersion === 0) return; // skip initial mount
     scheduleReconcile();
   }, [captureVersion, scheduleReconcile]);
+
+  // ── Trigger 4: traffic estimates updated ───────────────────────────────────
+  //
+  // trafficVersion increments in calendarStore after traffic enrichment
+  // completes following a sync — including when prior estimates are cleared.
+  // This fires reconciliation once per enrichment completion, not on a timer.
+  // In H.1 the reconcile produces the same schedule as before (pipeline does
+  // not yet consume trafficEstimates). In H.2 it will produce traffic-adjusted
+  // leave alert timing.
+
+  const trafficVersion = useCalendarStore((s) => s.trafficVersion);
+
+  useEffect(() => {
+    if (trafficVersion === 0) return; // skip initial — no traffic data yet
+    scheduleReconcile();
+  }, [trafficVersion, scheduleReconcile]);
 }

@@ -18,6 +18,7 @@ import type { AuthRequest } from 'expo-auth-session';
 import { rehydrateEventAttribution } from '@/services/attribution/rehydrateAttribution';
 import type { CalendarConnectionStatus, MeridianCalendarEvent } from '@/types/calendar';
 import type { VenueCoordinates } from '@/services/location/venueIntelligence';
+import type { TrafficEstimate } from '@/services/location/trafficIntelligence';
 
 type SerializedEvent = Omit<MeridianCalendarEvent, 'startTime' | 'endTime'> & {
   startTime: string;
@@ -81,12 +82,26 @@ type CalendarState = {
    * Venue coordinates resolved by Phase H0 enrichment.
    * Not persisted — repopulated after each sync.
    * Key: Meridian event ID. Value: geocoded venue coordinates.
-   * Phase H (traffic-aware routing) will read from this map.
    */
   venueCoordinates: Record<string, VenueCoordinates>;
+  /**
+   * Traffic estimates resolved by Phase H.1 enrichment.
+   * Not persisted — session-only. Repopulated after each sync.
+   * Key: Meridian event ID. Value: baseline + traffic minutes + heavier flag.
+   * Phase H.2 (leave alert timing/copy) will read from this map.
+   */
+  trafficEstimates: Record<string, TrafficEstimate>;
+  /**
+   * Increments when trafficEstimates is updated — including when stale data
+   * is cleared. useNotificationDelivery watches this to trigger reconciliation
+   * after traffic data arrives or is invalidated.
+   * Not persisted — session-only.
+   */
+  trafficVersion: number;
 
   setStatus: (status: CalendarConnectionStatus) => void;
   setVenueCoordinates: (coords: Record<string, VenueCoordinates>) => void;
+  setTrafficEstimates: (estimates: Record<string, TrafficEstimate>) => void;
   setShowingCached: (v: boolean) => void;
   clearCalendar: () => void;
 
@@ -118,9 +133,23 @@ export const useCalendarStore = create<CalendarState>()(
       error: null,
       syncVersion: 0,
       venueCoordinates: {},
+      trafficEstimates: {},
+      trafficVersion: 0,
 
       setStatus: (status) => set({ status }),
       setVenueCoordinates: (coords) => set({ venueCoordinates: coords }),
+      setTrafficEstimates: (estimates) =>
+        set((state) => {
+          const hadPriorEstimates = Object.keys(state.trafficEstimates).length > 0;
+          const hasNewEstimates = Object.keys(estimates).length > 0;
+          // Increment trafficVersion when there is new data, OR when stale data
+          // is being cleared — so useNotificationDelivery reschedules in both cases.
+          const shouldIncrement = hasNewEstimates || hadPriorEstimates;
+          return {
+            trafficEstimates: estimates,
+            trafficVersion: shouldIncrement ? state.trafficVersion + 1 : state.trafficVersion,
+          };
+        }),
       setShowingCached: (showingCached) => set({ showingCached }),
 
       clearCalendar: () =>
@@ -253,19 +282,38 @@ export const useCalendarStore = create<CalendarState>()(
           const { useCaptureStore } = await import('@/store/captureStore');
           useCaptureStore.getState().relinkCapturesToCalendar();
 
-          // Opportunistic venue enrichment — non-blocking.
-          // Resolves calendar event location strings to coordinates for Phase H.
+          // Opportunistic post-sync enrichment — non-blocking.
+          // Venue enrichment runs first; traffic enrichment chains after it
+          // because traffic requires venue coordinates to be available.
           const allEvents = [...weekEvents, ...upcomingEvents];
-          import('@/services/calendar/venueEnrichment')
+          void import('@/services/calendar/venueEnrichment')
             .then(({ enrichEventsWithVenueCoordinates }) =>
               enrichEventsWithVenueCoordinates(allEvents),
             )
-            .then((coords) => {
-              get().setVenueCoordinates(coords);
+            .then(async (venueCoords) => {
+              get().setVenueCoordinates(venueCoords);
+
+              // Chain: traffic enrichment uses the just-resolved venue coordinates.
+              const [{ enrichEventsWithTrafficEstimates }, { buildEtaProvider }, { useLocationStore }] =
+                await Promise.all([
+                  import('@/services/calendar/trafficEnrichment'),
+                  import('@/config/mapsApi'),
+                  import('@/store/locationStore'),
+                ]);
+              const homeLocation = useLocationStore.getState().homeLocation;
+              return enrichEventsWithTrafficEstimates(
+                allEvents,
+                venueCoords,
+                homeLocation,
+                buildEtaProvider(),
+              );
+            })
+            .then((trafficEstimates) => {
+              get().setTrafficEstimates(trafficEstimates);
             })
             .catch((err) => {
               if (__DEV__) {
-                console.warn('[Venue Intelligence] enrichment failed', err);
+                console.warn('[Traffic Intelligence] enrichment chain failed', err);
               }
             });
         } catch (err) {
