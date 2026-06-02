@@ -53,6 +53,8 @@
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Meridian uses your location to understand whether you're home, at work, or away. This helps leave alerts create breathing room.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Meridian notifies you before family events and work deadlines — rarely, and only when it matters.</string>
 	<key>RCTNewArchEnabled</key>
