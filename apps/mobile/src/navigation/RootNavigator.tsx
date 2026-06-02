@@ -2,6 +2,8 @@ import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 
+import { navigationRef } from '@/navigation/navigationRef';
+import { flushPendingNotificationTap } from '@/services/notifications/handleNotificationTap';
 import { TabNavigator } from '@/navigation/TabNavigator';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -22,7 +24,11 @@ export function RootNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      onReady={() => flushPendingNotificationTap(navigationRef)}
+    >
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <TabNavigator />
