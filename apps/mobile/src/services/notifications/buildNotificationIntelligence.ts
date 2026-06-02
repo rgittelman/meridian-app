@@ -24,6 +24,7 @@ import { generateMorningBriefCandidates } from './generateMorningBrief';
 import { generateTransitionAwarenessCandidates } from './generateTransitionAwareness';
 import { generateEveningWindDownCandidates } from './generateEveningWindDown';
 import { generateCriticalProtectionCandidates } from './generateCriticalProtection';
+import { generateLeaveAlertCandidates } from './generateLeaveAlert';
 import type { NotificationIntelligenceContext } from './types';
 import { logNotificationAudit } from './notificationDebug';
 
@@ -98,6 +99,7 @@ export function buildNotificationIntelligenceWithDiagnostics(
     ...generateTransitionAwarenessCandidates(events, prepClusters, now),
     ...generateEveningWindDownCandidates(events, now),
     ...generateCriticalProtectionCandidates(events, now),
+    ...generateLeaveAlertCandidates(events, now),
   ];
 
   for (const c of raw) {

@@ -27,6 +27,8 @@ export function shouldDeliverBundleForSettings(
       return settings.beforeEventsEnabled;
     case 'critical_commitment_protection':
       return settings.criticalAlertsEnabled;
+    case 'leave_alert':
+      return settings.beforeEventsEnabled;
     default:
       return true;
   }

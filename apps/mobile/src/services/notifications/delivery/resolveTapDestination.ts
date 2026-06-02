@@ -13,7 +13,8 @@ export function resolveNotificationTapDestination(input: {
   if (input.primarySourceEventId) {
     if (
       input.type === 'critical_commitment_protection' ||
-      input.type === 'transition_awareness'
+      input.type === 'transition_awareness' ||
+      input.type === 'leave_alert'
     ) {
       return { screen: 'event_detail', eventId: input.primarySourceEventId };
     }

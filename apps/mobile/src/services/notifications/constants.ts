@@ -6,6 +6,7 @@ export const DEFAULT_NOTIFICATION_DAILY_CAPS: NotificationDailyCaps = {
   eveningWindDown: 1,
   transitionAwareness: 2,
   criticalProtectionExempt: true,
+  leaveAlert: 5,
 };
 
 /** Local hour windows (0–23) for candidate generation. */

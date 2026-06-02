@@ -98,7 +98,11 @@ function evaluateSuppression(
     }
   }
 
-  if (candidate.type === 'transition_awareness' && !candidate.secondaryLine && candidate.additionalLines.length === 0) {
+  if (
+    candidate.type === 'transition_awareness' &&
+    !candidate.secondaryLine &&
+    candidate.additionalLines.length === 0
+  ) {
     return 'no_actionable_content';
   }
 

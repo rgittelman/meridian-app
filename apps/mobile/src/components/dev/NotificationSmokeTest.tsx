@@ -155,6 +155,18 @@ export function NotificationSmokeTest() {
       },
     );
 
+  const handleLeaveAlert = () =>
+    send(
+      'Leave Alert Test',
+      'Meridian',
+      "Grace's volleyball practice starts in 30 minutes.",
+      {
+        meridianManaged: true,
+        bundleKey: 'smoke-test-leave-alert',
+        tapDestination: { screen: 'plan' },
+      },
+    );
+
   const handleNonMeridian = () =>
     send(
       'Non-Meridian Test',
@@ -191,6 +203,7 @@ export function NotificationSmokeTest() {
         <SmokeButton label="Focus Test" onPress={handleFocus} />
         <SmokeButton label="Plan Test" onPress={handlePlan} />
         <SmokeButton label="Capture Test" onPress={handleCapture} />
+        <SmokeButton label="Leave Alert Test" onPress={handleLeaveAlert} />
         <SmokeButton label="Non-Meridian Test" onPress={handleNonMeridian} dim />
       </View>
 

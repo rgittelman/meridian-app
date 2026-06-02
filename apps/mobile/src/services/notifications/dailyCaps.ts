@@ -18,6 +18,8 @@ function capForType(
       return caps.transitionAwareness;
     case 'critical_commitment_protection':
       return caps.criticalProtectionExempt ? null : 1;
+    case 'leave_alert':
+      return caps.leaveAlert;
     default:
       return 1;
   }

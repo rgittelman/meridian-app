@@ -56,12 +56,24 @@ describe('shouldDeliverBundleForSettings', () => {
     );
   });
 
+  it('allows leave_alert when beforeEventsEnabled is true', () => {
+    assert.equal(shouldDeliverBundleForSettings('leave_alert', ALL_ENABLED), true);
+  });
+
+  it('blocks leave_alert when beforeEventsEnabled is false', () => {
+    assert.equal(
+      shouldDeliverBundleForSettings('leave_alert', { ...ALL_ENABLED, beforeEventsEnabled: false }),
+      false,
+    );
+  });
+
   it('allows all types when all settings are enabled', () => {
     const types = [
       'morning_brief',
       'evening_wind_down',
       'transition_awareness',
       'critical_commitment_protection',
+      'leave_alert',
     ] as const;
     for (const type of types) {
       assert.equal(
@@ -78,6 +90,7 @@ describe('shouldDeliverBundleForSettings', () => {
       'evening_wind_down',
       'transition_awareness',
       'critical_commitment_protection',
+      'leave_alert',
     ] as const;
     for (const type of types) {
       assert.equal(
