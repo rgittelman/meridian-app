@@ -3,6 +3,10 @@ import type {
   NotificationBundle,
   ProcessedNotificationCandidate,
 } from '@/types/notification';
+import type { MeridianCalendarEvent } from '@/types/calendar';
+import type { VenueCoordinates } from '@/services/location/venueIntelligence';
+import { classifyVenueLocation } from '@/services/location/venueIntelligence';
+import { useVenueCacheStore } from '@/store/venueCacheStore';
 import { isDevEnvironment } from '@/utils/isDev';
 
 export function logNotificationAudit(
@@ -42,6 +46,55 @@ export function logNotificationAudit(
       type: c.type,
       reason: c.suppressionReason,
       score: c.interruptionScore.total,
+    });
+  }
+}
+
+/**
+ * Phase H0 — Venue Intelligence diagnostic.
+ * Logs venue geocode status for each calendar event that has a location string.
+ * Dev-only. Call from the dev diagnostic panel after sync.
+ */
+export function logVenueDiagnostics(
+  events: MeridianCalendarEvent[],
+  venueCoordinates: Record<string, VenueCoordinates>,
+): void {
+  if (!isDevEnvironment()) return;
+
+  const cacheEntries = useVenueCacheStore.getState().entries;
+  const eventsWithLocation = events.filter((e) => e.location);
+
+  console.log('[Venue Intelligence] ─── diagnostics ───');
+  console.log('[Venue Intelligence] events with location:', eventsWithLocation.length);
+  console.log('[Venue Intelligence] events with resolved coords:', Object.keys(venueCoordinates).length);
+
+  for (const event of eventsWithLocation.slice(0, 20)) {
+    const raw = event.location!;
+    const classification = classifyVenueLocation(raw);
+    const coords = venueCoordinates[event.id];
+
+    if (!classification.shouldGeocode) {
+      console.log('[Venue Intelligence] skip', {
+        event: event.displayTitle,
+        location: raw,
+        reason: classification.reason,
+      });
+      continue;
+    }
+
+    const cached = cacheEntries[classification.normalizedKey];
+    const status = coords
+      ? 'resolved'
+      : cached?.geocodeSucceeded === false
+        ? 'geocode_failed'
+        : 'pending';
+
+    console.log('[Venue Intelligence] event', {
+      event: event.displayTitle,
+      location: raw,
+      normalizedKey: classification.normalizedKey,
+      status,
+      coords: coords ?? null,
     });
   }
 }

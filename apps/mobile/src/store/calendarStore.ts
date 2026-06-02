@@ -17,6 +17,7 @@ import { useGoogleAuthStore } from '@/store/googleAuthStore';
 import type { AuthRequest } from 'expo-auth-session';
 import { rehydrateEventAttribution } from '@/services/attribution/rehydrateAttribution';
 import type { CalendarConnectionStatus, MeridianCalendarEvent } from '@/types/calendar';
+import type { VenueCoordinates } from '@/services/location/venueIntelligence';
 
 type SerializedEvent = Omit<MeridianCalendarEvent, 'startTime' | 'endTime'> & {
   startTime: string;
@@ -76,8 +77,16 @@ type CalendarState = {
    * to the full events array.
    */
   syncVersion: number;
+  /**
+   * Venue coordinates resolved by Phase H0 enrichment.
+   * Not persisted — repopulated after each sync.
+   * Key: Meridian event ID. Value: geocoded venue coordinates.
+   * Phase H (traffic-aware routing) will read from this map.
+   */
+  venueCoordinates: Record<string, VenueCoordinates>;
 
   setStatus: (status: CalendarConnectionStatus) => void;
+  setVenueCoordinates: (coords: Record<string, VenueCoordinates>) => void;
   setShowingCached: (v: boolean) => void;
   clearCalendar: () => void;
 
@@ -108,8 +117,10 @@ export const useCalendarStore = create<CalendarState>()(
       showingCached: false,
       error: null,
       syncVersion: 0,
+      venueCoordinates: {},
 
       setStatus: (status) => set({ status }),
+      setVenueCoordinates: (coords) => set({ venueCoordinates: coords }),
       setShowingCached: (showingCached) => set({ showingCached }),
 
       clearCalendar: () =>
@@ -241,6 +252,22 @@ export const useCalendarStore = create<CalendarState>()(
 
           const { useCaptureStore } = await import('@/store/captureStore');
           useCaptureStore.getState().relinkCapturesToCalendar();
+
+          // Opportunistic venue enrichment — non-blocking.
+          // Resolves calendar event location strings to coordinates for Phase H.
+          const allEvents = [...weekEvents, ...upcomingEvents];
+          import('@/services/calendar/venueEnrichment')
+            .then(({ enrichEventsWithVenueCoordinates }) =>
+              enrichEventsWithVenueCoordinates(allEvents),
+            )
+            .then((coords) => {
+              get().setVenueCoordinates(coords);
+            })
+            .catch((err) => {
+              if (__DEV__) {
+                console.warn('[Venue Intelligence] enrichment failed', err);
+              }
+            });
         } catch (err) {
           const hadCache = get().weekEvents.length > 0;
           const status = resolveSyncFailureStatus(err, hadCache);
