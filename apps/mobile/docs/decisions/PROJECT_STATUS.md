@@ -134,6 +134,24 @@ Deferred:
 - Quiet hours enforcement for briefs
 - Stale content when calendar changes while app is closed (Phase I)
 
+### Phase H0 — Venue Intelligence Foundation
+Status: PASSED
+Locked: Yes
+
+Completed:
+- Venue location normalization
+- Venue geocoding eligibility classification (blank, vague, virtual, too_short)
+- Venue coordinate cache with 24-hour failure suppression
+- Non-blocking calendar post-sync enrichment (fire-and-forget, no UX impact)
+- Dev diagnostics: logVenueDiagnostics shows resolved/skipped/failed per event
+- 30 pure tests covering classification, normalization, and cache-decision logic
+
+Deferred:
+- Traffic-aware routing
+- ETA calculations
+- Distance Matrix API
+- Dynamic leave alert timing
+
 ## Next: Meridian Intelligence Audit V1
 
 Before Phase G, evaluate:
