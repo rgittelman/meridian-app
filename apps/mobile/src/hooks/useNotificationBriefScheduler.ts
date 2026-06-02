@@ -234,15 +234,23 @@ export async function scheduleBriefDevTest(
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useNotificationBriefScheduler(): void {
-  // Run on mount — schedules briefs from current state regardless of sync.
-  useEffect(() => {
-    void scheduleBriefs();
-  }, []);
-
   // Re-run whenever calendar sync completes — picks up event changes.
   const syncVersion = useCalendarStore((s) => s.syncVersion);
   useEffect(() => {
     if (syncVersion === 0) return; // skip initial mount (no sync yet)
     void scheduleBriefs();
   }, [syncVersion]);
+
+  // Fire once when the calendar store first has data — covers the mount-timing
+  // race where scheduleBriefs() ran at mount before the store hydrated from
+  // AsyncStorage cache. This false→true transition fires exactly once per
+  // session and acts as the safety net when syncVersion stays at 0 (offline /
+  // cached-only session).
+  const hasCalendarData = useCalendarStore(
+    (s) => s.weekEvents.length > 0 || s.upcomingEvents.length > 0,
+  );
+  useEffect(() => {
+    if (!hasCalendarData) return;
+    void scheduleBriefs();
+  }, [hasCalendarData]);
 }

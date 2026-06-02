@@ -29,7 +29,7 @@ Claude Code = Builder
 
 ## Current Phase
 
-Phase F — Morning Briefs & Evening Preview
+Meridian Intelligence Audit V1 (pause before Phase G)
 
 ## Completed
 
@@ -104,9 +104,49 @@ Deferred:
 - Geolocation-based leave timing (Phase G)
 - Traffic-aware departure times (Phase H)
 
+### Phase F — Morning Briefs & Evening Preview
+Status: PASSED
+Locked: Yes
+
+Completed:
+- Morning Brief generator: synthesises day shape from today's calendar events
+- Evening Preview generator: forward-looking, tomorrow's commitments only
+- Brief card in Focus screen: between greeting and Momentum Ring
+- Forward-scheduled at 7:15 AM (Morning) and 7:00 PM (Evening)
+- Settings toggles respected: master, morningBrief, eveningPreview
+- Calendar hydration race fixed: scheduler retriggers when store first has data
+- Dev diagnostic panel: Diagnose, Inspect Records, fast-fire test buttons
+
+Validation:
+- Morning Brief fires and routes to Focus ✓
+- Evening Preview fires and routes to Focus ✓
+- Brief card visible in Focus when content exists ✓
+- No card when no content ✓
+- Production settings gate verified ✓
+- Delivery record inspection verified ✓
+- No guilt language, no task counts, no backward-looking copy ✓
+
+Post-lock corrections:
+- Fixed calendar store hydration race (mount-timing bug):
+  scheduler now retriggers on first false→true transition of hasCalendarData
+
+Deferred:
+- Quiet hours enforcement for briefs
+- Stale content when calendar changes while app is closed (Phase I)
+
+## Next: Meridian Intelligence Audit V1
+
+Before Phase G, evaluate:
+- Does Meridian feel smarter every week?
+- Does it surface insights users didn't already know?
+- Is it anticipating or reminding?
+- Is there at least one "how did it know that?" moment per week?
+- Would a user show this to their spouse?
+
+If the answer is no, build more intelligence — not more infrastructure.
+
 ## Future Roadmap
 
-Phase F — Morning Briefs & Evening Preview
 Phase G — Geolocation Intelligence
 Phase H — Traffic-Aware Routing
 Phase I — Background Fetch

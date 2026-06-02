@@ -7,6 +7,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { AmbientCapture } from '@/components/focus/AmbientCapture';
 import { CalmWins } from '@/components/focus/CalmWins';
 import { CompletionToast } from '@/components/focus/CompletionToast';
+import { DailyBriefCard } from '@/components/focus/DailyBriefCard';
 import { FocusStack } from '@/components/focus/FocusStack';
 import { GreetingSection } from '@/components/focus/GreetingSection';
 import { MomentumRing } from '@/components/focus/MomentumRing';
@@ -14,6 +15,7 @@ import { PrepAwarenessSection } from '@/components/focus/PrepAwarenessSection';
 import { ScheduleStrip } from '@/components/focus/ScheduleStrip';
 import { SnoozeSheet } from '@/components/focus/SnoozeSheet';
 import { useCalendar } from '@/hooks/useCalendar';
+import { useDailyBrief } from '@/hooks/useDailyBrief';
 import { useGreeting } from '@/hooks/useGreeting';
 import { useOrchestration } from '@/hooks/useOrchestration';
 import { useLifeIntelligence } from '@/hooks/useLifeIntelligence';
@@ -70,6 +72,7 @@ export function FocusScreen() {
 
   const lifeSnapshot = useLifeIntelligence();
   const { name: greetingName, timeOfDay } = useGreeting();
+  const dailyBrief = useDailyBrief();
   const prepSnapshot = usePrepIntelligence();
 
   // Intelligence pipeline (calendar + life domains inform resurfacing)
@@ -177,6 +180,16 @@ export function FocusScreen() {
         <View style={staticStyles.padH}>
           <GreetingSection timeOfDay={timeOfDay} name={greetingName} />
         </View>
+
+        {/* 1b · Daily Brief Card — morning or evening, only when content exists */}
+        {dailyBrief && (
+          <>
+            <Divider size="md" />
+            <View style={staticStyles.padH}>
+              <DailyBriefCard brief={dailyBrief} />
+            </View>
+          </>
+        )}
 
         <Divider size="lg" />
 

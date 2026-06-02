@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { AppLoading, AppProviders } from '@/components/AppProviders';
 import { useAppFonts } from '@/hooks/useAppFonts';
 import { useNotificationAppLifecycle } from '@/hooks/useNotificationAppLifecycle';
+import { useNotificationBriefScheduler } from '@/hooks/useNotificationBriefScheduler';
 import { useNotificationDelivery } from '@/hooks/useNotificationDelivery';
 import { useNotificationTapHandler } from '@/hooks/useNotificationTapHandler';
 import { RootNavigator } from '@/navigation/RootNavigator';
@@ -13,6 +14,7 @@ export default function App() {
   const setReady = useAppStore((s) => s.setReady);
   useNotificationAppLifecycle();
   useNotificationDelivery();
+  useNotificationBriefScheduler();
   useNotificationTapHandler();
 
   useEffect(() => {
