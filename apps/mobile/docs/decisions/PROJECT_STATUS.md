@@ -29,7 +29,7 @@ Claude Code = Builder
 
 ## Current Phase
 
-Phase D — Notification Tap Handling
+Phase E — Leave Alerts
 
 ## Completed
 
@@ -70,9 +70,24 @@ Validation:
 - Focus completion count daily reset
 - Clear state implementation
 
+### Phase D — Notification Tap Handling
+Status: PASSED
+Locked: Yes
+
+Completed:
+- Notification response listener
+- Navigation ref
+- Pending tap queue for cold launch
+- V1 routing to Focus, Plan, and Capture tabs
+- Non-Meridian notifications ignored
+
+Deferred:
+- Event detail deep links
+- Capture detail deep links
+- In-app foreground banners
+
 ## Future Roadmap
 
-Phase D — Notification Tap Handling
 Phase E — Leave Alerts
 Phase F — Morning Brief Scheduling
 V2 — Location Intelligence
