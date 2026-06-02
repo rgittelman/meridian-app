@@ -69,6 +69,13 @@ type CalendarState = {
   cachedAt: number | null;
   showingCached: boolean;
   error: string | null;
+  /**
+   * Increments on every successful syncEvents() completion.
+   * Not persisted — session-only. useNotificationDelivery watches this
+   * to trigger reconciliation after a calendar sync without subscribing
+   * to the full events array.
+   */
+  syncVersion: number;
 
   setStatus: (status: CalendarConnectionStatus) => void;
   setShowingCached: (v: boolean) => void;
@@ -100,6 +107,7 @@ export const useCalendarStore = create<CalendarState>()(
       cachedAt: null,
       showingCached: false,
       error: null,
+      syncVersion: 0,
 
       setStatus: (status) => set({ status }),
       setShowingCached: (showingCached) => set({ showingCached }),
@@ -221,14 +229,15 @@ export const useCalendarStore = create<CalendarState>()(
             partial,
           });
 
-          set({
+          set((prev) => ({
             weekEvents,
             upcomingEvents,
             cachedAt: Date.now(),
             status: partial ? 'partial_sync' : 'connected',
             showingCached: false,
             error: null,
-          });
+            syncVersion: prev.syncVersion + 1,
+          }));
 
           const { useCaptureStore } = await import('@/store/captureStore');
           useCaptureStore.getState().relinkCapturesToCalendar();
