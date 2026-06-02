@@ -42,12 +42,28 @@ export function eventPrimaryLine(event: MeridianCalendarEvent): string {
   return prepAwarenessPrimaryLabel(title, people);
 }
 
+/**
+ * Strips a leading person name from an event title to prevent duplication
+ * when the title already embeds the person (e.g. "Hudson · Hockey Game" → "Hockey Game"
+ * when person is "Hudson"). Handles both "Name · Rest" and "Name Rest" prefixes.
+ */
+export function stripPersonPrefixFromTitle(title: string, person: string): string {
+  // "Hudson · Hockey Game" → "Hockey Game"
+  const dotPattern = new RegExp(`^${person}\\s*[·•\\-]\\s*`, 'i');
+  if (dotPattern.test(title)) return title.replace(dotPattern, '').trim();
+  // "Hudson hockey" → "hockey" (bare space prefix)
+  const spacePattern = new RegExp(`^${person}\\s+`, 'i');
+  if (spacePattern.test(title)) return title.replace(spacePattern, '').trim();
+  return title;
+}
+
 export function commitmentBriefLine(event: MeridianCalendarEvent): string {
   const person = peopleForEvent(event)[0];
-  const title = safeTrim(event.displayTitle ?? event.title, 'commitment');
+  const rawTitle = safeTrim(event.displayTitle ?? event.title, 'commitment');
   const time = event.allDay ? 'all day' : event.displayTime?.toLowerCase() ?? '';
 
   if (person) {
+    const title = stripPersonPrefixFromTitle(rawTitle, person);
     if (time.includes('tomorrow')) {
       return `${person} has ${title} tomorrow.`;
     }
@@ -57,9 +73,9 @@ export function commitmentBriefLine(event: MeridianCalendarEvent): string {
     return `${person} has ${title}.`;
   }
 
-  if (time.includes('tomorrow')) return `${title} tomorrow.`;
-  if (time) return `${title} ${time}.`;
-  return `${title}.`;
+  if (time.includes('tomorrow')) return `${rawTitle} tomorrow.`;
+  if (time) return `${rawTitle} ${time}.`;
+  return `${rawTitle}.`;
 }
 
 type BuildCandidateInput = {

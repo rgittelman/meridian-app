@@ -2,6 +2,7 @@ import type { PrepReadinessState } from '@/types/prep';
 import type { PreparationWindow } from '@/types/prep';
 import type { MeridianCalendarEvent } from '@/types/calendar';
 import { safeTrim } from '@/utils/safeString';
+import { stripPersonPrefixFromTitle } from '@/services/notifications/candidateHelpers';
 
 /** Commitment-first primary line (person · event when known). */
 export function prepAwarenessPrimaryLabel(
@@ -9,7 +10,10 @@ export function prepAwarenessPrimaryLabel(
   peopleContext: readonly string[],
 ): string {
   const person = peopleContext[0];
-  if (person) return `${person} · ${eventTitle}`;
+  if (person) {
+    const activity = stripPersonPrefixFromTitle(eventTitle, person);
+    return `${person} · ${activity}`;
+  }
   return eventTitle;
 }
 
