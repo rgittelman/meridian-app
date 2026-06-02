@@ -15,8 +15,9 @@
     "lint": "eslint src --ext .ts,.tsx",
     "test:capture": "npx tsx --test src/services/capture/captureIntelligenceAudit.test.ts",
     "test:calendar": "npx tsx --test src/services/calendar/calendarIntelligenceCorrection.test.ts",
-    "test:focus": "npx tsx --test src/services/resurfacing/focusIntelligenceV1.test.ts",
-    "test:plan": "npx tsx --test src/services/plan/humanizePlanTitle.test.ts src/services/plan/planIntelligenceV1.test.ts"
+    "test:focus": "npx tsx --test src/services/resurfacing/focusIntelligenceV1.test.ts src/store/focusStore.test.ts",
+    "test:plan": "npx tsx --test src/services/plan/humanizePlanTitle.test.ts src/services/plan/planIntelligenceV1.test.ts",
+    "test:focus-format": "npx tsx --test src/components/focus/completionFormat.test.ts"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

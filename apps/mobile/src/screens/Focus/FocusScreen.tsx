@@ -198,6 +198,7 @@ export function FocusScreen() {
             overloadState={overloadState}
             onItemComplete={handleItemComplete}
             onItemSnooze={handleItemSnooze}
+            completedCount={completedIds.length}
           />
         </View>
 

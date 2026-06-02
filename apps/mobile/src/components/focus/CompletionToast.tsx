@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { Text } from '@/components/typography/Text';
 import { makeStyles, radius, spacing, tabBarBottomInset, tabBarHeight } from '@/theme';
 import { motionDuration } from '@/animations/motionTokens';
+import { formatCompletionLabel } from '@/components/focus/completionFormat';
 import type { PendingUndo } from '@/store/focusStore';
 
 const UNDO_WINDOW_MS = 3000;
@@ -101,7 +102,7 @@ export function CompletionToast({
           maxFontSizeMultiplier={1.1}
           numberOfLines={1}
         >
-          Completed
+          {formatCompletionLabel(pendingUndo.title)}
         </Text>
 
         <View style={styles.divider} />

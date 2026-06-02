@@ -44,6 +44,12 @@ type FocusStackProps = {
   onItemComplete?: (id: string, title: string) => void;
   /** When provided, renders SwipeableFocusCard with snooze gesture */
   onItemSnooze?: (id: string) => void;
+  /**
+   * Number of items completed in the current session.
+   * When > 0 and the card list is empty, shows the clear state
+   * instead of blank space.
+   */
+  completedCount?: number;
 };
 
 export function FocusStack({
@@ -54,6 +60,7 @@ export function FocusStack({
   insight,
   onItemComplete,
   onItemSnooze,
+  completedCount = 0,
 }: FocusStackProps) {
   const styles = useStyles();
   const isGestureEnabled = Boolean(onItemComplete && onItemSnooze);
@@ -112,22 +119,56 @@ export function FocusStack({
         </Text>
       ) : null}
 
-      {/* Card list — layout animation handles smooth reflow on removal */}
-      <Animated.View style={styles.cardList} layout={LinearTransition.springify().damping(22).stiffness(200)}>
-        {cardItems.map((item) =>
-          isGestureEnabled ? (
-            <Animated.View key={item.id} layout={LinearTransition.springify().damping(22).stiffness(200)}>
-              <SwipeableFocusCard
-                item={item}
-                onComplete={onItemComplete!}
-                onSnooze={onItemSnooze!}
-              />
-            </Animated.View>
-          ) : (
-            <FocusCard key={item.id} item={item} />
-          ),
-        )}
-      </Animated.View>
+      {/* Clear state — shown when all cards are handled and at least one was completed */}
+      {cardItems.length === 0 && completedCount > 0 ? (
+        <View style={styles.clearState}>
+          <Text
+            variant="title"
+            color="ink"
+            style={styles.clearHeadline}
+            maxFontSizeMultiplier={1.2}
+          >
+            You&apos;re clear.
+          </Text>
+          <Text
+            variant="body"
+            color="inkSecondary"
+            style={styles.clearSubtext}
+            maxFontSizeMultiplier={1.2}
+          >
+            Nothing pressing right now.
+          </Text>
+          {completedCount > 0 && (
+            <Text
+              variant="footnote"
+              color="inkGhost"
+              style={styles.clearCount}
+              maxFontSizeMultiplier={1.1}
+            >
+              {completedCount === 1
+                ? '1 thing handled today.'
+                : `${completedCount} things handled today.`}
+            </Text>
+          )}
+        </View>
+      ) : (
+        /* Card list — layout animation handles smooth reflow on removal */
+        <Animated.View style={styles.cardList} layout={LinearTransition.springify().damping(22).stiffness(200)}>
+          {cardItems.map((item) =>
+            isGestureEnabled ? (
+              <Animated.View key={item.id} layout={LinearTransition.springify().damping(22).stiffness(200)}>
+                <SwipeableFocusCard
+                  item={item}
+                  onComplete={onItemComplete!}
+                  onSnooze={onItemSnooze!}
+                />
+              </Animated.View>
+            ) : (
+              <FocusCard key={item.id} item={item} />
+            ),
+          )}
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -146,5 +187,20 @@ const useStyles = makeStyles((c) => ({
   },
   cardList: {
     gap: spacing[2] + 2,
+  },
+  clearState: {
+    paddingTop: spacing[2],
+    paddingBottom: spacing[4],
+    gap: spacing[2],
+  },
+  clearHeadline: {
+    // Matches the calm weight of the greeting — present, not triumphant
+  },
+  clearSubtext: {
+    // Secondary color keeps the tone settled, not celebratory
+  },
+  clearCount: {
+    marginTop: spacing[1],
+    color: c.inkGhost,
   },
 }));
