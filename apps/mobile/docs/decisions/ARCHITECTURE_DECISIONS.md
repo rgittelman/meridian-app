@@ -160,6 +160,50 @@ Life screen header contains the gear entry point.
 
 ---
 
+## V1 Gap: No Capture-Triggered Notifications
+
+Status: Documented, deferred
+
+Observed scenario:
+User captured "Set a notification to call Matt in 2 minutes."
+No notification fired. The capture was saved and may have promoted to Focus,
+but no OS notification was scheduled.
+
+Current V1 behavior:
+The notification pipeline is calendar-anchored. Generators read calendar events
+and time-of-day patterns. No generator reads captures for reminder intent.
+A capture saying "remind me to X" has no path to an OS notification.
+
+Why this matters:
+Users naturally expect natural-language captures like "remind me to call Matt
+at 3pm" to behave like Reminders or Siri. Meridian currently cannot fulfill
+this expectation.
+
+What would be needed:
+A new generator — capture_reminder — that:
+  - Scans active captures for explicit reminder intent
+    ("remind me to", "call X at", "set a notification for", "alert me when")
+  - Resolves relative time expressions to absolute OS trigger times
+    ("in 2 minutes", "at 3pm", "before I leave")
+  - Schedules via the existing delivery scheduler
+
+This is more complex than calendar-based generators because it requires
+intent detection and time resolution from unstructured text, not just reading
+event.startTime. It belongs to Capture Semantic Intent V2 (Phase J).
+
+Distinction from calendar notifications:
+  Calendar notification: event exists → generate alert before it
+  Capture reminder: user asked for one → detect intent → create alert
+
+These are different trust models. Calendar notifications can be cancelled when
+events change. Capture reminders need their own lifecycle (fired, snoozed,
+expired, cancelled by user).
+
+Future phase placement: Phase J (Capture Semantic Intent V2), alongside
+correction/clarification detection.
+
+---
+
 ## Strategic Principle: Anticipation Over Reminders
 
 Status: Accepted
