@@ -3,7 +3,10 @@ import { Alert, Linking, Modal, Pressable, ScrollView, Switch, TextInput, View }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
+import { ChevronRight } from 'lucide-react-native';
+
 import { Text } from '@/components/typography/Text';
+import { CalendarSelectionScreen } from '@/screens/Settings/CalendarSelectionScreen';
 import { NotificationPermissionPrompt } from '@/screens/Settings/NotificationPermissionPrompt';
 import {
   captureCurrentLocation,
@@ -16,6 +19,7 @@ import {
   reverseGeocodeAddress,
 } from '@/services/location/geofenceManager';
 import { useCalendarStore } from '@/store/calendarStore';
+import { useCalendarSelectionStore } from '@/store/calendarSelectionStore';
 import { useLocationStore } from '@/store/locationStore';
 import type { KnownLocation } from '@/store/locationStore';
 import { useNotificationDeliveryStore } from '@/store/notificationDeliveryStore';
@@ -35,6 +39,7 @@ export function SettingsScreen({ visible, onClose }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const [showCalendarSelection, setShowCalendarSelection] = useState(false);
 
   const [settingLocation, setSettingLocation] = useState<'home' | 'work' | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -45,7 +50,15 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
   const permissionState = useNotificationDeliveryStore((s) => s.permissionState);
   const calendarStatus = useCalendarStore((s) => s.status);
+  const syncEvents = useCalendarStore((s) => s.syncEvents);
   const disconnect = useCalendarStore((s) => s.disconnect);
+
+  // Read only what's needed for the summary row count.
+  const availableCalendars = useCalendarSelectionStore((s) => s.availableCalendars);
+  const disabledCalendarIds = useCalendarSelectionStore((s) => s.disabledCalendarIds);
+  const enabledCalendarCount = availableCalendars.filter(
+    (cal) => !disabledCalendarIds.includes(cal.sourceCalendarId),
+  ).length;
 
   const {
     homeLocation,
@@ -257,7 +270,7 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
           <View style={styles.card}>
             <SettingsRow
-              label="Enable Meridian Notifications"
+              label="Notifications"
               value={enabled}
               onToggle={handleNotificationToggle}
             />
@@ -305,8 +318,27 @@ export function SettingsScreen({ visible, onClose }: Props) {
                 {isCalendarConnected ? 'Google' : 'Not connected'}
               </Text>
             </View>
+
             {isCalendarConnected && (
               <>
+                <Separator />
+                <Pressable
+                  onPress={() => setShowCalendarSelection(true)}
+                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Manage synced calendars"
+                >
+                  <Text variant="body">Calendars</Text>
+                  <View style={styles.calendarSummary}>
+                    <Text variant="footnote" color="inkSecondary">
+                      {availableCalendars.length > 0
+                        ? `${enabledCalendarCount} enabled`
+                        : 'Not synced'}
+                    </Text>
+                    <ChevronRight size={16} color={colors.inkSecondary} strokeWidth={1.75} />
+                  </View>
+                </Pressable>
+
                 <Separator />
                 <Pressable
                   onPress={handleDisconnectCalendar}
@@ -440,6 +472,12 @@ export function SettingsScreen({ visible, onClose }: Props) {
           <NotificationPermissionPrompt onDone={() => setShowPermissionPrompt(false)} />
         </View>
       </Modal>
+
+      {/* Calendar selection — second modal layer */}
+      <CalendarSelectionScreen
+        visible={showCalendarSelection}
+        onClose={() => setShowCalendarSelection(false)}
+      />
     </Modal>
   );
 }
@@ -718,6 +756,11 @@ const useStyles = makeStyles((c) => ({
   },
   pressed: {
     opacity: 0.72,
+  },
+  calendarSummary: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing[2],
   },
   currentRegionValue: {
     alignItems: 'flex-end' as const,

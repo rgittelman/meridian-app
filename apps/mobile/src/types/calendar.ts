@@ -66,6 +66,8 @@ export type CalendarSyncDiagnostics = {
   calendarsFetched: number;
   calendarsSkipped: number;
   calendarsFailed: number;
+  /** Calendars the user has explicitly disabled in Settings — excluded before event fetch. */
+  calendarsUserDisabled?: number;
   eventsFetched: number;
   eventsNormalized: number;
   eventsDeduped: number;

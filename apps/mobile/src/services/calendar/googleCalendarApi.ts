@@ -12,6 +12,7 @@ import type {
   MeridianCalendarEvent,
   SourceCalendarMeta,
 } from '@/types/calendar';
+import { useCalendarSelectionStore } from '@/store/calendarSelectionStore';
 
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
@@ -224,7 +225,17 @@ async function syncEventsInRange(
   timeMin: string,
   timeMax: string,
 ): Promise<MultiCalendarSyncResult> {
-  const calendars = await fetchGoogleCalendarList(accessToken);
+  const allCalendars = await fetchGoogleCalendarList(accessToken);
+
+  // Persist the discovered list so Settings can render it immediately.
+  useCalendarSelectionStore.getState().setAvailableCalendars(allCalendars);
+
+  // Filter to only calendars the user has enabled (opt-out model).
+  const selectionStore = useCalendarSelectionStore.getState();
+  const calendars = allCalendars.filter((cal) =>
+    selectionStore.isCalendarEnabled(cal.sourceCalendarId),
+  );
+  const calendarsUserDisabled = allCalendars.length - calendars.length;
 
   let calendarsSkipped = 0;
   let calendarsFailed = 0;
@@ -261,7 +272,8 @@ async function syncEventsInRange(
     paginationTruncatedCalendarIds.length > 0;
 
   const diagnostics: CalendarSyncDiagnostics = {
-    calendarsFetched: calendars.length,
+    calendarsFetched: allCalendars.length,
+    calendarsUserDisabled,
     calendarsSkipped,
     calendarsFailed,
     eventsFetched: pipeline.diagnostics.rawEventsFetched,
