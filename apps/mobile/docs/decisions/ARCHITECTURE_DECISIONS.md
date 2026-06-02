@@ -248,6 +248,50 @@ Rule for future sessions:
 
 ---
 
+---
+
+## V1 Gap: No In-App Event Dismissal
+
+Status: Documented, deferred
+
+Observed scenario:
+User sold concert tickets. Event still appears in Coming Up and BEFORE YOU GO.
+No way to dismiss or hide the event from within Meridian without deleting it from
+Google Calendar.
+
+Current V1 behavior:
+Meridian reads calendar events but does not write back to them.
+The only path to remove an event from Meridian is to delete or decline it in
+Google Calendar and wait for the next sync.
+
+Why this matters:
+Users have legitimate reasons to dismiss an event from Meridian's surfaces
+without deleting it from their calendar — sold tickets, declined attendance,
+cancelled plans, or simply "I know about this, stop surfacing it."
+
+Future design options:
+
+  Option A — Per-event local dismiss
+    A dismiss/archive action on schedule strip items and BEFORE YOU GO cards.
+    Event is hidden in Meridian for the session or permanently via a local
+    suppression list. Google Calendar is not touched.
+
+  Option B — Decline-and-suppress
+    Tapping dismiss offers to decline the Google Calendar event (requires write
+    scope) and suppress it from Meridian surfaces simultaneously.
+
+  Option C — Snooze until event passes
+    Dismiss hides the event from surfaces until its start time, then expires
+    automatically. Useful for events the user is attending but doesn't need
+    Meridian to prep for.
+
+Recommended phase: after Capture Semantic Intent V2 (Phase J) or alongside
+the Engagement / Wow Layer sprint — whichever comes first.
+
+Prerequisite for Option B: Google Calendar write scope (not currently held).
+
+---
+
 ## Current Next Priority
 
-Phase E — Leave Alerts (time-based, no geolocation)
+Phase F — Morning Briefs & Evening Preview (in progress)
