@@ -90,6 +90,15 @@ export class ExpoNotificationDeliveryScheduler implements NotificationDeliverySc
     return useNotificationDeliveryStore.getState().permissionState;
   }
 
+  /**
+   * In-flight guard — prevents duplicate scheduling when concurrent async calls
+   * both read the store before either write completes.
+   *
+   * Key: `bundleKey:targetWindowStart` (ISO string).
+   * Added synchronously before any await; removed in finally after upsertRecord.
+   */
+  private readonly inFlight = new Set<string>();
+
   constructor() {
     // Set up Android channel asynchronously — never blocks scheduling.
     void ensureAndroidChannel();
@@ -98,6 +107,31 @@ export class ExpoNotificationDeliveryScheduler implements NotificationDeliverySc
   // ── scheduleApprovedBundle ──────────────────────────────────────────────────
 
   async scheduleApprovedBundle(
+    bundle: ApprovedNotificationBundle,
+    options?: { scheduledFor?: Date },
+  ): Promise<ScheduleBundleResult> {
+    // Gate 0: in-flight race guard — synchronous, before any await.
+    // Prevents two concurrent calls from both passing Gate 4's store check
+    // before either one has written its record back.
+    const flightKey = `${bundle.bundleKey}:${bundle.targetWindowStart.toISOString()}`;
+    if (this.inFlight.has(flightKey)) {
+      return {
+        ok: false,
+        reason: 'duplicate',
+        message: `Bundle "${bundle.bundleKey}" is already being scheduled (in-flight).`,
+      };
+    }
+    this.inFlight.add(flightKey);
+
+    try {
+      return await this._scheduleApprovedBundleInner(bundle, options);
+    } finally {
+      this.inFlight.delete(flightKey);
+    }
+  }
+
+  /** Inner implementation — called only after the in-flight guard is set. */
+  private async _scheduleApprovedBundleInner(
     bundle: ApprovedNotificationBundle,
     options?: { scheduledFor?: Date },
   ): Promise<ScheduleBundleResult> {
