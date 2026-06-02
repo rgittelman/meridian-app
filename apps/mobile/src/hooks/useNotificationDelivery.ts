@@ -30,10 +30,12 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { ExpoNotificationDeliveryScheduler } from '@/services/notifications/delivery';
+import { shouldDeliverBundleForSettings } from '@/services/notifications/delivery/notificationSettingsFilter';
 import { getNotificationIntelligenceSnapshot } from '@/hooks/useNotificationIntelligence';
 import { isApprovedNotificationBundle } from '@/types/notificationDelivery';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useNotificationSettingsStore } from '@/store/notificationSettingsStore';
 import { useCaptureStore } from '@/store/captureStore';
 
 /** Debounce window in ms — collapses foreground + sync triggers firing together. */
@@ -57,10 +59,28 @@ export function useNotificationDelivery(): void {
   const reconcile = useCallback(async () => {
     if (!scheduler.current) return;
 
+    // If the user has disabled notifications, cancel all Meridian-scheduled
+    // notifications and skip reconciliation.
+    if (!useNotificationSettingsStore.getState().enabled) {
+      await scheduler.current.cancelAllMeridianNotifications('manual_clear');
+      return;
+    }
+
     // Build intelligence snapshot from current store state (non-reactive read).
     const snapshot = getNotificationIntelligenceSnapshot();
-    const approvedBundles = snapshot.approvedBundles.filter(isApprovedNotificationBundle);
+    const settings = useNotificationSettingsStore.getState();
 
+    const approvedBundles = snapshot.approvedBundles
+      .filter(isApprovedNotificationBundle)
+      .filter((b) => shouldDeliverBundleForSettings(b.type, settings));
+
+    if (__DEV__) {
+      const total = snapshot.approvedBundles.filter(isApprovedNotificationBundle).length;
+      const filtered = total - approvedBundles.length;
+      if (filtered > 0) {
+        console.log(`[NotificationDelivery] ${filtered}/${total} bundles filtered by category settings`);
+      }
+    }
     // Build context for the planner: event start times for change detection,
     // resolved captures for stale-notification cancellation.
     const { weekEvents, upcomingEvents } = useCalendarStore.getState();

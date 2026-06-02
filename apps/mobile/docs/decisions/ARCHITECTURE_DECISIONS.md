@@ -139,6 +139,25 @@ Future audits should:
 
 ---
 
+## ADR: Settings Entry Point
+
+Status: Accepted
+
+Decision:
+Settings is presented as a modal launched from a gear icon in the Life screen header.
+
+Rationale:
+- Settings is a low-frequency destination.
+- Preserves the 4-tab navigation model.
+- Keeps Focus, Plan, Life, and Capture as primary destinations.
+- Allows Settings to grow independently without affecting tab structure.
+
+Implementation:
+Root Navigator owns a Settings modal route.
+Life screen header contains the gear entry point.
+
+---
+
 ## Current Next Priority
 
 Next likely systems to audit:
