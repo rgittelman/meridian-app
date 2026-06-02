@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   tapDestinationToTab,
   extractTapDestination,
+  handleNotificationTap,
 } from './handleNotificationTap';
 
 // ── tapDestinationToTab ───────────────────────────────────────────────────────
@@ -117,5 +118,50 @@ describe('extractTapDestination', () => {
       from: 'firebase',
     });
     assert.equal(result, null);
+  });
+});
+
+// ── handleNotificationTap — deduplication guard ───────────────────────────────
+
+describe('handleNotificationTap deduplication', () => {
+  // Minimal nav stub — tracks navigate calls
+  function makeNav() {
+    const calls: string[] = [];
+    return {
+      isReady: () => true,
+      navigate: (name: string) => { calls.push(name); },
+      calls,
+    };
+  }
+
+  it('navigates on first call with a given notificationId', () => {
+    const nav = makeNav();
+    handleNotificationTap({ screen: 'plan' }, nav, 'notif-abc');
+    assert.equal(nav.calls.length, 1);
+    assert.equal(nav.calls[0], 'Plan');
+  });
+
+  it('ignores a second call with the same notificationId', () => {
+    const nav = makeNav();
+    handleNotificationTap({ screen: 'plan' }, nav, 'notif-dedup-1');
+    handleNotificationTap({ screen: 'focus' }, nav, 'notif-dedup-1');
+    assert.equal(nav.calls.length, 1, 'second call with same id should be ignored');
+    assert.equal(nav.calls[0], 'Plan');
+  });
+
+  it('navigates again with a different notificationId', () => {
+    const nav = makeNav();
+    handleNotificationTap({ screen: 'plan' }, nav, 'notif-x1');
+    handleNotificationTap({ screen: 'focus' }, nav, 'notif-x2');
+    assert.equal(nav.calls.length, 2);
+    assert.equal(nav.calls[0], 'Plan');
+    assert.equal(nav.calls[1], 'Focus');
+  });
+
+  it('navigates without deduplication when notificationId is omitted', () => {
+    const nav = makeNav();
+    handleNotificationTap({ screen: 'focus' }, nav);
+    handleNotificationTap({ screen: 'plan' }, nav);
+    assert.equal(nav.calls.length, 2, 'no id = no dedup guard');
   });
 });

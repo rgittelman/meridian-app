@@ -1,168 +1,209 @@
 /**
- * DEV ONLY — Notification delivery smoke test.
+ * DEV ONLY — Notification delivery + tap routing smoke test.
  *
- * Renders two buttons:
- *   "Send test notification"   — requests permission, schedules in 30 seconds
- *   "Cancel test notification" — cancels the scheduled notification
+ * Renders destination-specific send buttons plus a cancel button.
+ * Covers all V1 tap destinations for Phase D manual verification.
  *
  * This component must ONLY be rendered when __DEV__ is true.
  * Remove this file and its import in CaptureScreen.tsx after verifying delivery.
  *
- * HOW TO TEST
- * -----------
+ * HOW TO TEST (Phase D)
+ * ─────────────────────
  * 1. Run `npx expo run:ios` (native build required for expo-notifications).
- * 2. Open the Capture tab.
- * 3. Tap "Send test notification".
- *    - Accept the system permission dialog if prompted.
- *    - Check the status line below the button for confirmation.
- * 4. Background the app (Home button / swipe up).
- * 5. Wait ~30 seconds — the notification should appear in the system tray.
- * 6. Tap the notification to verify it navigates back to the app.
- * 7. Optionally: tap "Cancel test notification" within the 30-second window
- *    to verify cancellation.
+ * 2. Open the Capture tab — the smoke test panel is at the bottom.
+ * 3. Grant permission when prompted (first send only).
+ * 4. For each destination button:
+ *    a. Tap the button — note the status line confirming the fire time.
+ *    b. Background the app (Home / swipe up).
+ *    c. Wait ~15 seconds for the notification to arrive.
+ *    d. Tap the notification banner.
+ *    e. Verify the app opens to the expected tab (see table below).
+ *    f. Tap "Cancel All" before scheduling the next destination.
  *
- * HOW TO REMOVE
- * -------------
- * 1. Delete this file.
- * 2. Remove the <NotificationSmokeTest /> block from CaptureScreen.tsx.
+ *  Button                     | Expected tab on tap
+ *  ─────────────────────────  | ──────────────────
+ *  Focus Test                 | Focus
+ *  Plan Test                  | Plan
+ *  Capture Test               | Capture
+ *  Non-Meridian Test          | No Meridian routing (system default)
+ *
+ * COLD LAUNCH TEST
+ * ─────────────────
+ * 1. Tap a destination button and note it is scheduled.
+ * 2. Force-quit the app (swipe up from app switcher).
+ * 3. Tap the notification banner when it arrives.
+ * 4. Verify the app launches and routes to the correct tab.
+ *
+ * FOREGROUND TEST
+ * ───────────────
+ * 1. Schedule any notification.
+ * 2. Keep the app open.
+ * 3. Wait for it to fire — confirm no crash and no banner (foreground suppressed).
  */
 
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import * as ExpoNotifications from 'expo-notifications';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { nanoid } from 'nanoid/non-secure';
 
 import { Text } from '@/components/typography/Text';
-import {
-  ExpoNotificationDeliveryScheduler,
-  requestNotificationPermissions,
-} from '@/services/notifications/delivery';
+import { requestNotificationPermissions } from '@/services/notifications/delivery';
 import { useNotificationDeliveryStore } from '@/store/notificationDeliveryStore';
-import type { ApprovedNotificationBundle } from '@/types/notificationDelivery';
 import { makeStyles, radius, spacing } from '@/theme';
 
-const DELAY_SECONDS = 30;
+const DELAY_SECONDS = 15;
 
-/**
- * Stable bundle: same `bundleKey` and a `targetWindowStart` truncated to the
- * current minute so rapid taps within the same minute produce an identical
- * dedupe key, letting the scheduler's Gate 4 catch them even without the
- * in-flight guard. Together with the in-flight Set in the scheduler, this
- * makes duplicates impossible from the smoke test UI.
- */
-function makeTestBundle(): ApprovedNotificationBundle {
-  const now = new Date();
-  const fireAt = new Date(now.getTime() + DELAY_SECONDS * 1000);
-  // Truncate to second precision so taps within the same second are identical
-  fireAt.setMilliseconds(0);
+// ── Platform notification IDs tracked for cancellation ───────────────────────
 
-  return {
-    id: `smoke-test-${nanoid()}`,
-    bundleKey: 'smoke-test',
-    type: 'morning_brief',
-    candidateIds: [],
-    title: 'Meridian test',
-    lines: ['Smart notifications are connected.'],
-    decision: 'send',
-    suppressionReason: null,
-    interruptionReason: 'Manual smoke test from dev build.',
-    targetWindowStart: fireAt,
-    targetWindowEnd: new Date(fireAt.getTime() + 60_000),
-    householdImpact: 'medium',
-    interruptionScore: {
-      total: 50,
-      householdImpact: 18,
-      timingSensitivity: 14,
-      conflictRisk: 0,
-      prepRelevance: 0,
-      peopleImpact: 10,
-      confidence: 12,
+type ScheduledIds = { platformId: string; label: string }[];
+
+// ── Per-destination schedule helpers ─────────────────────────────────────────
+
+async function scheduleRaw(opts: {
+  label: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  delaySeconds?: number;
+}): Promise<string> {
+  const delay = opts.delaySeconds ?? DELAY_SECONDS;
+  const fireAt = new Date(Date.now() + delay * 1000);
+  return ExpoNotifications.scheduleNotificationAsync({
+    content: {
+      title: opts.title,
+      body: opts.body,
+      data: opts.data,
+      sound: 'default',
     },
-  };
+    trigger: {
+      type: SchedulableTriggerInputTypes.DATE,
+      date: fireAt,
+    },
+  });
 }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function NotificationSmokeTest() {
   const styles = useStyles();
   const [status, setStatus] = useState<string>('');
-  const scheduledBundleId = useRef<string | null>(null);
-  const scheduler = useRef(new ExpoNotificationDeliveryScheduler());
+  const scheduledIds = useRef<ScheduledIds>([]);
   const setPermissionState = useNotificationDeliveryStore((s) => s.setPermissionState);
 
-  const handleSend = async () => {
-    // UI guard: if a notification is already scheduled, refuse a duplicate.
-    // This catches sequential re-taps; the scheduler's in-flight Set catches
-    // concurrent async races.
-    if (scheduledBundleId.current !== null) {
-      setStatus('Already scheduled — wait for it to fire or tap Cancel first.');
-      return;
-    }
-
+  const ensurePermission = async (): Promise<boolean> => {
     setStatus('Requesting permission…');
-
-    // Step 1 — request permission (only on explicit user tap)
     const permission = await requestNotificationPermissions();
     setPermissionState(permission);
-
     if (permission !== 'granted' && permission !== 'provisional') {
       setStatus(`Permission: ${permission}. Enable notifications in iOS Settings.`);
-      return;
+      return false;
     }
+    return true;
+  };
 
-    // Step 2 — build and schedule the test bundle
-    setStatus('Scheduling…');
-    const bundle = makeTestBundle();
-    const scheduledFor = bundle.targetWindowStart;
-
-    const result = await scheduler.current.scheduleApprovedBundle(bundle, { scheduledFor });
-
-    if (result.ok) {
-      scheduledBundleId.current = bundle.id;
-      const secs = Math.round((scheduledFor.getTime() - Date.now()) / 1000);
-      setStatus(`Scheduled ✓ fires in ~${secs}s. Background the app to receive it.`);
-    } else {
-      setStatus(`Failed: ${result.reason} — ${result.message}`);
+  const send = async (
+    label: string,
+    title: string,
+    body: string,
+    data: Record<string, unknown>,
+  ) => {
+    if (!(await ensurePermission())) return;
+    setStatus(`Scheduling ${label}…`);
+    try {
+      const platformId = await scheduleRaw({ label, title, body, data });
+      scheduledIds.current = [...scheduledIds.current, { platformId, label }];
+      setStatus(`${label} scheduled ✓ — fires in ~${DELAY_SECONDS}s. Background app to receive.`);
+    } catch (e) {
+      setStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
-  const handleCancel = async () => {
-    const id = scheduledBundleId.current;
-    if (!id) {
-      setStatus('Nothing to cancel.');
+  const handleFocus = () =>
+    send(
+      'Focus Test',
+      'Meridian · Focus',
+      'Tap to open Focus.',
+      {
+        meridianManaged: true,
+        bundleKey: 'smoke-test-focus',
+        tapDestination: { screen: 'focus' },
+      },
+    );
+
+  const handlePlan = () =>
+    send(
+      'Plan Test',
+      'Meridian · Plan',
+      'Tap to open Plan.',
+      {
+        meridianManaged: true,
+        bundleKey: 'smoke-test-plan',
+        tapDestination: { screen: 'plan' },
+      },
+    );
+
+  const handleCapture = () =>
+    send(
+      'Capture Test',
+      'Meridian · Capture',
+      'Tap to open Capture.',
+      {
+        meridianManaged: true,
+        bundleKey: 'smoke-test-capture',
+        tapDestination: { screen: 'capture_detail', captureId: 'smoke-cap-001' },
+      },
+    );
+
+  const handleNonMeridian = () =>
+    send(
+      'Non-Meridian Test',
+      'External notification',
+      'This should not trigger Meridian routing.',
+      {
+        // No meridianManaged key — simulates a third-party notification
+        someOtherKey: nanoid(),
+      },
+    );
+
+  const handleCancelAll = async () => {
+    const ids = scheduledIds.current;
+    if (ids.length === 0) {
+      setStatus('Nothing scheduled.');
       return;
     }
-    await scheduler.current.cancelScheduledBundle(id, 'manual_clear');
-    scheduledBundleId.current = null;
-    setStatus('Cancelled.');
+    await Promise.allSettled(
+      ids.map(({ platformId }) =>
+        ExpoNotifications.cancelScheduledNotificationAsync(platformId),
+      ),
+    );
+    scheduledIds.current = [];
+    setStatus('All test notifications cancelled.');
   };
 
   return (
     <View style={styles.wrap}>
       <Text variant="caption" color="inkGhost" style={styles.label}>
-        Notification smoke test (dev)
+        Notification tap routing (dev · Phase D)
       </Text>
 
-      <View style={styles.row}>
-        <Pressable
-          onPress={handleSend}
-          style={({ pressed }) => [styles.btn, styles.btnSend, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Send test notification"
-        >
-          <Text variant="footnote" style={styles.btnTextSend}>
-            Send test notification
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={handleCancel}
-          style={({ pressed }) => [styles.btn, styles.btnCancel, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel test notification"
-        >
-          <Text variant="footnote" style={styles.btnTextCancel}>
-            Cancel
-          </Text>
-        </Pressable>
+      <View style={styles.grid}>
+        <SmokeButton label="Focus Test" onPress={handleFocus} />
+        <SmokeButton label="Plan Test" onPress={handlePlan} />
+        <SmokeButton label="Capture Test" onPress={handleCapture} />
+        <SmokeButton label="Non-Meridian Test" onPress={handleNonMeridian} dim />
       </View>
+
+      <Pressable
+        onPress={handleCancelAll}
+        style={({ pressed }) => [styles.cancelBtn, pressed && styles.pressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Cancel all test notifications"
+      >
+        <Text variant="caption" color="inkSecondary">
+          Cancel All Test Notifications
+        </Text>
+      </Pressable>
 
       {status ? (
         <Text variant="caption" color="inkGhost" style={styles.status}>
@@ -172,6 +213,38 @@ export function NotificationSmokeTest() {
     </View>
   );
 }
+
+// ── Sub-component ─────────────────────────────────────────────────────────────
+
+function SmokeButton({
+  label,
+  onPress,
+  dim = false,
+}: {
+  label: string;
+  onPress: () => void;
+  dim?: boolean;
+}) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btn,
+        dim ? styles.btnDim : styles.btnPrimary,
+        pressed && styles.pressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Text variant="caption" style={dim ? styles.btnTextDim : styles.btnText}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const useStyles = makeStyles((c) => ({
   wrap: {
@@ -187,8 +260,9 @@ const useStyles = makeStyles((c) => ({
   label: {
     letterSpacing: 0.3,
   },
-  row: {
+  grid: {
     flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: spacing[2],
   },
   btn: {
@@ -197,23 +271,30 @@ const useStyles = makeStyles((c) => ({
     borderRadius: radius.sm,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  btnSend: {
-    flex: 1,
-    alignItems: 'center' as const,
+  btnPrimary: {
     borderColor: c.accent,
     backgroundColor: c.accentSoft,
   },
-  btnCancel: {
+  btnDim: {
+    borderColor: c.borderSubtle,
+    backgroundColor: 'transparent',
+  },
+  cancelBtn: {
+    alignSelf: 'flex-start' as const,
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: radius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.borderSubtle,
   },
-  btnPressed: {
+  pressed: {
     opacity: 0.65,
   },
-  btnTextSend: {
+  btnText: {
     color: c.accent,
     fontWeight: '500' as const,
   },
-  btnTextCancel: {
+  btnTextDim: {
     color: c.inkTertiary,
   },
   status: {

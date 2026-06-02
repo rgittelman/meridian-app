@@ -47,14 +47,29 @@ export function tapDestinationToTab(destination: NotificationTapDestination): Ta
 let pendingTapDestination: NotificationTapDestination | null = null;
 
 /**
+ * Tracks the last notification identifier we acted on.
+ * Prevents double-routing when getLastNotificationResponseAsync and the
+ * response listener both fire for the same notification (e.g. on some
+ * Android versions after a fast background → foreground cycle).
+ */
+let lastHandledNotificationId: string | null = null;
+
+/**
  * Attempt to navigate to `destination`.
  * If the navigator is not ready, stores the destination for later flush.
  * Must be called with the navigationRef from @/navigation/navigationRef.
+ *
+ * Pass `notificationId` to deduplicate against the last-handled response.
  */
 export function handleNotificationTap(
   destination: NotificationTapDestination,
   nav: { isReady: () => boolean; navigate: (name: string, params?: object) => void },
+  notificationId?: string,
 ): void {
+  if (notificationId !== undefined) {
+    if (lastHandledNotificationId === notificationId) return;
+    lastHandledNotificationId = notificationId;
+  }
   if (!nav.isReady()) {
     pendingTapDestination = destination;
     return;
