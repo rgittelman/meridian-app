@@ -24,7 +24,7 @@ import { generateMorningBriefCandidates } from './generateMorningBrief';
 import { generateTransitionAwarenessCandidates } from './generateTransitionAwareness';
 import { generateEveningWindDownCandidates } from './generateEveningWindDown';
 import { generateCriticalProtectionCandidates } from './generateCriticalProtection';
-import { generateLeaveAlertCandidates } from './generateLeaveAlert';
+import { generateLeaveAlertCandidates, type LeaveAlertLocationContext } from './generateLeaveAlert';
 import { generateCaptureReminderCandidates } from './generateCaptureReminders';
 import type { NotificationIntelligenceContext } from './types';
 import { logNotificationAudit } from './notificationDebug';
@@ -33,6 +33,7 @@ export type BuildNotificationIntelligenceInput = {
   events: MeridianCalendarEvent[];
   captures: LifeObject[];
   context: NotificationIntelligenceContext;
+  locationContext?: LeaveAlertLocationContext;
   now?: Date;
 };
 
@@ -100,7 +101,7 @@ export function buildNotificationIntelligenceWithDiagnostics(
     ...generateTransitionAwarenessCandidates(events, prepClusters, now),
     ...generateEveningWindDownCandidates(events, now),
     ...generateCriticalProtectionCandidates(events, now),
-    ...generateLeaveAlertCandidates(events, now),
+    ...generateLeaveAlertCandidates(events, now, input.locationContext),
     ...generateCaptureReminderCandidates(input.captures, now),
   ];
 

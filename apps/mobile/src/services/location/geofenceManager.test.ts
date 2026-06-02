@@ -4,7 +4,9 @@ import { describe, it } from 'node:test';
 import {
   haversineDistanceMeters,
   isWithinRegion,
+  locationsTooClose,
   resolveCurrentRegion,
+  SAME_LOCATION_THRESHOLD_METERS,
 } from './geofenceHelpers';
 import type { KnownLocation } from '@/store/locationStore';
 
@@ -115,9 +117,59 @@ describe('resolveCurrentRegion', () => {
     assert.equal(resolveCurrentRegion(HOME.latitude, HOME.longitude, HOME, null), 'home');
   });
 
-  it('prioritises home over work if coordinates overlap (edge case)', () => {
-    // Home and work set to the same spot
+  it('returns "unknown" when home and work are the same coordinates (ambiguous data)', () => {
     const sameSpot: KnownLocation = { ...WORK, latitude: HOME.latitude, longitude: HOME.longitude };
-    assert.equal(resolveCurrentRegion(HOME.latitude, HOME.longitude, HOME, sameSpot), 'home');
+    assert.equal(resolveCurrentRegion(HOME.latitude, HOME.longitude, HOME, sameSpot), 'unknown');
+  });
+
+  it('returns "unknown" when home and work are within conflict threshold', () => {
+    // ~50m offset — within the 100m threshold
+    const nearHome: KnownLocation = { ...WORK, latitude: HOME.latitude + 0.0004, longitude: HOME.longitude };
+    assert.equal(resolveCurrentRegion(HOME.latitude, HOME.longitude, HOME, nearHome), 'unknown');
+  });
+});
+
+// ── locationsTooClose ─────────────────────────────────────────────────────────
+
+describe('locationsTooClose', () => {
+  it('returns true when home and work have identical coordinates', () => {
+    const sameAsHome: KnownLocation = { ...HOME, label: 'work' };
+    assert.equal(locationsTooClose(HOME, sameAsHome), true);
+  });
+
+  it('returns true when home and work are within the default threshold', () => {
+    // ~50m offset — well within 100m
+    const nearHome: KnownLocation = {
+      ...HOME,
+      label: 'work',
+      latitude: HOME.latitude + 0.0004,
+    };
+    const distance = haversineDistanceMeters(HOME.latitude, HOME.longitude, nearHome.latitude, nearHome.longitude);
+    assert.ok(distance < SAME_LOCATION_THRESHOLD_METERS, `expected < ${SAME_LOCATION_THRESHOLD_METERS}m, got ${distance.toFixed(0)}m`);
+    assert.equal(locationsTooClose(HOME, nearHome), true);
+  });
+
+  it('returns false when home and work are far apart', () => {
+    assert.equal(locationsTooClose(HOME, WORK), false);
+  });
+
+  it('returns false when locations are just outside a custom threshold', () => {
+    // ~200m offset
+    const slightlyFar: KnownLocation = {
+      ...HOME,
+      label: 'work',
+      latitude: HOME.latitude + 0.0018,
+    };
+    assert.equal(locationsTooClose(HOME, slightlyFar, 100), false);
+  });
+
+  it('respects a custom threshold — returns true when within it', () => {
+    // ~200m offset — outside default 100m but within a 300m custom threshold
+    const slightlyFar: KnownLocation = {
+      ...HOME,
+      label: 'work',
+      latitude: HOME.latitude + 0.0018,
+    };
+    assert.equal(locationsTooClose(HOME, slightlyFar, 300), true);
   });
 });

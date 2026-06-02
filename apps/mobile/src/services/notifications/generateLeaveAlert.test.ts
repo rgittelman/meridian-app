@@ -4,8 +4,13 @@ import { describe, it } from 'node:test';
 import {
   generateLeaveAlertCandidates,
   leaveAlertPrimaryLine,
+  leaveAlertLocationAwarePrimaryLine,
+  shouldUseLocationAwareCopy,
   LEAVE_ALERT_MINUTES_BEFORE,
+  LEAVE_ALERT_LOCATION_AWARE_SECONDARY,
 } from './generateLeaveAlert';
+import type { LeaveAlertLocationContext } from './generateLeaveAlert';
+import { evaluateConstitutionalCompliance } from './constitutionalCheck';
 import type { MeridianCalendarEvent } from '@/types/calendar';
 
 // ── Fixture helpers ───────────────────────────────────────────────────────────
@@ -167,5 +172,141 @@ describe('generateLeaveAlertCandidates', () => {
   it('empty events list returns no candidates', () => {
     const candidates = generateLeaveAlertCandidates([], NOW);
     assert.equal(candidates.length, 0);
+  });
+});
+
+// ── Phase G.2: shouldUseLocationAwareCopy ─────────────────────────────────────
+
+describe('shouldUseLocationAwareCopy', () => {
+  it('returns true when region is home and smart leave timing is enabled', () => {
+    const ctx: LeaveAlertLocationContext = { currentRegion: 'home', smartLeaveTimingEnabled: true };
+    assert.equal(shouldUseLocationAwareCopy(ctx), true);
+  });
+
+  it('returns false when region is home but smart leave timing is disabled', () => {
+    const ctx: LeaveAlertLocationContext = { currentRegion: 'home', smartLeaveTimingEnabled: false };
+    assert.equal(shouldUseLocationAwareCopy(ctx), false);
+  });
+
+  it('returns false when region is work', () => {
+    const ctx: LeaveAlertLocationContext = { currentRegion: 'work', smartLeaveTimingEnabled: true };
+    assert.equal(shouldUseLocationAwareCopy(ctx), false);
+  });
+
+  it('returns false when region is away', () => {
+    const ctx: LeaveAlertLocationContext = { currentRegion: 'away', smartLeaveTimingEnabled: true };
+    assert.equal(shouldUseLocationAwareCopy(ctx), false);
+  });
+
+  it('returns false when region is unknown', () => {
+    const ctx: LeaveAlertLocationContext = { currentRegion: 'unknown', smartLeaveTimingEnabled: true };
+    assert.equal(shouldUseLocationAwareCopy(ctx), false);
+  });
+
+  it('returns false when locationContext is undefined (missing context)', () => {
+    assert.equal(shouldUseLocationAwareCopy(undefined), false);
+  });
+});
+
+// ── Phase G.2: leaveAlertLocationAwarePrimaryLine ────────────────────────────
+
+describe('leaveAlertLocationAwarePrimaryLine', () => {
+  it('uses starts-at format with displayTime when person is present', () => {
+    const event = makeEvent('e1', 30, { displayTime: '2:30 PM' });
+    const line = leaveAlertLocationAwarePrimaryLine(event);
+    assert.equal(line, "Grace's volleyball practice starts at 2:30 PM.");
+  });
+
+  it('uses starts-at format with displayTime when no person label', () => {
+    const event = makeEvent('e2', 30, {
+      displayPersonLabel: null,
+      inferredOwnerLabel: null,
+      displayTitle: 'BFSC board meeting',
+      displayTime: '7:00 PM',
+    });
+    const line = leaveAlertLocationAwarePrimaryLine(event);
+    assert.equal(line, 'BFSC board meeting starts at 7:00 PM.');
+  });
+});
+
+// ── Phase G.2: generateLeaveAlertCandidates with locationContext ──────────────
+
+describe('generateLeaveAlertCandidates — Phase G.2 location copy', () => {
+  const HOME_SMART_ON: LeaveAlertLocationContext = { currentRegion: 'home', smartLeaveTimingEnabled: true };
+  const HOME_SMART_OFF: LeaveAlertLocationContext = { currentRegion: 'home', smartLeaveTimingEnabled: false };
+  const WORK: LeaveAlertLocationContext = { currentRegion: 'work', smartLeaveTimingEnabled: true };
+  const AWAY: LeaveAlertLocationContext = { currentRegion: 'away', smartLeaveTimingEnabled: true };
+  const UNKNOWN: LeaveAlertLocationContext = { currentRegion: 'unknown', smartLeaveTimingEnabled: true };
+
+  it('home + smart enabled: uses starts-at primary and breathing-room secondary', () => {
+    const event = makeEvent('e-home-on', 30, { displayTime: '2:30 PM' });
+    const [c] = generateLeaveAlertCandidates([event], NOW, HOME_SMART_ON);
+    assert.ok(c, 'expected one candidate');
+    assert.ok(c.primaryLine.includes('starts at 2:30 PM'), `primary: "${c.primaryLine}"`);
+    assert.equal(c.secondaryLine, LEAVE_ALERT_LOCATION_AWARE_SECONDARY);
+  });
+
+  it('home + smart disabled: falls back to Phase E copy, no secondary', () => {
+    const event = makeEvent('e-home-off', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW, HOME_SMART_OFF);
+    assert.ok(c.primaryLine.includes(`starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes`), `primary: "${c.primaryLine}"`);
+    assert.equal(c.secondaryLine, null);
+  });
+
+  it('work: falls back to Phase E copy, no secondary', () => {
+    const event = makeEvent('e-work', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW, WORK);
+    assert.ok(c.primaryLine.includes(`starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes`));
+    assert.equal(c.secondaryLine, null);
+  });
+
+  it('away: falls back to Phase E copy, no secondary', () => {
+    const event = makeEvent('e-away', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW, AWAY);
+    assert.ok(c.primaryLine.includes(`starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes`));
+    assert.equal(c.secondaryLine, null);
+  });
+
+  it('unknown: falls back to Phase E copy, no secondary', () => {
+    const event = makeEvent('e-unknown', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW, UNKNOWN);
+    assert.ok(c.primaryLine.includes(`starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes`));
+    assert.equal(c.secondaryLine, null);
+  });
+
+  it('missing context (undefined): falls back to Phase E copy, no secondary', () => {
+    const event = makeEvent('e-no-ctx', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW, undefined);
+    assert.ok(c.primaryLine.includes(`starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes`));
+    assert.equal(c.secondaryLine, null);
+  });
+});
+
+// ── Phase G.2: constitutional pass path ──────────────────────────────────────
+
+describe('leave_alert constitutional pass path', () => {
+  it('passes constitutional check regardless of conflictRisk being 0', () => {
+    const event = makeEvent('e-const', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW);
+    assert.ok(c, 'expected one candidate');
+    assert.equal(c.conflictRisk, 0, 'conflictRisk should be 0');
+
+    const result = evaluateConstitutionalCompliance(c, {
+      recentlyOpenedApp: false,
+      openedWithinTwoWeeks: true,
+    });
+    assert.equal(result.pass, true, `expected pass but got: ${result.failureReason}`);
+    assert.equal(result.failureReason, null);
+  });
+
+  it('passes constitutional check even when app was recently opened (household high impact)', () => {
+    const event = makeEvent('e-const-recent', 30);
+    const [c] = generateLeaveAlertCandidates([event], NOW);
+
+    const result = evaluateConstitutionalCompliance(c, {
+      recentlyOpenedApp: true,
+      openedWithinTwoWeeks: true,
+    });
+    assert.equal(result.pass, true, `expected pass but got: ${result.failureReason}`);
   });
 });

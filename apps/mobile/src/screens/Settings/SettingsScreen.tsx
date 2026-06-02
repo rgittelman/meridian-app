@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, Switch, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Linking, Modal, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
@@ -7,7 +7,13 @@ import { Text } from '@/components/typography/Text';
 import { NotificationPermissionPrompt } from '@/screens/Settings/NotificationPermissionPrompt';
 import {
   captureCurrentLocation,
+  geocodeAddress,
+  locationsTooClose,
   requestLocationPermission,
+  resolveAddressSuggestion,
+  resolveApproximateLocation,
+  resolveCurrentRegionFromDevice,
+  reverseGeocodeAddress,
 } from '@/services/location/geofenceManager';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useLocationStore } from '@/store/locationStore';
@@ -32,6 +38,10 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
   const [settingLocation, setSettingLocation] = useState<'home' | 'work' | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [currentLocationLabel, setCurrentLocationLabel] = useState<string | null>(null);
+  const [addressInputMode, setAddressInputMode] = useState<'home' | 'work' | null>(null);
+  const [addressText, setAddressText] = useState('');
+  const [geocodingLocation, setGeocodingLocation] = useState<'home' | 'work' | null>(null);
 
   const permissionState = useNotificationDeliveryStore((s) => s.permissionState);
   const calendarStatus = useCalendarStore((s) => s.status);
@@ -44,9 +54,27 @@ export function SettingsScreen({ visible, onClose }: Props) {
     smartLeaveTimingEnabled,
     setHomeLocation,
     setWorkLocation,
+    setCurrentRegion,
     setLocationPermission,
     setSmartLeaveTimingEnabled,
   } = useLocationStore();
+
+  // Refresh current region and approximate location each time the settings modal opens.
+  useEffect(() => {
+    if (!visible) return;
+    setCurrentLocationLabel(null);
+    const { homeLocation: home, workLocation: work } = useLocationStore.getState();
+    void resolveCurrentRegionFromDevice(home, work).then(async ({ region, permissionState }) => {
+      setCurrentRegion(region);
+      setLocationPermission(permissionState);
+      // Capture a fresh GPS fix for the approximate location label.
+      const position = await captureCurrentLocation();
+      if (position) {
+        const label = await resolveApproximateLocation(position.latitude, position.longitude);
+        setCurrentLocationLabel(label);
+      }
+    });
+  }, [visible]);
 
   const {
     enabled,
@@ -121,16 +149,70 @@ export function SettingsScreen({ visible, onClose }: Props) {
       return;
     }
 
+    const resolvedAddress = await reverseGeocodeAddress(position.latitude, position.longitude);
+
     const loc: KnownLocation = {
       label,
       latitude: position.latitude,
       longitude: position.longitude,
       radiusMeters: DEFAULT_REGION_RADIUS_METERS,
+      address: resolvedAddress ?? undefined,
     };
 
     if (label === 'home') setHomeLocation(loc);
     else setWorkLocation(loc);
   };
+
+  const handleClearLocation = (label: 'home' | 'work') => {
+    setLocationError(null);
+    if (label === 'home') setHomeLocation(null);
+    else setWorkLocation(null);
+  };
+
+  const handleEnterAddress = (label: 'home' | 'work') => {
+    setLocationError(null);
+    setAddressText('');
+    setAddressInputMode(label);
+  };
+
+  const handleCancelAddress = () => {
+    setAddressInputMode(null);
+    setAddressText('');
+    setLocationError(null);
+  };
+
+  const handleSubmitAddress = async (label: 'home' | 'work') => {
+    if (!addressText.trim()) return;
+    setLocationError(null);
+    setGeocodingLocation(label);
+
+    const coords = await geocodeAddress(addressText);
+    setGeocodingLocation(null);
+
+    if (!coords) {
+      setLocationError("I couldn't find that address. Try adding city and state.");
+      return;
+    }
+
+    const loc: KnownLocation = {
+      label,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      radiusMeters: DEFAULT_REGION_RADIUS_METERS,
+      address: addressText.trim(),
+    };
+
+    if (label === 'home') setHomeLocation(loc);
+    else setWorkLocation(loc);
+
+    setAddressInputMode(null);
+    setAddressText('');
+  };
+
+  const locationsConflict =
+    homeLocation !== null &&
+    workLocation !== null &&
+    locationsTooClose(homeLocation, workLocation);
 
   const regionLabel = (region: typeof currentRegion): string => {
     switch (region) {
@@ -249,52 +331,42 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
           <View style={styles.card}>
             {/* Home */}
-            <View style={styles.row}>
-              <View style={styles.locationLabelGroup}>
-                <Text variant="body">Home</Text>
-                {homeLocation && (
-                  <Text variant="caption" color="inkSecondary">
-                    Set
-                  </Text>
-                )}
-              </View>
-              <Pressable
-                onPress={() => void handleSetLocation('home')}
-                disabled={settingLocation !== null}
-                style={({ pressed }) => [styles.setBtn, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Set home location"
-              >
-                <Text variant="footnote" color="accent">
-                  {settingLocation === 'home' ? 'Reading…' : homeLocation ? 'Update' : 'Set'}
-                </Text>
-              </Pressable>
-            </View>
+            <LocationRow
+              label="Home"
+              isSet={homeLocation !== null}
+              savedAddress={homeLocation?.address}
+              isBusy={settingLocation === 'home' || geocodingLocation === 'home'}
+              isAddressMode={addressInputMode === 'home'}
+              addressText={addressText}
+              onAddressChange={setAddressText}
+              onUseGPS={() => void handleSetLocation('home')}
+              onEnterAddress={() => handleEnterAddress('home')}
+              onSubmitAddress={() => void handleSubmitAddress('home')}
+              onCancelAddress={handleCancelAddress}
+              onClear={() => handleClearLocation('home')}
+              anyBusy={settingLocation !== null || geocodingLocation !== null || addressInputMode !== null}
+              geocodingInProgress={geocodingLocation === 'home'}
+            />
 
             <Separator />
 
             {/* Work */}
-            <View style={styles.row}>
-              <View style={styles.locationLabelGroup}>
-                <Text variant="body">Work</Text>
-                {workLocation && (
-                  <Text variant="caption" color="inkSecondary">
-                    Set
-                  </Text>
-                )}
-              </View>
-              <Pressable
-                onPress={() => void handleSetLocation('work')}
-                disabled={settingLocation !== null}
-                style={({ pressed }) => [styles.setBtn, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Set work location"
-              >
-                <Text variant="footnote" color="accent">
-                  {settingLocation === 'work' ? 'Reading…' : workLocation ? 'Update' : 'Set'}
-                </Text>
-              </Pressable>
-            </View>
+            <LocationRow
+              label="Work"
+              isSet={workLocation !== null}
+              savedAddress={workLocation?.address}
+              isBusy={settingLocation === 'work' || geocodingLocation === 'work'}
+              isAddressMode={addressInputMode === 'work'}
+              addressText={addressText}
+              onAddressChange={setAddressText}
+              onUseGPS={() => void handleSetLocation('work')}
+              onEnterAddress={() => handleEnterAddress('work')}
+              onSubmitAddress={() => void handleSubmitAddress('work')}
+              onCancelAddress={handleCancelAddress}
+              onClear={() => handleClearLocation('work')}
+              anyBusy={settingLocation !== null || geocodingLocation !== null || addressInputMode !== null}
+              geocodingInProgress={geocodingLocation === 'work'}
+            />
 
             <Separator />
 
@@ -303,9 +375,16 @@ export function SettingsScreen({ visible, onClose }: Props) {
               <Text variant="body" color="inkSecondary">
                 Current Region
               </Text>
-              <Text variant="body" color="inkSecondary">
-                {regionLabel(currentRegion)}
-              </Text>
+              <View style={styles.currentRegionValue}>
+                <Text variant="body" color="inkSecondary">
+                  {currentLocationLabel ?? regionLabel(currentRegion)}
+                </Text>
+                {currentLocationLabel && (
+                  <Text variant="caption" color="inkGhost">
+                    {regionLabel(currentRegion)}
+                  </Text>
+                )}
+              </View>
             </View>
 
             <Separator />
@@ -321,6 +400,11 @@ export function SettingsScreen({ visible, onClose }: Props) {
           {locationError && (
             <Text variant="caption" color="warning" style={styles.locationError}>
               {locationError}
+            </Text>
+          )}
+          {!locationError && locationsConflict && (
+            <Text variant="caption" color="warning" style={styles.locationError}>
+              Home and Work look like the same place. Current region may not be accurate.
             </Text>
           )}
         </View>
@@ -392,6 +476,199 @@ function SettingsRow({
   );
 }
 
+function LocationRow({
+  label,
+  isSet,
+  savedAddress,
+  isBusy,
+  isAddressMode,
+  addressText,
+  onAddressChange,
+  onUseGPS,
+  onEnterAddress,
+  onSubmitAddress,
+  onCancelAddress,
+  onClear,
+  anyBusy,
+  geocodingInProgress,
+}: {
+  label: string;
+  isSet: boolean;
+  savedAddress?: string;
+  isBusy: boolean;
+  isAddressMode: boolean;
+  addressText: string;
+  onAddressChange: (text: string) => void;
+  onUseGPS: () => void;
+  onEnterAddress: () => void;
+  onSubmitAddress: () => void;
+  onCancelAddress: () => void;
+  onClear: () => void;
+  anyBusy: boolean;
+  geocodingInProgress: boolean;
+}) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setSuggestion(null);
+    if (!isAddressMode || addressText.trim().length < 5) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      void resolveAddressSuggestion(addressText).then(setSuggestion);
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [addressText, isAddressMode]);
+
+  return (
+    <View>
+      {/* Label row */}
+      <View style={styles.row}>
+        <View style={styles.locationLabelGroup}>
+          <Text variant="body">{label}</Text>
+          {isSet && (
+            <Text variant="caption" color="inkSecondary" numberOfLines={1}>
+              {savedAddress ?? 'Set'}
+            </Text>
+          )}
+        </View>
+        {!isAddressMode && (
+          <View style={styles.locationActionGroup}>
+            {isBusy ? (
+              <Text variant="footnote" color="inkSecondary">
+                {geocodingInProgress ? 'Looking up…' : 'Reading…'}
+              </Text>
+            ) : (
+              <>
+                <Pressable
+                  onPress={onUseGPS}
+                  disabled={anyBusy}
+                  style={({ pressed }) => [styles.locationActionBtn, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set ${label} from current location`}
+                >
+                  <Text variant="footnote" color="accent">
+                    Use GPS
+                  </Text>
+                </Pressable>
+                <Text variant="footnote" color="inkGhost">
+                  {' · '}
+                </Text>
+                <Pressable
+                  onPress={onEnterAddress}
+                  disabled={anyBusy}
+                  style={({ pressed }) => [styles.locationActionBtn, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Enter ${label} address`}
+                >
+                  <Text variant="footnote" color="accent">
+                    Set Address
+                  </Text>
+                </Pressable>
+                {isSet && (
+                  <>
+                    <Text variant="footnote" color="inkGhost">
+                      {' · '}
+                    </Text>
+                    <Pressable
+                      onPress={onClear}
+                      disabled={anyBusy}
+                      style={({ pressed }) => [styles.locationActionBtn, pressed && styles.pressed]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Clear ${label} location`}
+                    >
+                      <Text variant="footnote" color="warning">
+                        Clear
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Address input — shown inline when in address mode */}
+      {isAddressMode && (
+        <>
+          <View style={styles.addressInputRow}>
+            <TextInput
+              style={[
+                styles.addressInput,
+                { color: colors.ink, borderColor: colors.border },
+              ]}
+              placeholder={`${label} address…`}
+              placeholderTextColor={colors.inkGhost}
+              value={addressText}
+              onChangeText={(text) => {
+                onAddressChange(text);
+                setSuggestion(null);
+              }}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={onSubmitAddress}
+              editable={!geocodingInProgress}
+            />
+          </View>
+          {suggestion !== null && suggestion !== addressText.trim() && (
+            <Pressable
+              onPress={() => {
+                onAddressChange(suggestion);
+                setSuggestion(null);
+              }}
+              style={({ pressed }) => [styles.suggestionRow, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`Use suggested address: ${suggestion}`}
+            >
+              <Text variant="caption" color="inkSecondary">
+                Matched:{' '}
+              </Text>
+              <Text variant="caption" color="accent" style={styles.suggestionText}>
+                {suggestion}
+              </Text>
+            </Pressable>
+          )}
+          <View style={styles.addressActionsRow}>
+            <Pressable
+              onPress={onCancelAddress}
+              disabled={geocodingInProgress}
+              style={({ pressed }) => [styles.locationActionBtn, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel address entry"
+            >
+              <Text variant="footnote" color="inkSecondary">
+                Cancel
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={onSubmitAddress}
+              disabled={geocodingInProgress || !addressText.trim()}
+              style={({ pressed }) => [styles.locationActionBtn, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`Save ${label} address`}
+            >
+              <Text
+                variant="footnote"
+                color={addressText.trim() && !geocodingInProgress ? 'accent' : 'inkGhost'}
+              >
+                {geocodingInProgress ? 'Looking up…' : 'Save'}
+              </Text>
+            </Pressable>
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 function Separator() {
   const styles = useStyles();
   return <View style={styles.separator} />;
@@ -442,8 +719,47 @@ const useStyles = makeStyles((c) => ({
   pressed: {
     opacity: 0.72,
   },
+  currentRegionValue: {
+    alignItems: 'flex-end' as const,
+    gap: spacing[1],
+  },
   locationLabelGroup: {
     gap: spacing[1],
+  },
+  locationActionGroup: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  locationActionBtn: {
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[1],
+  },
+  addressInputRow: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[2],
+  },
+  addressInput: {
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    fontSize: 15,
+  },
+  suggestionRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[2],
+  },
+  suggestionText: {
+    flexShrink: 1,
+  },
+  addressActionsRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'flex-end' as const,
+    gap: spacing[4],
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
   },
   setBtn: {
     paddingVertical: spacing[1],

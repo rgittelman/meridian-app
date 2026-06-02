@@ -80,6 +80,8 @@ export function evaluateConstitutionalCompliance(
     candidate.type === 'morning_brief' ||
     candidate.type === 'evening_wind_down' ||
     candidate.type === 'transition_awareness' ||
+    // Leave alerts protect a commitment the user is about to miss — reduces stress.
+    candidate.type === 'leave_alert' ||
     candidate.conflictRisk > 0;
 
   const preventsProblem =

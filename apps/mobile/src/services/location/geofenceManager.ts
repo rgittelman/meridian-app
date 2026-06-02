@@ -23,7 +23,7 @@ import type { CurrentRegion, KnownLocation, LocationPermissionState } from '@/st
 import { resolveCurrentRegion } from './geofenceHelpers';
 
 // Re-export pure helpers so callers can import from one place.
-export { haversineDistanceMeters, isWithinRegion, resolveCurrentRegion } from './geofenceHelpers';
+export { haversineDistanceMeters, isWithinRegion, resolveCurrentRegion, locationsTooClose } from './geofenceHelpers';
 
 // ── Async Expo-backed functions ───────────────────────────────────────────────
 
@@ -81,6 +81,83 @@ export async function captureCurrentLocation(): Promise<{
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reverse geocodes coordinates to a human-readable address string.
+ * Returns null on failure — caller should fall back to formatted coordinates.
+ */
+export async function reverseGeocodeAddress(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  try {
+    const results = await ExpoLocation.reverseGeocodeAsync({ latitude, longitude });
+    if (results.length === 0) return null;
+    const r = results[0];
+    const parts = [r.streetNumber, r.street, r.city, r.region].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reverse-geocodes coordinates to a short "City, State" label for display.
+ * Returns null on any failure — caller should fall back to a region label.
+ */
+export async function resolveApproximateLocation(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  try {
+    const results = await ExpoLocation.reverseGeocodeAsync({ latitude, longitude });
+    if (results.length === 0) return null;
+    const r = results[0];
+    const city = r.city ?? r.subregion ?? r.district ?? null;
+    const region = r.region ?? null;
+    if (city && region) return `${city}, ${region}`;
+    if (city) return city;
+    if (region) return region;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves a partial address string to a formatted suggestion for display.
+ * Geocodes the text, then reverse-geocodes the first result to get a
+ * canonical address string. Returns null when no match or on any error.
+ * Intended for debounced "as-you-type" suggestion — not for saving.
+ */
+export async function resolveAddressSuggestion(text: string): Promise<string | null> {
+  const trimmed = text.trim();
+  if (trimmed.length < 5) return null;
+  try {
+    const geocoded = await ExpoLocation.geocodeAsync(trimmed);
+    if (geocoded.length === 0) return null;
+    return reverseGeocodeAddress(geocoded[0].latitude, geocoded[0].longitude);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Geocodes a plain-text address to coordinates using the platform geocoding service.
+ * Does not require location permission — uses a network/OS geocoding API.
+ * Returns null when the address cannot be resolved; never throws.
+ */
+export async function geocodeAddress(
+  address: string,
+): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const results = await ExpoLocation.geocodeAsync(address.trim());
+    if (results.length === 0) return null;
+    return { latitude: results[0].latitude, longitude: results[0].longitude };
   } catch {
     return null;
   }

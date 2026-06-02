@@ -6,6 +6,7 @@ import { useCalendarStore } from '@/store/calendarStore';
 import { useCaptureStore } from '@/store/captureStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useResurfacingStore } from '@/store/resurfacingStore';
+import { useLocationStore } from '@/store/locationStore';
 import type { MeridianCalendarEvent } from '@/types/calendar';
 
 function mergeCalendarEvents(
@@ -50,6 +51,9 @@ export function useNotificationIntelligence(): NotificationIntelligenceSnapshot 
     (s) => Object.keys(s.cooldowns).length >= 4,
   );
 
+  const currentRegion = useLocationStore((s) => s.currentRegion);
+  const smartLeaveTimingEnabled = useLocationStore((s) => s.smartLeaveTimingEnabled);
+
   return useMemo(() => {
     const merged = mergeCalendarEvents(weekEvents, upcomingEvents);
     if (merged.length === 0 && captures.length === 0) {
@@ -67,6 +71,7 @@ export function useNotificationIntelligence(): NotificationIntelligenceSnapshot 
         overloadRecoveryActive,
         dailyCaps,
       },
+      locationContext: { currentRegion, smartLeaveTimingEnabled },
     });
   }, [
     weekEvents,
@@ -78,6 +83,8 @@ export function useNotificationIntelligence(): NotificationIntelligenceSnapshot 
     recoveryWindowUntil,
     overloadRecoveryActive,
     dailyCaps,
+    currentRegion,
+    smartLeaveTimingEnabled,
   ]);
 }
 
@@ -93,6 +100,7 @@ export function getNotificationIntelligenceSnapshot(): NotificationIntelligenceS
     dailyCaps,
   } = useNotificationStore.getState();
   const cooldowns = useResurfacingStore.getState().cooldowns;
+  const { currentRegion, smartLeaveTimingEnabled } = useLocationStore.getState();
 
   const merged = mergeCalendarEvents(weekEvents, upcomingEvents);
   if (merged.length === 0 && captures.length === 0) return EMPTY_SNAPSHOT;
@@ -108,5 +116,6 @@ export function getNotificationIntelligenceSnapshot(): NotificationIntelligenceS
       overloadRecoveryActive: Object.keys(cooldowns).length >= 4,
       dailyCaps,
     },
+    locationContext: { currentRegion, smartLeaveTimingEnabled },
   });
 }

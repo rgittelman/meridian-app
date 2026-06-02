@@ -16,6 +16,8 @@ export type KnownLocation = {
   longitude: number;
   /** Radius in metres — default 150 m covers home + driveway. */
   radiusMeters: number;
+  /** Human-readable address — set from geocoding or reverse-geocoding. Optional for backwards compat. */
+  address?: string;
 };
 
 export const DEFAULT_REGION_RADIUS_METERS = 150;

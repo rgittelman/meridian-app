@@ -7,6 +7,9 @@ import type { CurrentRegion, KnownLocation } from '@/store/locationStore';
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
+/** Threshold below which home and work are considered the same place. */
+export const SAME_LOCATION_THRESHOLD_METERS = 100;
+
 function toRadians(deg: number): number {
   return (deg * Math.PI) / 180;
 }
@@ -30,6 +33,18 @@ export function haversineDistanceMeters(
 }
 
 /**
+ * Returns true when two known locations are within the given threshold of each other.
+ * Used to detect invalid setup where Home and Work have been set to the same place.
+ */
+export function locationsTooClose(
+  a: KnownLocation,
+  b: KnownLocation,
+  thresholdMeters = SAME_LOCATION_THRESHOLD_METERS,
+): boolean {
+  return haversineDistanceMeters(a.latitude, a.longitude, b.latitude, b.longitude) <= thresholdMeters;
+}
+
+/**
  * Returns true when a coordinate is within a known location's radius.
  */
 export function isWithinRegion(
@@ -43,6 +58,7 @@ export function isWithinRegion(
 
 /**
  * Resolves which named region a coordinate falls in.
+ * Returns 'unknown' if home and work are set to the same place — ambiguous data.
  * Home is checked before work; returns 'away' if neither matches.
  */
 export function resolveCurrentRegion(
@@ -51,6 +67,8 @@ export function resolveCurrentRegion(
   home: KnownLocation | null,
   work: KnownLocation | null,
 ): CurrentRegion {
+  // If both locations are configured but indistinguishably close, region is ambiguous.
+  if (home && work && locationsTooClose(home, work)) return 'unknown';
   if (home && isWithinRegion(currentLat, currentLon, home)) return 'home';
   if (work && isWithinRegion(currentLat, currentLon, work)) return 'work';
   if (home || work) return 'away';

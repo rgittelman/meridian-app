@@ -19,10 +19,20 @@
 
 import type { MeridianCalendarEvent } from '@/types/calendar';
 import type { NotificationCandidate } from '@/types/notification';
+import type { CurrentRegion } from '@/store/locationStore';
 import { isHouseholdRelevant } from '@/services/relevance';
 import { filterEventsForPlan } from '@/services/calendar/eventFilters';
-import { buildCandidate, dayKey, peopleForEvent } from './candidateHelpers';
+import { buildCandidate, dayKey, peopleForEvent, stripPersonPrefixFromTitle } from './candidateHelpers';
 import { safeTrim } from '@/utils/safeString';
+
+/**
+ * Location context passed in from Phase G.2.
+ * Optional — when absent or region is not 'home', falls back to Phase E copy.
+ */
+export type LeaveAlertLocationContext = {
+  currentRegion: CurrentRegion;
+  smartLeaveTimingEnabled: boolean;
+};
 
 /** Minutes before event start to fire the leave alert. */
 export const LEAVE_ALERT_MINUTES_BEFORE = 30;
@@ -56,9 +66,47 @@ export function leaveAlertPrimaryLine(event: MeridianCalendarEvent): string {
   return `${rawTitle} starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes.`;
 }
 
+/**
+ * Phase G.2 — location-aware primary line.
+ * Only used when currentRegion === 'home' && smartLeaveTimingEnabled === true.
+ *
+ * "Grace's volleyball practice starts at 2:30 PM."
+ * "BFSC board meeting starts at 7:00 PM."
+ */
+export function leaveAlertLocationAwarePrimaryLine(event: MeridianCalendarEvent): string {
+  const rawTitle = safeTrim(event.displayTitle ?? event.title, 'Your commitment');
+  const people = peopleForEvent(event);
+  const person = people[0];
+  const time = event.displayTime;
+
+  if (person) {
+    const activity = stripPersonPrefixFromTitle(rawTitle, person);
+    return `${person}'s ${activity} starts at ${time}.`;
+  }
+  return `${rawTitle} starts at ${time}.`;
+}
+
+/** Phase G.2 — location-aware secondary line. Constant for all home-region alerts. */
+export const LEAVE_ALERT_LOCATION_AWARE_SECONDARY =
+  'Leaving in the next 15 minutes gives you breathing room.';
+
+/**
+ * Returns true when location-aware copy should be used.
+ * Only fires at home with smart leave timing enabled.
+ */
+export function shouldUseLocationAwareCopy(
+  locationContext: LeaveAlertLocationContext | undefined,
+): boolean {
+  if (!locationContext) return false;
+  return (
+    locationContext.currentRegion === 'home' && locationContext.smartLeaveTimingEnabled === true
+  );
+}
+
 export function generateLeaveAlertCandidates(
   events: MeridianCalendarEvent[],
   now = new Date(),
+  locationContext?: LeaveAlertLocationContext,
 ): NotificationCandidate[] {
   const candidates: NotificationCandidate[] = [];
   const planEvents = filterEventsForPlan(events);
@@ -83,6 +131,8 @@ export function generateLeaveAlertCandidates(
     const windowStart = new Date(alertFireMs);
     const windowEnd = new Date(alertFireMs + ALERT_WINDOW_WIDTH_MINUTES * 60 * 1000);
 
+    const useLocationCopy = shouldUseLocationAwareCopy(locationContext);
+
     candidates.push(
       buildCandidate({
         id: `leave-alert-${event.id}-${dayKey(now)}`,
@@ -94,8 +144,10 @@ export function generateLeaveAlertCandidates(
         confidence: 'high',
         interruptionReason: 'Commitment starting soon — time to leave or prepare.',
         bundleKey: `leave-alert-${event.id}-${dayKey(now)}`,
-        primaryLine: leaveAlertPrimaryLine(event),
-        secondaryLine: null,
+        primaryLine: useLocationCopy
+          ? leaveAlertLocationAwarePrimaryLine(event)
+          : leaveAlertPrimaryLine(event),
+        secondaryLine: useLocationCopy ? LEAVE_ALERT_LOCATION_AWARE_SECONDARY : null,
         additionalLines: [],
         timingSensitivity: 'high',
         conflictRisk: 0,
