@@ -69,6 +69,12 @@ type CaptureState = {
   confirmationMessage: CaptureConfirmationMessage | null;
   /** Dev: last save audit for promotion transparency */
   lastCaptureAudit: CaptureIntelligenceAudit | null;
+  /**
+   * Increments on every addCapture — session only, not persisted.
+   * useNotificationDelivery watches this to trigger immediate reconciliation
+   * when a capture is saved (needed for capture reminder notifications).
+   */
+  captureVersion: number;
 
   addCapture: (raw: string) => void;
   clearConfirmation: () => void;
@@ -85,6 +91,7 @@ export const useCaptureStore = create<CaptureState>()(
       isSubmitting: false,
       confirmationMessage: null,
       lastCaptureAudit: null,
+      captureVersion: 0,
 
       addCapture: (raw: string) => {
         const trimmed = raw.trim();
@@ -103,6 +110,7 @@ export const useCaptureStore = create<CaptureState>()(
           isSubmitting: false,
           confirmationMessage: generateConfirmation(item),
           lastCaptureAudit: audit,
+          captureVersion: state.captureVersion + 1,
         }));
 
         void enrichInBackground(item, (updated) => {

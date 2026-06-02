@@ -155,4 +155,19 @@ export function useNotificationDelivery(): void {
     if (syncVersion === 0) return; // skip initial mount (no sync has occurred)
     scheduleReconcile();
   }, [syncVersion, scheduleReconcile]);
+
+  // ── Trigger 3: capture saved ────────────────────────────────────────────────
+  //
+  // captureVersion increments in captureStore on every addCapture().
+  // Watching it fires reconciliation immediately when a capture is saved,
+  // which is required for capture reminder notifications — without this,
+  // the pipeline only runs on foreground, and short-window reminders
+  // ("in 2 minutes") expire before the scheduler ever sees them.
+
+  const captureVersion = useCaptureStore((s) => s.captureVersion);
+
+  useEffect(() => {
+    if (captureVersion === 0) return; // skip initial mount
+    scheduleReconcile();
+  }, [captureVersion, scheduleReconcile]);
 }
