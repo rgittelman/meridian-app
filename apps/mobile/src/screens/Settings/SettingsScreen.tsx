@@ -1,16 +1,23 @@
 import { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, Switch, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 import { Text } from '@/components/typography/Text';
 import { NotificationPermissionPrompt } from '@/screens/Settings/NotificationPermissionPrompt';
+import {
+  captureCurrentLocation,
+  requestLocationPermission,
+} from '@/services/location/geofenceManager';
 import { useCalendarStore } from '@/store/calendarStore';
+import { useLocationStore } from '@/store/locationStore';
+import type { KnownLocation } from '@/store/locationStore';
 import { useNotificationDeliveryStore } from '@/store/notificationDeliveryStore';
 import { useNotificationSettingsStore } from '@/store/notificationSettingsStore';
 import { makeStyles, radius, spacing } from '@/theme';
 import { useTheme } from '@/hooks/useTheme';
 import Constants from 'expo-constants';
+import { DEFAULT_REGION_RADIUS_METERS } from '@/store/locationStore';
 
 type Props = {
   visible: boolean;
@@ -23,9 +30,23 @@ export function SettingsScreen({ visible, onClose }: Props) {
   const { colors } = useTheme();
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
 
+  const [settingLocation, setSettingLocation] = useState<'home' | 'work' | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
   const permissionState = useNotificationDeliveryStore((s) => s.permissionState);
   const calendarStatus = useCalendarStore((s) => s.status);
   const disconnect = useCalendarStore((s) => s.disconnect);
+
+  const {
+    homeLocation,
+    workLocation,
+    currentRegion,
+    smartLeaveTimingEnabled,
+    setHomeLocation,
+    setWorkLocation,
+    setLocationPermission,
+    setSmartLeaveTimingEnabled,
+  } = useLocationStore();
 
   const {
     enabled,
@@ -72,6 +93,54 @@ export function SettingsScreen({ visible, onClose }: Props) {
   const isCalendarConnected =
     calendarStatus === 'connected' || calendarStatus === 'partial_sync';
 
+  const handleSetLocation = async (label: 'home' | 'work') => {
+    setLocationError(null);
+    setSettingLocation(label);
+
+    // Option A: permission is triggered by the Set action, in context.
+    const permission = await requestLocationPermission();
+    setLocationPermission(permission);
+
+    if (permission !== 'granted') {
+      setSettingLocation(null);
+      if (permission === 'denied') {
+        setLocationError(
+          `Location access is off. Open Settings to allow When In Use access for ${label === 'home' ? 'Home' : 'Work'}.`,
+        );
+      } else {
+        setLocationError('Location is not available on this device.');
+      }
+      return;
+    }
+
+    const position = await captureCurrentLocation();
+    setSettingLocation(null);
+
+    if (!position) {
+      setLocationError('Could not read your location. Try again in a moment.');
+      return;
+    }
+
+    const loc: KnownLocation = {
+      label,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      radiusMeters: DEFAULT_REGION_RADIUS_METERS,
+    };
+
+    if (label === 'home') setHomeLocation(loc);
+    else setWorkLocation(loc);
+  };
+
+  const regionLabel = (region: typeof currentRegion): string => {
+    switch (region) {
+      case 'home': return 'Home';
+      case 'work': return 'Work';
+      case 'away': return 'Away';
+      default: return 'Unknown';
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -95,6 +164,8 @@ export function SettingsScreen({ visible, onClose }: Props) {
             <X size={22} color={colors.inkSecondary} strokeWidth={1.75} />
           </Pressable>
         </View>
+
+        <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* Notifications section */}
         <View style={styles.section}>
@@ -170,6 +241,90 @@ export function SettingsScreen({ visible, onClose }: Props) {
           </View>
         </View>
 
+        {/* Location Intelligence section */}
+        <View style={styles.section}>
+          <Text variant="footnote" color="inkTertiary" style={styles.sectionLabel}>
+            LOCATION INTELLIGENCE
+          </Text>
+
+          <View style={styles.card}>
+            {/* Home */}
+            <View style={styles.row}>
+              <View style={styles.locationLabelGroup}>
+                <Text variant="body">Home</Text>
+                {homeLocation && (
+                  <Text variant="caption" color="inkSecondary">
+                    Set
+                  </Text>
+                )}
+              </View>
+              <Pressable
+                onPress={() => void handleSetLocation('home')}
+                disabled={settingLocation !== null}
+                style={({ pressed }) => [styles.setBtn, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Set home location"
+              >
+                <Text variant="footnote" color="accent">
+                  {settingLocation === 'home' ? 'Reading…' : homeLocation ? 'Update' : 'Set'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Separator />
+
+            {/* Work */}
+            <View style={styles.row}>
+              <View style={styles.locationLabelGroup}>
+                <Text variant="body">Work</Text>
+                {workLocation && (
+                  <Text variant="caption" color="inkSecondary">
+                    Set
+                  </Text>
+                )}
+              </View>
+              <Pressable
+                onPress={() => void handleSetLocation('work')}
+                disabled={settingLocation !== null}
+                style={({ pressed }) => [styles.setBtn, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Set work location"
+              >
+                <Text variant="footnote" color="accent">
+                  {settingLocation === 'work' ? 'Reading…' : workLocation ? 'Update' : 'Set'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Separator />
+
+            {/* Current region */}
+            <View style={styles.row}>
+              <Text variant="body" color="inkSecondary">
+                Current Region
+              </Text>
+              <Text variant="body" color="inkSecondary">
+                {regionLabel(currentRegion)}
+              </Text>
+            </View>
+
+            <Separator />
+
+            {/* Smart Leave Timing */}
+            <SettingsRow
+              label="Smart Leave Timing"
+              value={smartLeaveTimingEnabled}
+              onToggle={setSmartLeaveTimingEnabled}
+            />
+          </View>
+
+          {locationError && (
+            <Text variant="caption" color="warning" style={styles.locationError}>
+              {locationError}
+            </Text>
+          )}
+        </View>
+
         {/* App section */}
         <View style={styles.section}>
           <Text variant="footnote" color="inkTertiary" style={styles.sectionLabel}>
@@ -186,6 +341,8 @@ export function SettingsScreen({ visible, onClose }: Props) {
             </View>
           </View>
         </View>
+
+        </ScrollView>
       </View>
 
       {/* Permission prompt — presented as a second modal layer */}
@@ -284,5 +441,17 @@ const useStyles = makeStyles((c) => ({
   },
   pressed: {
     opacity: 0.72,
+  },
+  locationLabelGroup: {
+    gap: spacing[1],
+  },
+  setBtn: {
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+  },
+  locationError: {
+    marginTop: spacing[2],
+    marginLeft: spacing[1],
+    lineHeight: 18,
   },
 }));

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { AppLoading, AppProviders } from '@/components/AppProviders';
 import { useAppFonts } from '@/hooks/useAppFonts';
 import { useNotificationAppLifecycle } from '@/hooks/useNotificationAppLifecycle';
+import { useLocationRegion } from '@/hooks/useLocationRegion';
 import { useNotificationBriefScheduler } from '@/hooks/useNotificationBriefScheduler';
 import { useNotificationDelivery } from '@/hooks/useNotificationDelivery';
 import { useNotificationTapHandler } from '@/hooks/useNotificationTapHandler';
@@ -16,6 +17,7 @@ export default function App() {
   useNotificationDelivery();
   useNotificationBriefScheduler();
   useNotificationTapHandler();
+  useLocationRegion();
 
   useEffect(() => {
     if (loaded) setReady(true);

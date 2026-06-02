@@ -18,7 +18,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.meridian.app",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "Meridian notifies you before family events and work deadlines — rarely, and only when it matters."
+        "NSUserNotificationsUsageDescription": "Meridian notifies you before family events and work deadlines — rarely, and only when it matters.",
+        "NSLocationWhenInUseUsageDescription": "Meridian uses your location to understand whether you're home, at work, or away. This helps leave alerts create breathing room."
       }
     },
     "android": {
@@ -41,6 +42,12 @@
         {
           "color": "#1C1B19",
           "iosDisplayInForeground": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Meridian uses your location to understand whether you're home, at work, or away. This helps leave alerts create breathing room."
         }
       ]
     ]
