@@ -20,6 +20,7 @@
 import type { MeridianCalendarEvent } from '@/types/calendar';
 import type { NotificationCandidate } from '@/types/notification';
 import type { CurrentRegion } from '@/store/locationStore';
+import type { TrafficEstimate } from '@/services/location/trafficIntelligence';
 import { isHouseholdRelevant } from '@/services/relevance';
 import { filterEventsForPlan } from '@/services/calendar/eventFilters';
 import { buildCandidate, dayKey, peopleForEvent, stripPersonPrefixFromTitle } from './candidateHelpers';
@@ -34,14 +35,39 @@ export type LeaveAlertLocationContext = {
   smartLeaveTimingEnabled: boolean;
 };
 
-/** Minutes before event start to fire the leave alert. */
+/** Minutes before event start to fire the leave alert when no traffic data is available. */
 export const LEAVE_ALERT_MINUTES_BEFORE = 30;
+
+/**
+ * Buffer added to trafficMinutes when computing the traffic-aware alert fire time.
+ * Accounts for preparation time (getting keys, getting to the car).
+ * Total advance notice = trafficMinutes + LEAVE_ALERT_BUFFER_MINUTES.
+ */
+export const LEAVE_ALERT_BUFFER_MINUTES = 10;
+
+/** Phase H.2 secondary line when traffic is heavier than usual. */
+export const LEAVE_ALERT_TRAFFIC_SECONDARY = 'Traffic is heavier than usual today.';
 
 /** Generation window: only create candidates within this many minutes of the alert fire time. */
 const GENERATION_WINDOW_MINUTES = 60;
 
 /** Width of the OS scheduling window in minutes — keeps dedupe keys stable. */
 const ALERT_WINDOW_WIDTH_MINUTES = 5;
+
+/**
+ * Computes the alert fire time in milliseconds.
+ * When a traffic estimate is available, uses trafficMinutes + buffer.
+ * Falls back to the fixed T-30 when no estimate is present.
+ */
+export function computeAlertFireMs(
+  startMs: number,
+  estimate: TrafficEstimate | undefined,
+): number {
+  if (!estimate) {
+    return startMs - LEAVE_ALERT_MINUTES_BEFORE * 60 * 1000;
+  }
+  return startMs - (estimate.trafficMinutes + LEAVE_ALERT_BUFFER_MINUTES) * 60 * 1000;
+}
 
 /**
  * Builds the primary notification line for a leave alert.
@@ -107,6 +133,7 @@ export function generateLeaveAlertCandidates(
   events: MeridianCalendarEvent[],
   now = new Date(),
   locationContext?: LeaveAlertLocationContext,
+  trafficContext?: Record<string, TrafficEstimate>,
 ): NotificationCandidate[] {
   const candidates: NotificationCandidate[] = [];
   const planEvents = filterEventsForPlan(events);
@@ -120,7 +147,8 @@ export function generateLeaveAlertCandidates(
     if (!isHouseholdRelevant(event)) continue;
 
     const startMs = event.startTime.getTime();
-    const alertFireMs = startMs - LEAVE_ALERT_MINUTES_BEFORE * 60 * 1000;
+    const trafficEstimate = trafficContext?.[event.id];
+    const alertFireMs = computeAlertFireMs(startMs, trafficEstimate);
     const minutesUntilAlert = (alertFireMs - nowMs) / 60_000;
 
     // Only generate when the alert fire time is within the generation window
@@ -133,6 +161,19 @@ export function generateLeaveAlertCandidates(
 
     const useLocationCopy = shouldUseLocationAwareCopy(locationContext);
 
+    let primaryLine: string;
+    let secondaryLine: string | null;
+
+    if (useLocationCopy) {
+      primaryLine = leaveAlertLocationAwarePrimaryLine(event);
+      secondaryLine = trafficEstimate?.isHeavierThanUsual
+        ? LEAVE_ALERT_TRAFFIC_SECONDARY
+        : LEAVE_ALERT_LOCATION_AWARE_SECONDARY;
+    } else {
+      primaryLine = leaveAlertPrimaryLine(event);
+      secondaryLine = null;
+    }
+
     candidates.push(
       buildCandidate({
         id: `leave-alert-${event.id}-${dayKey(now)}`,
@@ -144,10 +185,8 @@ export function generateLeaveAlertCandidates(
         confidence: 'high',
         interruptionReason: 'Commitment starting soon — time to leave or prepare.',
         bundleKey: `leave-alert-${event.id}-${dayKey(now)}`,
-        primaryLine: useLocationCopy
-          ? leaveAlertLocationAwarePrimaryLine(event)
-          : leaveAlertPrimaryLine(event),
-        secondaryLine: useLocationCopy ? LEAVE_ALERT_LOCATION_AWARE_SECONDARY : null,
+        primaryLine,
+        secondaryLine,
         additionalLines: [],
         timingSensitivity: 'high',
         conflictRisk: 0,

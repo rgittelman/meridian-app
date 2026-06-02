@@ -13,7 +13,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { planNotificationReconciliation } from './reconciliationPlan';
+import {
+  planNotificationReconciliation,
+  hasAlertTimingDrift,
+  TIMING_DRIFT_THRESHOLD_MS,
+} from './reconciliationPlan';
 import type {
   ApprovedNotificationBundle,
   ScheduledNotificationRecord,
@@ -222,5 +226,104 @@ describe('Phase B: window expiry — passed records are expired, not cancelled',
     const action = decisions.find((d) => d.bundleId === bundle.id);
     assert.ok(action);
     assert.equal(action.action, 'expire_passed');
+  });
+});
+
+// ── Phase H.2: hasAlertTimingDrift (pure helper) ─────────────────────────────
+
+describe('hasAlertTimingDrift — pure helper', () => {
+  const BASE_TIME = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const THRESHOLD = TIMING_DRIFT_THRESHOLD_MS;
+
+  function makeRecordWithWindow(windowStart: Date) {
+    const b = makeBundle({ targetWindowStart: windowStart });
+    return makeRecord(b, { targetWindowStart: windowStart });
+  }
+
+  it('returns false when record and bundle have identical targetWindowStart', () => {
+    const bundle = makeBundle({ targetWindowStart: BASE_TIME });
+    const record = makeRecord(bundle, { targetWindowStart: BASE_TIME });
+    assert.equal(hasAlertTimingDrift(record, bundle), false);
+  });
+
+  it('returns false when drift is within the threshold', () => {
+    const bundle = makeBundle({ targetWindowStart: new Date(BASE_TIME.getTime() + THRESHOLD - 1) });
+    const record = makeRecordWithWindow(BASE_TIME);
+    assert.equal(hasAlertTimingDrift(record, bundle), false);
+  });
+
+  it('returns false when drift is exactly at the threshold boundary', () => {
+    const bundle = makeBundle({ targetWindowStart: new Date(BASE_TIME.getTime() + THRESHOLD) });
+    const record = makeRecordWithWindow(BASE_TIME);
+    // Strictly greater than threshold required — boundary does not trigger
+    assert.equal(hasAlertTimingDrift(record, bundle), false);
+  });
+
+  it('returns true when drift exceeds the threshold (alert moved later)', () => {
+    const bundle = makeBundle({ targetWindowStart: new Date(BASE_TIME.getTime() + THRESHOLD + 1) });
+    const record = makeRecordWithWindow(BASE_TIME);
+    assert.equal(hasAlertTimingDrift(record, bundle), true);
+  });
+
+  it('returns true when drift exceeds the threshold (alert moved earlier)', () => {
+    const bundle = makeBundle({ targetWindowStart: new Date(BASE_TIME.getTime() - THRESHOLD - 1) });
+    const record = makeRecordWithWindow(BASE_TIME);
+    assert.equal(hasAlertTimingDrift(record, bundle), true);
+  });
+
+  it('respects a custom threshold', () => {
+    const twoMinMs = 2 * 60 * 1000;
+    const bundle = makeBundle({ targetWindowStart: new Date(BASE_TIME.getTime() + twoMinMs + 1) });
+    const record = makeRecordWithWindow(BASE_TIME);
+    assert.equal(hasAlertTimingDrift(record, bundle, twoMinMs), true);
+    assert.equal(hasAlertTimingDrift(record, bundle, THRESHOLD), false);
+  });
+});
+
+// ── Phase H.2: timing drift in full reconciliation ───────────────────────────
+
+describe('Phase H.2: timing drift reschedule in planNotificationReconciliation', () => {
+  it('emits reschedule_changed when bundle targetWindowStart drifts beyond threshold', () => {
+    const originalWindow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const driftedWindow = new Date(originalWindow.getTime() + TIMING_DRIFT_THRESHOLD_MS + 60_000);
+
+    const bundle = makeBundle({ targetWindowStart: driftedWindow, targetWindowEnd: new Date(driftedWindow.getTime() + 5 * 60_000) });
+    // Existing record was scheduled at the original (now stale) window
+    const record = makeRecord(
+      makeBundle({ id: bundle.id, bundleKey: bundle.bundleKey, targetWindowStart: originalWindow }),
+      { bundleId: bundle.id, targetWindowStart: originalWindow },
+    );
+
+    const decisions = planNotificationReconciliation({
+      approvedBundles: [bundle],
+      scheduledRecords: [record],
+      context: baseContext,
+    });
+
+    const action = decisions.find((d) => d.bundleId === bundle.id && d.recordId === record.id);
+    assert.ok(action, 'expected a decision for the drifted record');
+    assert.equal(action.action, 'reschedule_changed');
+    assert.ok(action.reason?.includes('timing drift'), `expected timing drift reason, got: "${action.reason}"`);
+  });
+
+  it('emits keep_existing when timing drift is within threshold', () => {
+    const originalWindow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const smallDrift = new Date(originalWindow.getTime() + 60_000); // 1 min — below 5-min threshold
+
+    const bundle = makeBundle({ targetWindowStart: smallDrift, targetWindowEnd: new Date(smallDrift.getTime() + 5 * 60_000) });
+    const record = makeRecord(
+      makeBundle({ id: bundle.id, bundleKey: bundle.bundleKey, targetWindowStart: originalWindow }),
+      { bundleId: bundle.id, targetWindowStart: originalWindow },
+    );
+
+    const decisions = planNotificationReconciliation({
+      approvedBundles: [bundle],
+      scheduledRecords: [record],
+      context: baseContext,
+    });
+
+    const action = decisions.find((d) => d.bundleId === bundle.id);
+    assert.ok(action, 'expected a decision');
+    assert.equal(action.action, 'keep_existing', `expected keep_existing for small drift, got: ${action.action}`);
   });
 });

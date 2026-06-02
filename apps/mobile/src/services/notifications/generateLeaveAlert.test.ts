@@ -6,10 +6,14 @@ import {
   leaveAlertPrimaryLine,
   leaveAlertLocationAwarePrimaryLine,
   shouldUseLocationAwareCopy,
+  computeAlertFireMs,
   LEAVE_ALERT_MINUTES_BEFORE,
+  LEAVE_ALERT_BUFFER_MINUTES,
   LEAVE_ALERT_LOCATION_AWARE_SECONDARY,
+  LEAVE_ALERT_TRAFFIC_SECONDARY,
 } from './generateLeaveAlert';
 import type { LeaveAlertLocationContext } from './generateLeaveAlert';
+import type { TrafficEstimate } from '@/services/location/trafficIntelligence';
 import { evaluateConstitutionalCompliance } from './constitutionalCheck';
 import type { MeridianCalendarEvent } from '@/types/calendar';
 
@@ -308,5 +312,171 @@ describe('leave_alert constitutional pass path', () => {
       openedWithinTwoWeeks: true,
     });
     assert.equal(result.pass, true, `expected pass but got: ${result.failureReason}`);
+  });
+});
+
+// ── Phase H.2: computeAlertFireMs ────────────────────────────────────────────
+
+describe('computeAlertFireMs', () => {
+  const START_MS = NOW.getTime() + 60 * 60_000; // 60 min from now
+
+  it('returns T-30 when no traffic estimate is provided', () => {
+    const result = computeAlertFireMs(START_MS, undefined);
+    assert.equal(result, START_MS - LEAVE_ALERT_MINUTES_BEFORE * 60_000);
+  });
+
+  it('returns T-(trafficMinutes + buffer) when estimate is present', () => {
+    const estimate: TrafficEstimate = {
+      eventId: 'e1',
+      baselineMinutes: 20,
+      trafficMinutes: 28,
+      isHeavierThanUsual: true,
+      fetchedAt: Date.now(),
+    };
+    const result = computeAlertFireMs(START_MS, estimate);
+    assert.equal(result, START_MS - (28 + LEAVE_ALERT_BUFFER_MINUTES) * 60_000);
+  });
+
+  it('uses trafficMinutes not baselineMinutes for the calculation', () => {
+    const estimate: TrafficEstimate = {
+      eventId: 'e2',
+      baselineMinutes: 15,
+      trafficMinutes: 30,
+      isHeavierThanUsual: true,
+      fetchedAt: Date.now(),
+    };
+    const withTraffic = computeAlertFireMs(START_MS, estimate);
+    const withoutTraffic = computeAlertFireMs(START_MS, undefined);
+    // trafficMinutes (30) > LEAVE_ALERT_MINUTES_BEFORE (30) by buffer, so alert fires earlier
+    assert.ok(withTraffic < withoutTraffic, 'traffic-aware alert should fire earlier than T-30');
+  });
+});
+
+// ── Phase H.2: generateLeaveAlertCandidates with trafficContext ───────────────
+
+describe('generateLeaveAlertCandidates — Phase H.2 traffic context', () => {
+  const HOME_SMART_ON: LeaveAlertLocationContext = {
+    currentRegion: 'home',
+    smartLeaveTimingEnabled: true,
+  };
+
+  function makeTrafficEstimate(
+    eventId: string,
+    trafficMinutes: number,
+    isHeavierThanUsual: boolean,
+  ): TrafficEstimate {
+    return {
+      eventId,
+      baselineMinutes: 20,
+      trafficMinutes,
+      isHeavierThanUsual,
+      fetchedAt: Date.now(),
+    };
+  }
+
+  it('traffic heavier than usual → shifted fire time + traffic secondary copy', () => {
+    const event = makeEvent('e-heavy', 60, { displayTime: '3:00 PM' });
+    const trafficContext = { 'e-heavy': makeTrafficEstimate('e-heavy', 28, true) };
+    const [c] = generateLeaveAlertCandidates([event], NOW, HOME_SMART_ON, trafficContext);
+
+    assert.ok(c, 'expected one candidate');
+    assert.equal(c.secondaryLine, LEAVE_ALERT_TRAFFIC_SECONDARY);
+    // Alert fires earlier than T-30 (28 + 10 buffer = T-38 advance notice)
+    const expectedFireMs = event.startTime.getTime() - (28 + LEAVE_ALERT_BUFFER_MINUTES) * 60_000;
+    assert.equal(c.targetWindowStart.getTime(), expectedFireMs);
+  });
+
+  it('traffic present but not heavier → shifted fire time + breathing room secondary', () => {
+    const event = makeEvent('e-normal-traffic', 60, { displayTime: '3:00 PM' });
+    const trafficContext = { 'e-normal-traffic': makeTrafficEstimate('e-normal-traffic', 22, false) };
+    const [c] = generateLeaveAlertCandidates([event], NOW, HOME_SMART_ON, trafficContext);
+
+    assert.ok(c, 'expected one candidate');
+    assert.equal(c.secondaryLine, LEAVE_ALERT_LOCATION_AWARE_SECONDARY);
+    // Alert still fires at traffic-adjusted time even when not heavier
+    const expectedFireMs = event.startTime.getTime() - (22 + LEAVE_ALERT_BUFFER_MINUTES) * 60_000;
+    assert.equal(c.targetWindowStart.getTime(), expectedFireMs);
+  });
+
+  it('traffic context absent → falls back to T-30 with breathing room secondary', () => {
+    const event = makeEvent('e-no-traffic', 50, { displayTime: '2:50 PM' });
+    const [c] = generateLeaveAlertCandidates([event], NOW, HOME_SMART_ON, undefined);
+
+    assert.ok(c, 'expected one candidate');
+    assert.equal(c.secondaryLine, LEAVE_ALERT_LOCATION_AWARE_SECONDARY);
+    const expectedFireMs = event.startTime.getTime() - LEAVE_ALERT_MINUTES_BEFORE * 60_000;
+    assert.equal(c.targetWindowStart.getTime(), expectedFireMs);
+  });
+
+  it('no entry for this event in traffic context → falls back to T-30', () => {
+    const event = makeEvent('e-missing-entry', 50, { displayTime: '2:50 PM' });
+    // Traffic context exists but has no entry for this event's ID
+    const trafficContext = { 'other-event': makeTrafficEstimate('other-event', 25, true) };
+    const [c] = generateLeaveAlertCandidates([event], NOW, HOME_SMART_ON, trafficContext);
+
+    assert.ok(c, 'expected one candidate');
+    const expectedFireMs = event.startTime.getTime() - LEAVE_ALERT_MINUTES_BEFORE * 60_000;
+    assert.equal(c.targetWindowStart.getTime(), expectedFireMs);
+  });
+
+  it('not at home (work region) → Phase E copy, no traffic secondary regardless of estimate', () => {
+    const event = makeEvent('e-work', 50);
+    const workCtx: LeaveAlertLocationContext = { currentRegion: 'work', smartLeaveTimingEnabled: true };
+    const trafficContext = { 'e-work': makeTrafficEstimate('e-work', 30, true) };
+    const [c] = generateLeaveAlertCandidates([event], NOW, workCtx, trafficContext);
+
+    assert.ok(c, 'expected one candidate');
+    assert.equal(c.secondaryLine, null, 'work region should have no secondary line');
+    assert.ok(c.primaryLine.includes(`starts in ${LEAVE_ALERT_MINUTES_BEFORE} minutes`));
+  });
+});
+
+// ── Phase H.2: traffic copy constitutional check ──────────────────────────────
+
+describe('traffic secondary copy — constitutional check', () => {
+  it('LEAVE_ALERT_TRAFFIC_SECONDARY passes constitutional check', () => {
+    const event = makeEvent('e-traffic-const', 60, { displayTime: '3:00 PM' });
+    const trafficContext = {
+      'e-traffic-const': {
+        eventId: 'e-traffic-const',
+        baselineMinutes: 20,
+        trafficMinutes: 28,
+        isHeavierThanUsual: true,
+        fetchedAt: Date.now(),
+      } satisfies TrafficEstimate,
+    };
+
+    const [c] = generateLeaveAlertCandidates(
+      [event],
+      NOW,
+      { currentRegion: 'home', smartLeaveTimingEnabled: true },
+      trafficContext,
+    );
+
+    assert.ok(c, 'expected one candidate');
+    assert.equal(c.secondaryLine, LEAVE_ALERT_TRAFFIC_SECONDARY,
+      'expected traffic secondary copy');
+
+    const result = evaluateConstitutionalCompliance(c, {
+      recentlyOpenedApp: false,
+      openedWithinTwoWeeks: true,
+    });
+    assert.equal(result.pass, true,
+      `traffic secondary copy failed constitutional check: ${result.failureReason}`);
+    assert.equal(result.failureReason, null);
+  });
+
+  it('traffic secondary copy contains no guilt or alarmist language', () => {
+    const guiltPatterns = [
+      /you still haven'?t/i, /overdue/i, /missed/i, /streak/i,
+    ];
+    const alarmistPatterns = [
+      /urgent!/i, /warning!/i, /leave now/i, /you'?re late/i, /hurry/i,
+    ];
+
+    for (const p of [...guiltPatterns, ...alarmistPatterns]) {
+      assert.ok(!p.test(LEAVE_ALERT_TRAFFIC_SECONDARY),
+        `"${LEAVE_ALERT_TRAFFIC_SECONDARY}" matched disallowed pattern: ${p}`);
+    }
   });
 });

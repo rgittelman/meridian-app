@@ -25,6 +25,7 @@ import { generateTransitionAwarenessCandidates } from './generateTransitionAware
 import { generateEveningWindDownCandidates } from './generateEveningWindDown';
 import { generateCriticalProtectionCandidates } from './generateCriticalProtection';
 import { generateLeaveAlertCandidates, type LeaveAlertLocationContext } from './generateLeaveAlert';
+import type { TrafficEstimate } from '@/services/location/trafficIntelligence';
 import { generateCaptureReminderCandidates } from './generateCaptureReminders';
 import type { NotificationIntelligenceContext } from './types';
 import { logNotificationAudit } from './notificationDebug';
@@ -34,6 +35,8 @@ export type BuildNotificationIntelligenceInput = {
   captures: LifeObject[];
   context: NotificationIntelligenceContext;
   locationContext?: LeaveAlertLocationContext;
+  /** Phase H.2 — traffic estimates keyed by event ID. Optional; falls back to T-30 when absent. */
+  trafficContext?: Record<string, TrafficEstimate>;
   now?: Date;
 };
 
@@ -101,7 +104,7 @@ export function buildNotificationIntelligenceWithDiagnostics(
     ...generateTransitionAwarenessCandidates(events, prepClusters, now),
     ...generateEveningWindDownCandidates(events, now),
     ...generateCriticalProtectionCandidates(events, now),
-    ...generateLeaveAlertCandidates(events, now, input.locationContext),
+    ...generateLeaveAlertCandidates(events, now, input.locationContext, input.trafficContext),
     ...generateCaptureReminderCandidates(input.captures, now),
   ];
 

@@ -53,6 +53,7 @@ export function useNotificationIntelligence(): NotificationIntelligenceSnapshot 
 
   const currentRegion = useLocationStore((s) => s.currentRegion);
   const smartLeaveTimingEnabled = useLocationStore((s) => s.smartLeaveTimingEnabled);
+  const trafficEstimates = useCalendarStore((s) => s.trafficEstimates);
 
   return useMemo(() => {
     const merged = mergeCalendarEvents(weekEvents, upcomingEvents);
@@ -72,6 +73,7 @@ export function useNotificationIntelligence(): NotificationIntelligenceSnapshot 
         dailyCaps,
       },
       locationContext: { currentRegion, smartLeaveTimingEnabled },
+      trafficContext: trafficEstimates,
     });
   }, [
     weekEvents,
@@ -85,6 +87,7 @@ export function useNotificationIntelligence(): NotificationIntelligenceSnapshot 
     dailyCaps,
     currentRegion,
     smartLeaveTimingEnabled,
+    trafficEstimates,
   ]);
 }
 
@@ -101,6 +104,7 @@ export function getNotificationIntelligenceSnapshot(): NotificationIntelligenceS
   } = useNotificationStore.getState();
   const cooldowns = useResurfacingStore.getState().cooldowns;
   const { currentRegion, smartLeaveTimingEnabled } = useLocationStore.getState();
+  const { trafficEstimates } = useCalendarStore.getState();
 
   const merged = mergeCalendarEvents(weekEvents, upcomingEvents);
   if (merged.length === 0 && captures.length === 0) return EMPTY_SNAPSHOT;
@@ -117,5 +121,6 @@ export function getNotificationIntelligenceSnapshot(): NotificationIntelligenceS
       dailyCaps,
     },
     locationContext: { currentRegion, smartLeaveTimingEnabled },
+    trafficContext: trafficEstimates,
   });
 }

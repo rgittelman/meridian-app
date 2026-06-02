@@ -7,6 +7,12 @@ import type {
 } from '@/types/notificationDelivery';
 import { buildDeliveryDedupeKeyFromParts } from '@/types/notificationDelivery';
 
+/**
+ * Phase H.2 — minimum timing shift that triggers a reschedule.
+ * Noise below this threshold (API jitter, minor traffic fluctuation) is ignored.
+ */
+export const TIMING_DRIFT_THRESHOLD_MS = 5 * 60 * 1000;
+
 export type ReconciliationPlanInput = {
   approvedBundles: ApprovedNotificationBundle[];
   scheduledRecords: ScheduledNotificationRecord[];
@@ -83,6 +89,16 @@ export function planNotificationReconciliation(
         bundleId: record.bundleId,
         recordId: record.id,
         reason: 'Bundle content changed',
+      });
+      continue;
+    }
+
+    if (hasAlertTimingDrift(record, bundle)) {
+      decisions.push({
+        action: 'reschedule_changed',
+        bundleId: record.bundleId,
+        recordId: record.id,
+        reason: 'Alert timing drift exceeds threshold',
       });
       continue;
     }
@@ -178,6 +194,22 @@ function hasResolvedCapture(
 ): boolean {
   if (!context?.resolvedCaptureIds) return false;
   return record.sourceCaptureIds.some((id) => context.resolvedCaptureIds!.has(id));
+}
+
+/**
+ * Phase H.2 — returns true when the bundle's target window has shifted more
+ * than TIMING_DRIFT_THRESHOLD_MS from the record's scheduled window.
+ * Triggers reschedule_changed so the OS notification fires at the new time.
+ * Noise below the threshold (API jitter, minor traffic changes) is ignored.
+ */
+export function hasAlertTimingDrift(
+  record: ScheduledNotificationRecord,
+  bundle: ApprovedNotificationBundle,
+  thresholdMs = TIMING_DRIFT_THRESHOLD_MS,
+): boolean {
+  const existingMs = record.targetWindowStart.getTime();
+  const newMs = bundle.targetWindowStart.getTime();
+  return Math.abs(newMs - existingMs) > thresholdMs;
 }
 
 function shouldCancelForRecentAppOpen(
