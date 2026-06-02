@@ -49,8 +49,15 @@ import { nanoid } from 'nanoid/non-secure';
 
 import { Text } from '@/components/typography/Text';
 import { requestNotificationPermissions } from '@/services/notifications/delivery';
+import { getNotificationPermissionState } from '@/services/notifications/delivery/notificationPermissions';
 import { scheduleBriefDevTest } from '@/hooks/useNotificationBriefScheduler';
+import {
+  buildMorningBriefContent,
+  buildEveningPreviewContent,
+} from '@/services/notifications/buildBriefContent';
+import { useCalendarStore } from '@/store/calendarStore';
 import { useNotificationDeliveryStore } from '@/store/notificationDeliveryStore';
+import { useNotificationSettingsStore } from '@/store/notificationSettingsStore';
 import { makeStyles, radius, spacing } from '@/theme';
 
 const DELAY_SECONDS = 15;
@@ -265,7 +272,7 @@ export function BriefSmokeTest() {
   const handleInspectRecords = () => {
     const scheduled = records.filter((r) => r.deliveryStatus === 'scheduled');
     if (scheduled.length === 0) {
-      setRecordsText('No scheduled records.');
+      setRecordsText('── Delivery Records ──\nNo scheduled records.');
       return;
     }
     const lines = scheduled.map((r) => {
@@ -275,7 +282,79 @@ export function BriefSmokeTest() {
       });
       return `[${r.notificationType}]\n"${r.title}"\n@ ${fireAt}\n${r.bundleKey}`;
     });
-    setRecordsText(lines.join('\n─\n'));
+    setRecordsText(`── Delivery Records (${scheduled.length}) ──\n` + lines.join('\n─\n'));
+  };
+
+  const handleDiagnose = async () => {
+    const now = new Date();
+    const settings = useNotificationSettingsStore.getState();
+    const permission = await getNotificationPermissionState();
+
+    const { weekEvents, upcomingEvents } = useCalendarStore.getState();
+    const seen = new Set<string>();
+    const allEvents = [...weekEvents, ...upcomingEvents].filter((e) => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
+    });
+
+    const morningContent = buildMorningBriefContent(allEvents, now);
+    const eveningContent = buildEveningPreviewContent(allEvents, now);
+
+    // Compute next targets
+    const nextMorning = new Date(now);
+    nextMorning.setHours(7, 15, 0, 0);
+    if (nextMorning.getTime() <= now.getTime()) nextMorning.setDate(nextMorning.getDate() + 1);
+
+    const nextEvening = new Date(now);
+    nextEvening.setHours(19, 0, 0, 0);
+    if (nextEvening.getTime() <= now.getTime()) nextEvening.setDate(nextEvening.getDate() + 1);
+
+    const fmt = (d: Date) =>
+      d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) +
+      ' ' +
+      d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+    const lines = [
+      '── Brief Scheduler Diagnosis ──',
+      `Time now:          ${fmt(now)}`,
+      `Master enabled:    ${settings.enabled}`,
+      `Morning Brief on:  ${settings.morningBriefEnabled}`,
+      `Evening Preview on:${settings.eveningPreviewEnabled}`,
+      `Permission:        ${permission}`,
+      `Calendar events:   ${allEvents.length} (${weekEvents.length} week + ${upcomingEvents.length} upcoming)`,
+      `Morning content:   ${morningContent ? 'has_content' : 'no_content'}`,
+      `Evening content:   ${eveningContent ? 'has_content' : 'no_content'}`,
+      `Next morning target: ${fmt(nextMorning)}`,
+      `Next evening target: ${fmt(nextEvening)}`,
+    ];
+
+    // Explain why a brief would be skipped
+    const morningSkipReasons: string[] = [];
+    if (!settings.enabled) morningSkipReasons.push('master disabled');
+    if (!settings.morningBriefEnabled) morningSkipReasons.push('toggle off');
+    if (permission !== 'granted' && permission !== 'provisional') morningSkipReasons.push(`permission:${permission}`);
+    if (!morningContent) morningSkipReasons.push('no calendar content');
+
+    lines.push(
+      morningSkipReasons.length === 0
+        ? 'Morning Brief: WOULD SCHEDULE ✓'
+        : `Morning Brief: SKIPPED — ${morningSkipReasons.join(', ')}`,
+    );
+
+    const eveningSkipReasons: string[] = [];
+    if (!settings.enabled) eveningSkipReasons.push('master disabled');
+    if (!settings.eveningPreviewEnabled) eveningSkipReasons.push('toggle off');
+    if (permission !== 'granted' && permission !== 'provisional') eveningSkipReasons.push(`permission:${permission}`);
+    if (!eveningContent) eveningSkipReasons.push('no tomorrow content');
+
+    lines.push(
+      eveningSkipReasons.length === 0
+        ? 'Evening Preview: WOULD SCHEDULE ✓'
+        : `Evening Preview: SKIPPED — ${eveningSkipReasons.join(', ')}`,
+    );
+
+    setRecordsText(lines.join('\n'));
   };
 
   return (
@@ -288,6 +367,7 @@ export function BriefSmokeTest() {
         <SmokeButton label="Morning Brief" onPress={handleMorningBriefTest} />
         <SmokeButton label="Evening Preview" onPress={handleEveningPreviewTest} />
         <SmokeButton label="Inspect Records" onPress={handleInspectRecords} dim />
+        <SmokeButton label="Diagnose" onPress={handleDiagnose} dim />
       </View>
 
       {briefStatus ? (
