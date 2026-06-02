@@ -152,6 +152,32 @@ Deferred:
 - Distance Matrix API
 - Dynamic leave alert timing
 
+### Phase H.2 — Traffic-Aware Leave Alerts
+Status: PASSED
+Locked: Yes
+
+Behavior:
+- Fire time: event start - (trafficMinutes + 10 min buffer) when estimate present
+- Fire time: T-30 fallback when no traffic estimate
+- Traffic timing applies regardless of whether traffic is heavier than baseline
+- Secondary copy when heavier: "Traffic is heavier than usual today."
+- Secondary copy otherwise: "Leaving in the next 15 minutes gives you breathing room."
+- Traffic copy gate: home region + smart timing enabled (same as G.2 copy gate)
+
+Reconciliation:
+- Timing drift > 5 minutes → reschedule_changed (cancel + reschedule)
+- Timing drift ≤ 5 minutes → keep_existing
+- Reuses existing reschedule_changed path; identity preserved
+
+System remains:
+- Not a navigation app, not a traffic monitor, not a route planner
+- No turn-by-turn, no ETA promises, no maps
+
+Validation:
+- TypeScript: passing
+- Full test suite: 229/229
+- Constitutional traffic copy tests: passing
+
 ### Phase H.1 — Traffic Intelligence Data Plumbing
 Status: PASSED
 Locked: Yes
