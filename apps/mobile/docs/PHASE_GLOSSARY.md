@@ -21,7 +21,9 @@ Do not rename or renumber phases. Do not invent new phase letters without Codema
 | H.2 | Traffic-Aware Leave Alerts | Locked | Traffic-adjusted leave timing |
 | H.3 | Traffic Validation | Locked | Validation and hardening pass |
 | I | Confidence & Diagnostics | Not Started | Internal visibility: why alerts fired/didn't, traffic path traceability |
-| J | Account & Onboarding Foundation | Future | Account model, onboarding flow |
+| J.1 | Local Profile Foundation | **Locked** | profileStore, ProfileAvatar (initials → M fallback), ProfileModal; local-first, no backend |
+| J.2 | Profile Iteration | Planned | Avatar URL population, name editing; requires separate approval |
+| J (full) | Account & Onboarding Foundation | Future | Auth, sync, onboarding flow — deferred |
 
 ---
 

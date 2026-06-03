@@ -29,7 +29,9 @@ Claude Code = Builder
 
 ## Current Phase
 
-Meridian Intelligence Audit V1 (pause before Phase G)
+Phase J.1 — Local Profile Foundation: PASSED
+
+Next: Codemaster to decide between Phase J.2, Phase I (Confidence & Diagnostics), or V2 visual polish backlog.
 
 ## Completed
 
@@ -235,6 +237,29 @@ Not activated:
 - No leave alert copy changes
 - No dedupe key changes
 - H.2 blocked until dedupe/reschedule behavior is designed and approved
+
+### Phase J.1 — Local Profile Foundation
+Status: PASSED
+Locked: Yes
+
+Completed:
+- profileStore (Zustand + AsyncStorage): displayName, avatarUrl (reserved), initials, seedFromAuth
+- ProfileAvatar component: image → initials → "M" fallback; seeds profile from Google auth on mount
+- ProfileModal (pageSheet): large avatar, display name (if known), "Connected via Google" + StatusPill, Settings row
+- LifeScreen header: gear icon replaced by ProfileAvatar (28px); tapping opens ProfileModal
+- Settings now accessed via Profile → Settings row (SettingsScreen unchanged)
+
+Constraints locked:
+- Local-first; no backend, no sync, no new Google scopes, no People API
+- Avatar fallback chain: avatarUrl → initials → "M" (never "?")
+- Household model unchanged; householdContext.ts untouched
+- 325/325 tests passing; TypeScript clean
+
+Deferred to Phase J.2 (requires separate Codemaster approval):
+- Avatar URL population (Google profile photo)
+- Display name editing
+- Apple Sign-In
+- Settings migration under Profile (Settings remains a separate modal for now)
 
 ## Next: Phase I — Confidence & Diagnostics
 

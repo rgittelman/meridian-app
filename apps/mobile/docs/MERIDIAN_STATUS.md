@@ -18,9 +18,13 @@ Theme system rewrite (dark.ts, typography, radius, spacing, gradients.ts, tabAcc
 
 **Settings is intentionally left as a temporary local modal.** Do not expand it further until Phase J (Account & Onboarding Foundation) is scoped and approved.
 
+**Phase J.1 — Local Profile Foundation: LOCKED.**
+
+Profile is local-first. No backend, no sync, no new auth. Settings accessed through Profile modal. 325/325 tests passing.
+
 **Next priorities — Codemaster to decide order:**
-- Phase J — Account & Onboarding Foundation (first major architectural phase)
-- V2 visual polish backlog (CaptureActionGrid visual weight, diagnostic copy humanization in CaptureCard)
+- Phase J.2 — avatar URL population, name editing (requires separate approval)
+- V2 visual polish backlog (CaptureActionGrid visual weight, diagnostic copy humanization)
 - Phase I — Confidence & Diagnostics (internal visibility into leave alert pipeline)
 - Phase H.3 device smoke test (6 scenarios in PHASE_H_VALIDATION.md not yet run)
 
@@ -52,11 +56,13 @@ Intelligence / Notification:
 [DONE]     Phase F — Morning Briefs & Evening Preview
 [DONE]     Phase G.1 — Location Foundation
 [DONE]     Phase H0/H.1/H.2 — Traffic-Aware Leave Alerts
-[DONE]     Phase J.1 — Capture Reminder Notifications
+[DONE]     Phase J.1 — Local Profile Foundation (profileStore, ProfileAvatar, ProfileModal)
+           Note: Phase J.1 (capture reminders) was renamed; capture reminders landed earlier as part of notification work
 [PARTIAL]  Phase H.3 — Real-World Validation (static ✅, device smoke test pending)
 [PLANNED]  Phase I — Confidence & Diagnostics
+[PLANNED]  Phase J.2 — Profile iteration (avatar URL, name editing) — requires approval
 [PLANNED]  Engagement / Wow Layer — "How did it know that?" observations
-[PLANNED]  Phase J (full) — Account & Onboarding Foundation
+[PLANNED]  Phase J (full) — Account, auth, sync — deferred
 
 Visual:
 [DONE]     V1.0 — Light/beige palette (deprecated)

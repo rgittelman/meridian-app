@@ -201,6 +201,20 @@ Do not re-litigate any entry here without a documented regression or user-visibl
 
 ---
 
+### Decision: Phase J.1 Locked — Local Profile Foundation
+**Date:** 2026-06-03
+**Status:** Locked
+**Rationale:** Phase J.1 establishes a local-only profile layer: `profileStore` (displayName, avatarUrl reserved, initials), `ProfileAvatar` (image → initials → "M" fallback), and `ProfileModal` (avatar + name + connection status + Settings entry). No backend, no sync, no new Google scopes, no People API. Settings is now accessed through Profile → Settings row; the Life header gear icon is replaced by the avatar. Avatar fallback chain is locked as: avatarUrl → initials → "M" (never "?" or User icon). Household model untouched. 325 tests passing.
+
+Locked constraints:
+- Profile is local-first permanently unless Phase J.2+ explicitly changes this
+- Avatar fallback = initials → "M"; do not change fallback without Codemaster approval
+- `householdContext.ts` is not an account model; do not conflate it with profile
+- Phase J.2 (avatar URL population, name editing, Apple Sign-In) requires separate planning and approval
+- Settings modal remains a separate sheet until Phase J.2+ explicitly migrates it
+
+---
+
 ### Decision: Phase J Architectural Direction — Device-First, Account Optional
 **Date:** 2026-06-03
 **Status:** Codemaster instinct (not yet confirmed — requires full Phase J prereq review)
