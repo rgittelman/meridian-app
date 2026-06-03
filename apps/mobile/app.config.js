@@ -18,6 +18,9 @@ module.exports = () => ({
       googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
       // Phase H.1 — Traffic-Aware Routing. Restrict to Distance Matrix API only.
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+      eas: {
+        projectId: 'bfcb0fc6-6b3e-4fd5-a5a5-241e68a83302',
+      },
     },
   },
 });

@@ -50,6 +50,15 @@
           "locationWhenInUsePermission": "Meridian uses your location to understand whether you're home, at work, or away. This helps leave alerts create breathing room."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "googleIosClientId": "",
+      "googleAndroidClientId": "",
+      "googleWebClientId": "",
+      "googleMapsApiKey": "",
+      "eas": {
+        "projectId": "bfcb0fc6-6b3e-4fd5-a5a5-241e68a83302"
+      }
+    }
   }
 }
