@@ -9,6 +9,8 @@ export const spacing = {
   6: 24,
   8: 32,
   10: 40,
+  12: 48,
+  14: 56,
 } as const;
 
 export type SpacingToken = keyof typeof spacing;

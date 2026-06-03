@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { StatusPill } from '@/components/shared/primitives/StatusPill';
+import type { StatusSentiment } from '@/components/shared/primitives/StatusPill';
 import { AmbientCapture } from '@/components/focus/AmbientCapture';
 import { CalmWins } from '@/components/focus/CalmWins';
 import { CompletionToast } from '@/components/focus/CompletionToast';
@@ -169,6 +171,9 @@ export function FocusScreen() {
     momentumProgress >= 0.40 ? 'Building' :
     'Starting';
 
+  const momentumSentiment: StatusSentiment =
+    momentumProgress >= 0.65 ? 'positive' : 'neutral';
+
   return (
     <View style={staticStyles.root}>
       <ScreenContainer
@@ -179,6 +184,9 @@ export function FocusScreen() {
         {/* 1 · Greeting */}
         <View style={staticStyles.padH}>
           <GreetingSection timeOfDay={timeOfDay} name={greetingName} />
+          <View style={staticStyles.pillRow}>
+            <StatusPill label={momentumLabel} sentiment={momentumSentiment} />
+          </View>
         </View>
 
         {/* 1b · Daily Brief Card — morning or evening, only when content exists */}
@@ -294,6 +302,9 @@ const staticStyles = StyleSheet.create({
   },
   padH: {
     paddingHorizontal: screenPaddingHorizontal,
+  },
+  pillRow: {
+    marginTop: spacing[3],
   },
   recoverySpace: {
     height: spacing[10] + spacing[8],

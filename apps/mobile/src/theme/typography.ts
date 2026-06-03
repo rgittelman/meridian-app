@@ -14,8 +14,8 @@ export const fontFamily = {
 } as const;
 
 export const fontSize = {
-  display: 32,
-  title: 26,
+  display: 34,
+  title: 28,
   heading: 20,
   subhead: 17,
   body: 16,
@@ -25,8 +25,8 @@ export const fontSize = {
 } as const;
 
 export const lineHeight = {
-  display: 38,
-  title: 32,
+  display: 40,
+  title: 34,
   heading: 26,
   subhead: 24,
   body: 24,

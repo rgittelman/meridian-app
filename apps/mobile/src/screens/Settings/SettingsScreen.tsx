@@ -5,6 +5,8 @@ import { X } from 'lucide-react-native';
 
 import { ChevronRight } from 'lucide-react-native';
 
+import { GradientCard } from '@/components/shared/surfaces/GradientCard';
+import { StatusPill } from '@/components/shared/primitives/StatusPill';
 import { Text } from '@/components/typography/Text';
 import { CalendarSelectionScreen } from '@/screens/Settings/CalendarSelectionScreen';
 import { NotificationPermissionPrompt } from '@/screens/Settings/NotificationPermissionPrompt';
@@ -262,13 +264,12 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
         <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Notifications section */}
+        {/* ── Notifications ─────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text variant="footnote" color="inkTertiary" style={styles.sectionLabel}>
-            NOTIFICATIONS
+          <Text variant="caption" color="inkTertiary" style={styles.sectionLabel}>
+            Notifications
           </Text>
-
-          <View style={styles.card}>
+          <GradientCard style={styles.cardOverride}>
             <SettingsRow
               label="Notifications"
               value={enabled}
@@ -302,20 +303,27 @@ export function SettingsScreen({ visible, onClose }: Props) {
               onToggle={setCriticalAlertsEnabled}
               disabled={!enabled}
             />
-          </View>
+          </GradientCard>
         </View>
 
-        {/* Calendar section */}
+        {/* ── Calendar ──────────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text variant="footnote" color="inkTertiary" style={styles.sectionLabel}>
-            CALENDAR
-          </Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text variant="caption" color="inkTertiary" style={styles.sectionLabel}>
+              Calendar
+            </Text>
+            <StatusPill
+              label={isCalendarConnected ? 'Connected' : 'Not connected'}
+              sentiment={isCalendarConnected ? 'positive' : 'neutral'}
+            />
+          </View>
 
-          <View style={styles.card}>
+          {/* Main calendar rows */}
+          <GradientCard style={styles.cardOverride}>
             <View style={styles.row}>
-              <Text variant="body">Connected Account</Text>
+              <Text variant="body">Calendar Account</Text>
               <Text variant="footnote" color="inkSecondary">
-                {isCalendarConnected ? 'Google' : 'Not connected'}
+                {isCalendarConnected ? 'Google' : '—'}
               </Text>
             </View>
 
@@ -328,7 +336,7 @@ export function SettingsScreen({ visible, onClose }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel="Manage synced calendars"
                 >
-                  <Text variant="body">Calendars</Text>
+                  <Text variant="body">Synced Calendars</Text>
                   <View style={styles.calendarSummary}>
                     <Text variant="footnote" color="inkSecondary">
                       {availableCalendars.length > 0
@@ -338,31 +346,36 @@ export function SettingsScreen({ visible, onClose }: Props) {
                     <ChevronRight size={16} color={colors.inkSecondary} strokeWidth={1.75} />
                   </View>
                 </Pressable>
-
-                <Separator />
-                <Pressable
-                  onPress={handleDisconnectCalendar}
-                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Disconnect Google Calendar"
-                >
-                  <Text variant="body" color="warning">
-                    Disconnect Calendar
-                  </Text>
-                </Pressable>
               </>
             )}
-          </View>
+          </GradientCard>
+
+          {/* Disconnect — visually separated, destructive */}
+          {isCalendarConnected && (
+            <GradientCard style={[styles.cardOverride, styles.destructiveCard]}>
+              <Pressable
+                onPress={handleDisconnectCalendar}
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Disconnect Google Calendar"
+              >
+                <Text variant="body" color="warning">
+                  Disconnect Calendar
+                </Text>
+              </Pressable>
+            </GradientCard>
+          )}
         </View>
 
-        {/* Location Intelligence section */}
+        {/* ── Location ──────────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text variant="footnote" color="inkTertiary" style={styles.sectionLabel}>
-            LOCATION INTELLIGENCE
+          <Text variant="caption" color="inkTertiary" style={styles.sectionLabel}>
+            Location
           </Text>
-
-          <View style={styles.card}>
-            {/* Home */}
+          <Text variant="footnote" color="inkGhost" style={styles.sectionSubline}>
+            Used for leave timing and traffic awareness.
+          </Text>
+          <GradientCard style={styles.cardOverride}>
             <LocationRow
               label="Home"
               isSet={homeLocation !== null}
@@ -382,7 +395,6 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
             <Separator />
 
-            {/* Work */}
             <LocationRow
               label="Work"
               isSet={workLocation !== null}
@@ -402,11 +414,16 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
             <Separator />
 
-            {/* Current region */}
-            <View style={styles.row}>
-              <Text variant="body" color="inkSecondary">
-                Current Region
-              </Text>
+            {/* Current region — with clarifying label */}
+            <View style={[styles.row, styles.regionRow]}>
+              <View style={styles.regionLabelGroup}>
+                <Text variant="body" color="inkSecondary">
+                  Current Region
+                </Text>
+                <Text variant="caption" color="inkGhost">
+                  Meridian's read of where you are right now
+                </Text>
+              </View>
               <View style={styles.currentRegionValue}>
                 <Text variant="body" color="inkSecondary">
                   {currentLocationLabel ?? regionLabel(currentRegion)}
@@ -421,13 +438,12 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
             <Separator />
 
-            {/* Smart Leave Timing */}
             <SettingsRow
               label="Smart Leave Timing"
               value={smartLeaveTimingEnabled}
               onToggle={setSmartLeaveTimingEnabled}
             />
-          </View>
+          </GradientCard>
 
           {locationError && (
             <Text variant="caption" color="warning" style={styles.locationError}>
@@ -441,21 +457,11 @@ export function SettingsScreen({ visible, onClose }: Props) {
           )}
         </View>
 
-        {/* App section */}
-        <View style={styles.section}>
-          <Text variant="footnote" color="inkTertiary" style={styles.sectionLabel}>
-            APP
+        {/* ── App version — de-emphasized footer ────────────────────────── */}
+        <View style={styles.versionFooter}>
+          <Text variant="footnote" color="inkGhost">
+            Meridian {appVersion}
           </Text>
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <Text variant="body" color="inkSecondary">
-                Version
-              </Text>
-              <Text variant="body" color="inkSecondary">
-                {appVersion}
-              </Text>
-            </View>
-          </View>
         </View>
 
         </ScrollView>
@@ -729,17 +735,29 @@ const useStyles = makeStyles((c) => ({
   section: {
     marginBottom: spacing[5],
   },
-  sectionLabel: {
+  sectionHeaderRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing[2],
     marginBottom: spacing[2],
     marginLeft: spacing[1],
-    letterSpacing: 0.5,
   },
-  card: {
-    backgroundColor: c.surface,
+  sectionLabel: {
+    letterSpacing: 0.4,
+  },
+  sectionSubline: {
+    marginBottom: spacing[3],
+    marginLeft: spacing[1],
+    marginTop: -spacing[1],
+  },
+  // GradientCard override: rows own their padding; card clips overflow at radius.lg
+  cardOverride: {
+    padding: 0,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: c.border,
     overflow: 'hidden' as const,
+  },
+  destructiveCard: {
+    marginTop: spacing[2],
   },
   row: {
     flexDirection: 'row' as const,
@@ -812,5 +830,17 @@ const useStyles = makeStyles((c) => ({
     marginTop: spacing[2],
     marginLeft: spacing[1],
     lineHeight: 18,
+  },
+  regionRow: {
+    alignItems: 'flex-start' as const,
+  },
+  regionLabelGroup: {
+    gap: spacing[1],
+    flex: 1,
+    paddingRight: spacing[4],
+  },
+  versionFooter: {
+    alignItems: 'center' as const,
+    paddingVertical: spacing[6],
   },
 }));

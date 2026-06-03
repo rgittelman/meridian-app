@@ -135,10 +135,10 @@ export function CaptureCard({ item, index, onPress }: CaptureCardProps) {
 
 const useStyles = makeStyles((c) => ({
   card: {
-    backgroundColor: c.captureCardBg,
+    backgroundColor: c.surface,
     borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.captureCardBorder,
+    borderWidth: 1,
+    borderColor: c.border,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3] + 2,
     gap: spacing[2],

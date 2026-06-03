@@ -3,6 +3,20 @@ import type { ItemCategory } from '@/services/priority/types';
 import type { LifeDomainId } from '@/types/life';
 
 /**
+ * Maps a LifeDomainId to its canonical domain accent color.
+ * Single source of truth for domain color identity across all screens.
+ */
+export function domainColorFor(colors: AppColors, domain: LifeDomainId): string {
+  switch (domain) {
+    case 'family':    return colors.domainFamily;
+    case 'work':      return colors.domainWork;
+    case 'health':    return colors.domainHealth;
+    case 'personal':  return colors.domainPersonal;
+    case 'community': return colors.domainCommunity;
+  }
+}
+
+/**
  * Accent color for calendar event cards.
  *
  * Priority: named-person owner (family accent) → explicit category → ownerLabel fallback.

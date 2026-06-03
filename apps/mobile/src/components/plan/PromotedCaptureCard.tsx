@@ -1,11 +1,13 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
+import { GradientCard } from '@/components/shared/surfaces/GradientCard';
+import { DomainBadge } from '@/components/shared/primitives/DomainBadge';
+import { domainColorFor } from '@/components/calendar/planEventAccent';
 import { Text } from '@/components/typography/Text';
-import { planAccentForDomain } from '@/components/calendar/planEventAccent';
 import { formatPlanPeopleLine } from '@/services/plan/humanizePlanTitle';
 import type { PlanPromotedCapture } from '@/types/plan';
 import { useTheme } from '@/hooks/useTheme';
-import { makeStyles, radius, spacing } from '@/theme';
+import { makeStyles, spacing } from '@/theme';
 
 const ATTRIBUTION = 'From your captures';
 
@@ -15,23 +17,24 @@ type PromotedCaptureCardProps = {
 };
 
 /**
- * Lightweight Plan intention row — lower visual weight than calendar events.
- * Hold / Handled live in PromotedCaptureDetailSheet, not on the timeline.
+ * Capture intention row on the Plan timeline.
+ * Visually distinct from calendar events: surfaceMuted background (vs surfaceElevated),
+ * domain-colored accent border, DomainBadge dot. Lower visual weight — intentional.
+ * Hold / Handled live in PromotedCaptureDetailSheet.
  */
 export function PromotedCaptureCard({ capture, onPress }: PromotedCaptureCardProps) {
-  const styles = useStyles();
   const { colors } = useTheme();
+  const styles = useStyles();
   const isHeld = capture.status === 'held';
-  const markerColor = planAccentForDomain(colors, capture.inferredDomain);
+  const accentColor = domainColorFor(colors, capture.inferredDomain);
   const peopleLine =
     formatPlanPeopleLine(capture.inferredPeople) ?? capture.personLabel ?? null;
 
-  const content = (
-    <>
-      <View
-        style={[styles.marker, { backgroundColor: markerColor }]}
-        accessibilityElementsHidden
-      />
+  const inner = (
+    <View style={styles.row}>
+      <View style={styles.badgeWrap}>
+        <DomainBadge domain={capture.inferredDomain} variant="dot" size="sm" />
+      </View>
       <View style={styles.content}>
         {peopleLine ? (
           <Text
@@ -56,7 +59,6 @@ export function PromotedCaptureCard({ capture, onPress }: PromotedCaptureCardPro
           <Text
             variant="caption"
             color="inkGhost"
-            style={styles.location}
             numberOfLines={1}
             maxFontSizeMultiplier={1.05}
           >
@@ -81,68 +83,44 @@ export function PromotedCaptureCard({ capture, onPress }: PromotedCaptureCardPro
           </Text>
         </View>
       </View>
-    </>
+    </View>
   );
 
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={() => onPress(capture)}
-        style={({ pressed }) => [
-          styles.row,
-          isHeld && styles.rowHeld,
-          pressed && styles.rowPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={`${capture.title}. ${peopleLine ? `${peopleLine}. ` : ''}${ATTRIBUTION}. ${capture.displayTime}`}
-        accessibilityHint="Opens details"
-      >
-        {content}
-      </Pressable>
-    );
-  }
-
   return (
-    <View
-      style={[styles.row, isHeld && styles.rowHeld]}
-      accessibilityRole="text"
-      accessibilityLabel={`${capture.title}. ${ATTRIBUTION}. ${capture.displayTime}`}
+    <GradientCard
+      accentColor={accentColor}
+      onPress={onPress ? () => onPress(capture) : undefined}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      style={[
+        styles.cardOverride,
+        isHeld && styles.cardHeld,
+      ]}
     >
-      {content}
-    </View>
+      {inner}
+    </GradientCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
+  // surfaceMuted background distinguishes captures from calendar events (surfaceElevated)
+  cardOverride: {
+    backgroundColor: c.surfaceMuted,
+    padding: spacing[3],
+  },
+  cardHeld: {
+    opacity: 0.6,
+  },
   row: {
     flexDirection: 'row' as const,
     gap: spacing[2],
-    backgroundColor: c.planCaptureRow,
-    borderRadius: radius.sm,
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.planCaptureBorder,
-    borderStyle: 'dashed' as const,
-    opacity: 0.92,
+    alignItems: 'flex-start' as const,
   },
-  rowHeld: {
-    opacity: 0.65,
-  },
-  rowPressed: {
-    backgroundColor: c.surfaceMuted,
-  },
-  marker: {
-    width: 5,
-    height: 5,
-    borderRadius: radius.full,
-    marginTop: 6,
-    // backgroundColor is applied inline from planAccentForDomain
-    opacity: 0.7,
+  badgeWrap: {
+    paddingTop: 5,
   },
   content: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   people: {
     color: c.peoplePillText,
@@ -152,14 +130,12 @@ const useStyles = makeStyles((c) => ({
   title: {
     lineHeight: 20,
   },
-  location: {
-    marginTop: 1,
-  },
   metaRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     flexWrap: 'wrap' as const,
     gap: spacing[1],
+    marginTop: 2,
   },
   time: {
     color: c.planCaptureTime,

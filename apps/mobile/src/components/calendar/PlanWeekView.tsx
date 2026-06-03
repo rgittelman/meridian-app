@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Text } from '@/components/typography/Text';
 import { ConnectCalendarCard } from '@/components/calendar/ConnectCalendarCard';
@@ -64,20 +64,31 @@ export function PlanWeekView({
           promotedCaptures,
         );
         const isToday = key === todayKey;
-        const label = isToday
-          ? 'Today'
-          : day.toLocaleDateString(undefined, { weekday: 'long' });
+        const tomorrowKey = startOfDay(new Date(new Date().setDate(new Date().getDate() + 1))).toISOString();
+        const isTomorrow = !isToday && key === tomorrowKey;
+        const label = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : day.toLocaleDateString(undefined, { weekday: 'long' });
+        const dateLabel = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         const dayEmpty = dayEvents.length === 0 && dayCaptures.length === 0;
 
         return (
           <View key={key} style={styles.daySection}>
-            <Text
-              variant="callout"
-              style={[styles.dayLabel, isToday && styles.dayLabelToday]}
-              maxFontSizeMultiplier={1.1}
-            >
-              {label}
-            </Text>
+            <View style={styles.dayHeaderRow}>
+              <Text
+                variant="callout"
+                weight={isToday ? 'semibold' : 'regular'}
+                style={[styles.dayLabel, isToday && styles.dayLabelToday]}
+                maxFontSizeMultiplier={1.1}
+              >
+                {label}
+              </Text>
+              <Text
+                variant="footnote"
+                color="inkGhost"
+                maxFontSizeMultiplier={1.0}
+              >
+                · {dateLabel}
+              </Text>
+            </View>
 
             {dayEmpty ? (
               <Text variant="footnote" color="inkGhost" style={styles.emptyDay}>
@@ -97,11 +108,11 @@ export function PlanWeekView({
                   <View style={styles.capturedGroup}>
                     <Text
                       variant="caption"
-                      color="inkGhost"
+                      color="inkTertiary"
                       style={styles.capturedLabel}
                       maxFontSizeMultiplier={1.05}
                     >
-                      Captured intentions
+                      Intentions
                     </Text>
                     {dayCaptures.map((capture) => (
                       <PromotedCaptureCard
@@ -238,27 +249,29 @@ const useStyles = makeStyles((c) => ({
   daySection: {
     gap: spacing[2],
   },
+  dayHeaderRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'baseline' as const,
+    gap: spacing[2],
+  },
   dayLabel: {
     color: c.inkTertiary,
     letterSpacing: 0.2,
   },
   dayLabelToday: {
-    color: c.inkSecondary,
+    color: c.ink,
   },
   emptyDay: {
     paddingLeft: spacing[4],
     fontStyle: 'italic' as const,
   },
   capturedGroup: {
-    marginTop: spacing[2],
+    marginTop: spacing[1],
     gap: spacing[2],
-    paddingTop: spacing[2],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.borderSubtle,
   },
   capturedLabel: {
-    letterSpacing: 0.3,
-    fontStyle: 'italic' as const,
-    paddingLeft: spacing[1],
+    letterSpacing: 0.35,
+    textTransform: 'uppercase' as const,
+    marginBottom: -spacing[1],
   },
 }));

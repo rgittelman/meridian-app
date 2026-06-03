@@ -1,46 +1,61 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
+import { GradientCard } from '@/components/shared/surfaces/GradientCard';
+import { DomainBadge } from '@/components/shared/primitives/DomainBadge';
+import { StatusPill } from '@/components/shared/primitives/StatusPill';
+import type { StatusSentiment } from '@/components/shared/primitives/StatusPill';
+import { domainColorFor } from '@/components/calendar/planEventAccent';
 import { Text } from '@/components/typography/Text';
 import { useTheme } from '@/hooks/useTheme';
-import type { LifeDomainSnapshot } from '@/types/life';
-import { LIFE_DOMAIN_DEFINITIONS } from '@/services/life/constants';
-import { makeStyles, radius, spacing } from '@/theme';
+import { makeStyles, spacing } from '@/theme';
+import type { AttentionLevel, LifeDomainSnapshot } from '@/types/life';
 
 type LifeDomainCardProps = {
   domain: LifeDomainSnapshot;
   onPress: () => void;
 };
 
+function attentionToSentiment(level: AttentionLevel): StatusSentiment {
+  switch (level) {
+    case 'active':  return 'caution';
+    case 'present': return 'positive';
+    case 'quiet':   return 'neutral';
+  }
+}
+
+function attentionLabel(level: AttentionLevel): string {
+  switch (level) {
+    case 'active':  return 'Active';
+    case 'present': return 'Present';
+    case 'quiet':   return 'Quiet';
+  }
+}
+
 export function LifeDomainCard({ domain, onPress }: LifeDomainCardProps) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const def = LIFE_DOMAIN_DEFINITIONS.find((d) => d.id === domain.id);
-  const Icon = def?.Icon;
-  const isActive = domain.attention.level === 'active';
-  const isPresent = domain.attention.level === 'present';
+  const accentColor = domainColorFor(colors, domain.id);
+  const sentiment = attentionToSentiment(domain.attention.level);
 
   return (
-    <Pressable
+    <GradientCard
+      accentColor={accentColor}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.card,
-        (isActive || isPresent) && styles.cardPresent,
-        pressed && styles.cardPressed,
+        {
+          backgroundColor: `${accentColor}18`,
+          shadowColor: accentColor,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.18,
+          shadowRadius: 8,
+          elevation: 3,
+        },
       ]}
-      accessibilityRole="button"
-      accessibilityLabel={`${domain.label}. ${domain.previewLines[0] ?? ''}`}
     >
       <View style={styles.header}>
-        {Icon ? <Icon size={18} color={colors.inkTertiary} strokeWidth={1.75} /> : null}
-        <Text variant="callout" color="inkSecondary" style={styles.label}>
-          {domain.label}
-        </Text>
-        {(isActive || isPresent) && (
-          <View
-            style={[styles.lifeBar, isActive && styles.lifeBarActive]}
-            accessibilityElementsHidden
-          />
-        )}
+        <DomainBadge domain={domain.id} size="sm" variant="pill" />
+        <StatusPill label={attentionLabel(domain.attention.level)} sentiment={sentiment} />
       </View>
 
       <View style={styles.previews}>
@@ -48,67 +63,45 @@ export function LifeDomainCard({ domain, onPress }: LifeDomainCardProps) {
           <Text
             key={`${domain.id}-${i}`}
             variant="footnote"
-            style={styles.previewLine}
+            color="inkSecondary"
             maxFontSizeMultiplier={1.1}
           >
             {line}
           </Text>
         ))}
         {domain.previewOverflowLine ? (
-          <Text variant="footnote" style={styles.overflowLine} maxFontSizeMultiplier={1.05}>
+          <Text
+            variant="footnote"
+            color="inkGhost"
+            style={styles.overflow}
+            maxFontSizeMultiplier={1.05}
+          >
             {domain.previewOverflowLine}
           </Text>
         ) : null}
       </View>
-    </Pressable>
+    </GradientCard>
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles(() => ({
   card: {
-    width: '47.5%' as unknown as number,
-    backgroundColor: c.lifeCategoryBg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.lifeCategoryBorder,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[4],
-    paddingBottom: spacing[3],
-    gap: spacing[2],
-  },
-  cardPresent: {
-    borderColor: c.lifeDomainBorderActive,
-  },
-  cardPressed: {
-    backgroundColor: c.surfaceMuted,
+    // Width managed by grid container — GradientCard style prop merges here
+    flex: 1,
+    minWidth: 0,
+    gap: spacing[3],
   },
   header: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: spacing[2],
-  },
-  label: {
-    flex: 1,
-  },
-  lifeBar: {
-    width: 20,
-    height: 2,
-    borderRadius: radius.full,
-    backgroundColor: c.insightSoft,
-  },
-  lifeBarActive: {
-    backgroundColor: c.lifeDomainActiveBar,
+    justifyContent: 'space-between' as const,
+    flexWrap: 'wrap' as const,
+    gap: spacing[1],
   },
   previews: {
     gap: spacing[1],
-    marginTop: spacing[1],
   },
-  previewLine: {
-    color: c.lifeDomainPreview,
-    flexShrink: 1,
-  },
-  overflowLine: {
-    color: c.inkGhost,
+  overflow: {
     fontStyle: 'italic' as const,
     marginTop: spacing[1],
   },

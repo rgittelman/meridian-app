@@ -1,8 +1,9 @@
 import { View } from 'react-native';
 
+import { GradientCard } from '@/components/shared/surfaces/GradientCard';
 import { Text } from '@/components/typography/Text';
 import type { BriefContent } from '@/services/notifications/buildBriefContent';
-import { makeStyles, radius, spacing } from '@/theme';
+import { spacing } from '@/theme';
 
 type Props = {
   brief: BriefContent;
@@ -12,15 +13,13 @@ type Props = {
  * Morning Brief / Evening Preview card for the Focus screen.
  *
  * Positioned between the greeting and the Momentum Ring.
- * Reads-only — no interaction. Disappears when brief content is null.
+ * Read-only — no interaction. Disappears when brief content is null.
  *
  * Copy standard: calm, specific, never guilt, never task counts.
  */
 export function DailyBriefCard({ brief }: Props) {
-  const styles = useStyles();
-
   return (
-    <View style={styles.card} accessibilityRole="text">
+    <GradientCard style={styles.card}>
       <Text variant="body" color="ink" style={styles.primary}>
         {brief.primaryLine}
       </Text>
@@ -33,18 +32,12 @@ export function DailyBriefCard({ brief }: Props) {
           ))}
         </View>
       )}
-    </View>
+    </GradientCard>
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const styles = {
   card: {
-    backgroundColor: c.surfaceMuted,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: c.borderSubtle,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[4],
     gap: spacing[2],
   },
   primary: {
@@ -56,4 +49,4 @@ const useStyles = makeStyles((c) => ({
   commitment: {
     lineHeight: 20,
   },
-}));
+} as const;

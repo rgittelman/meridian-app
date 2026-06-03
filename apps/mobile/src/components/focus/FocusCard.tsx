@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+
+import { GradientCard } from '@/components/shared/surfaces/GradientCard';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -255,19 +257,23 @@ export function FocusCard({
   const urgency = item.urgency ?? 'default';
   const showActions = Boolean(onComplete && onLater);
 
-  const urgencySurface: Record<FocusItemUrgency, string> = {
-    default: colors.focusCardDefault,
-    time: colors.focusCardPeople,
-    warm: colors.focusCardUrgent,
-  };
-
+  // bodyOnly=true: SwipeableFocusCard manages its own shell — skip GradientCard entirely
   if (bodyOnly) {
     return <FocusCardBody item={item} onPress={onPress} />;
   }
 
+  // accent border only — surfaceElevated is the universal background.
+  // The ring owns orange/amber; cards signal urgency through border color, not fill.
+  const urgencyAccent: Record<FocusItemUrgency, string | undefined> = {
+    default: undefined,
+    time:    colors.accent,
+    warm:    colors.warning,
+  };
+
   return (
-    <View
-      style={[styles.shell, { backgroundColor: urgencySurface[urgency] }]}
+    <GradientCard
+      accentColor={urgencyAccent[urgency]}
+      style={styles.shellOverride}
     >
       <FocusCardBody item={item} onPress={onPress} />
       {showActions && (
@@ -277,15 +283,16 @@ export function FocusCard({
           onLater={onLater!}
         />
       )}
-    </View>
+    </GradientCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
-  shell: {
+  // Overrides for GradientCard: zero padding (FocusCardBody/actionsStrip manage their own),
+  // radius.lg to match the original shell, overflow hidden to clip the action strip.
+  shellOverride: {
+    padding: 0,
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
     overflow: 'hidden' as const,
   },
   bodyRow: {

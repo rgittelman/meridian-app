@@ -145,9 +145,16 @@ export const lightColors: AppColors = {
   planCaptureMarker: '#A89888',
   planCaptureTime: '#8A8278',
   planCaptureSource: '#9A9088',
-  planAccentFamily: '#6B8F66',
-  planAccentWork: '#8E7A62',
-  planAccentCommunity: '#9A8468',
-  planAccentHealth: '#5E8A80',
-  planAccentNeutral: '#9A948C',
+  planAccentFamily: '#7C3AED',
+  planAccentWork: '#2563EB',
+  planAccentCommunity: '#0891B2',
+  planAccentHealth: '#059669',
+  planAccentNeutral: '#6B7280',
+
+  // Domain accent colors — slightly muted for light backgrounds
+  domainFamily:    '#7C3AED',
+  domainWork:      '#2563EB',
+  domainHealth:    '#059669',
+  domainPersonal:  '#D97706',
+  domainCommunity: '#0891B2',
 };

@@ -1,10 +1,11 @@
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   View,
 } from 'react-native';
@@ -13,6 +14,7 @@ import { Text } from '@/components/typography/Text';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CaptureActionGrid } from '@/components/shared/capture/CaptureActionGrid';
 import { CaptureConfirmation } from '@/components/capture/CaptureConfirmation';
 import { CaptureIntelligenceDiagnostics } from '@/components/capture/CaptureIntelligenceDiagnostics';
 import { CaptureHeader } from '@/components/capture/CaptureHeader';
@@ -43,10 +45,12 @@ import {
  * Layout:
  *  1. Confirmation toast (shown briefly after capture)
  *  2. Ambient header
- *  3. Natural language input surface
- *  4. Suggested examples
- *  5. Recent captures
- *  6. Recovery space
+ *  3. [Dev only, collapsed] Dev diagnostics / smoke tests
+ *  4. Quick action grid — shortcut into the input with context
+ *  5. Natural language input surface
+ *  6. Suggested examples
+ *  7. Recent captures
+ *  8. Recovery space
  */
 export function CaptureScreen() {
   const insets = useSafeAreaInsets();
@@ -59,6 +63,7 @@ export function CaptureScreen() {
   const { colors } = useTheme();
   const styles = useStyles();
   const showDevDiagnostics = isDevEnvironment();
+  const [devExpanded, setDevExpanded] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,6 +76,15 @@ export function CaptureScreen() {
       return () => clearTimeout(timer);
     }, [route.params?.focusInput, captureInput.inputRef]),
   );
+
+  const focusInput = useCallback(() => {
+    captureInput.inputRef.current?.focus();
+  }, [captureInput.inputRef]);
+
+  const focusWithReminder = useCallback(() => {
+    captureInput.setValue('Remind me to ');
+    captureInput.inputRef.current?.focus();
+  }, [captureInput]);
 
   const topPad = insets.top + screenPaddingTop;
   const bottomPad =
@@ -96,20 +110,8 @@ export function CaptureScreen() {
         {/* 1 · Confirmation — appears briefly after each capture */}
         <View style={styles.padH}>
           <CaptureConfirmation />
-          {showDevDiagnostics && lastCaptureAudit && items[0] ? (
-            <View style={styles.devDiagnostics}>
-              <CaptureIntelligenceDiagnostics
-                item={items[0]}
-                audit={lastCaptureAudit}
-              />
-            </View>
-          ) : null}
-          {/* DEV ONLY — remove after verifying notification delivery */}
-          {showDevDiagnostics ? <NotificationSmokeTest /> : null}
-          {showDevDiagnostics ? <BriefSmokeTest /> : null}
         </View>
 
-        {/* Spacing: only show gap when confirmation is visible */}
         <Divider size="md" />
 
         {/* 2 · Ambient header */}
@@ -117,9 +119,49 @@ export function CaptureScreen() {
           <CaptureHeader variant={0} />
         </View>
 
+        {/* 3 · Dev tools — collapsed by default, dev only */}
+        {showDevDiagnostics ? (
+          <View style={styles.padH}>
+            <Pressable
+              onPress={() => setDevExpanded((v) => !v)}
+              style={styles.devToggle}
+              accessibilityRole="button"
+              accessibilityLabel={devExpanded ? 'Collapse dev tools' : 'Expand dev tools'}
+            >
+              <Text variant="caption" color="inkGhost" style={styles.devToggleText}>
+                {devExpanded ? '▾ Dev tools' : '▸ Dev tools'}
+              </Text>
+            </Pressable>
+            {devExpanded ? (
+              <View style={styles.devSection}>
+                {lastCaptureAudit && items[0] ? (
+                  <CaptureIntelligenceDiagnostics
+                    item={items[0]}
+                    audit={lastCaptureAudit}
+                  />
+                ) : null}
+                <NotificationSmokeTest />
+                <BriefSmokeTest />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <Divider size="lg" />
 
-        {/* 3 · Natural language input */}
+        {/* 4 · Quick action grid — all focus the input; Reminder pre-fills */}
+        <View style={styles.padH}>
+          <CaptureActionGrid
+            onNote={focusInput}
+            onTask={focusInput}
+            onReminder={focusWithReminder}
+            onEvent={focusInput}
+          />
+        </View>
+
+        <Divider size="lg" />
+
+        {/* 5 · Natural language input */}
         <View style={styles.padH}>
           <CaptureInput
             {...captureInput}
@@ -129,7 +171,7 @@ export function CaptureScreen() {
 
         <Divider size="lg" />
 
-        {/* 4 · Suggested examples — full-width horizontal scroll */}
+        {/* 6 · Suggested examples — full-width horizontal scroll */}
         <SuggestedExamples
           onSelect={(text) => {
             captureInput.setValue(text);
@@ -140,14 +182,14 @@ export function CaptureScreen() {
         {items.length > 0 && (
           <>
             <Divider size="xl" />
-            {/* 5 · Recent captures */}
+            {/* 7 · Recent captures */}
             <View style={styles.padH}>
               <RecentCaptures items={items} />
             </View>
           </>
         )}
 
-        {/* 6 · Graceful closure — soft atmospheric end of screen */}
+        {/* 8 · Graceful closure */}
         <View style={styles.closure}>
           <Text
             variant="caption"
@@ -188,8 +230,22 @@ const useStyles = makeStyles((c) => ({
   padH: {
     paddingHorizontal: screenPaddingHorizontal,
   },
-  devDiagnostics: {
-    marginTop: spacing[3],
+  devToggle: {
+    marginTop: spacing[4],
+    paddingVertical: spacing[2],
+    alignSelf: 'flex-start' as const,
+  },
+  devToggleText: {
+    letterSpacing: 0.2,
+  },
+  devSection: {
+    marginTop: spacing[2],
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    borderStyle: 'dashed' as const,
+    borderRadius: 8,
+    padding: spacing[3],
+    gap: spacing[3],
   },
   closure: {
     paddingTop: spacing[10],

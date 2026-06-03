@@ -19,3 +19,7 @@ export {
   tabBarHeight,
   tabBarBottomInset,
 } from './layout';
+
+// Visual upgrade — V1.1
+export { tabAccents, type TabName, type TabAccentSet } from './tabAccents';
+export { gradients, type GradientDef } from './gradients';

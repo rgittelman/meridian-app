@@ -1,8 +1,7 @@
-import { View } from 'react-native';
-
+import { GradientCard } from '@/components/shared/surfaces/GradientCard';
 import { Text } from '@/components/typography/Text';
 import type { PrepAwarenessItem } from '@/types/prep';
-import { makeStyles, radius, spacing } from '@/theme';
+import { makeStyles, spacing } from '@/theme';
 
 type PrepAwarenessSectionProps = {
   items: PrepAwarenessItem[];
@@ -10,10 +9,8 @@ type PrepAwarenessSectionProps = {
 };
 
 function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
-  const styles = useCardStyles();
-
   return (
-    <View style={styles.card} accessibilityRole="text">
+    <GradientCard style={cardStyle.inner} accessibilityRole="text">
       <Text variant="callout" color="ink" maxFontSizeMultiplier={1.1}>
         {item.primaryLabel}
       </Text>
@@ -23,7 +20,7 @@ function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
         </Text>
       ) : null}
       {item.body ? (
-        <Text variant="footnote" style={styles.body} maxFontSizeMultiplier={1.05}>
+        <Text variant="footnote" color="inkSecondary" maxFontSizeMultiplier={1.05}>
           {item.body}
         </Text>
       ) : null}
@@ -32,7 +29,7 @@ function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
           {item.connectedSummary}
         </Text>
       ) : null}
-    </View>
+    </GradientCard>
   );
 }
 
@@ -52,7 +49,7 @@ export function PrepAwarenessSection({
       : null;
 
   return (
-    <View style={styles.wrap}>
+    <GradientCard style={styles.wrap} accessibilityRole="none">
       <Text variant="caption" color="inkTertiary" style={styles.eyebrow}>
         Before you go
       </Text>
@@ -64,32 +61,23 @@ export function PrepAwarenessSection({
           {overflowLine}
         </Text>
       ) : null}
-    </View>
+    </GradientCard>
   );
 }
 
+// Static object — no makeStyles needed for the inner card since GradientCard provides surface
+const cardStyle = {
+  inner: { gap: spacing[1], padding: spacing[3] } as const,
+};
+
 const useStyles = makeStyles((c) => ({
   wrap: {
-    gap: spacing[2],
+    gap: spacing[3],
+    backgroundColor: c.surfaceMuted,
   },
   eyebrow: {
     letterSpacing: 0.4,
     textTransform: 'uppercase' as const,
     color: c.inkGhost,
-  },
-}));
-
-const useCardStyles = makeStyles((c) => ({
-  card: {
-    backgroundColor: c.surfaceMuted,
-    borderRadius: radius.sm,
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-    gap: spacing[1],
-    borderWidth: 1,
-    borderColor: c.borderSubtle,
-  },
-  body: {
-    color: c.inkSecondary,
   },
 }));
