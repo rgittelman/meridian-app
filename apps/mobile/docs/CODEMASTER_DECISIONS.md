@@ -201,6 +201,22 @@ Do not re-litigate any entry here without a documented regression or user-visibl
 
 ---
 
+### Decision: Phase J Architectural Direction — Device-First, Account Optional
+**Date:** 2026-06-03
+**Status:** Codemaster instinct (not yet confirmed — requires full Phase J prereq review)
+**Rationale:** Device-first + account optional keeps Phase J scoped and shippable without requiring a backend at launch. Account-first + cloud sync from day one makes Phase J a multi-month initiative with conflict resolution, backend infrastructure, and high risk. The correct approach for Meridian's current stage is: app is fully usable without an account; account is offered and earns trust, not required. See PHASE_J_PREREQS.md for the full set of questions that must be answered before any Phase J implementation begins.
+
+Key instincts (pending confirmation):
+- Device-first, local-first data model
+- Account optional — cloud backup deferred
+- Google Sign-In + Apple Sign-In as auth providers
+- Avatar from provider when available; initials fallback always present
+- Onboarding: fully usable before sign-in; account earned, not required
+- Profile screen replaces Settings modal as the final home for user settings
+- Four questions must be confirmed before Phase J planning: (1) device-first confirmed?, (2) what syncs in Phase J V1?, (3) onboarding order?, (4) family model in scope?
+
+---
+
 ### Decision: Builder/Auditor Role Separation
 **Date:** Project inception
 **Status:** Permanent
