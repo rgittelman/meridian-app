@@ -215,6 +215,20 @@ Locked constraints:
 
 ---
 
+### Decision: Deliberate Pause Before J.2 — Use the App First
+**Date:** 2026-06-03
+**Status:** Accepted
+**Rationale:** J.1 shipped a local profile foundation. The next J.2 items (editable name, avatar sourcing, onboarding, account state) are harder to unwind than visual work. Before planning J.2, use the app naturally — Capture, Focus, notifications, Plan, Profile — and let real use reveal what actually matters next. Do not begin J.2 planning sessions until this observation period has happened.
+
+---
+
+### Decision: Profile Completion State — Tracked Backlog, Not Yet Approved
+**Date:** 2026-06-03
+**Status:** Backlog (not approved for implementation)
+**Rationale:** A "profile completeness" surface (Calendar connected ✓ / Home location ○ / Notifications ○ / etc.) would serve as natural setup guidance without a traditional onboarding flow. It fits the "earn the right to ask" philosophy. Captured here so it isn't lost, but do not build until J.2 scope is approved and this pattern is explicitly included.
+
+---
+
 ### Decision: Phase J Architectural Direction — Device-First, Account Optional
 **Date:** 2026-06-03
 **Status:** Codemaster instinct (not yet confirmed — requires full Phase J prereq review)

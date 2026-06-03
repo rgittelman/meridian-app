@@ -22,11 +22,19 @@ Theme system rewrite (dark.ts, typography, radius, spacing, gradients.ts, tabAcc
 
 Profile is local-first. No backend, no sync, no new auth. Settings accessed through Profile modal. 325/325 tests passing.
 
-**Next priorities — Codemaster to decide order:**
-- Phase J.2 — avatar URL population, name editing (requires separate approval)
-- V2 visual polish backlog (CaptureActionGrid visual weight, diagnostic copy humanization)
-- Phase I — Confidence & Diagnostics (internal visibility into leave alert pipeline)
-- Phase H.3 device smoke test (6 scenarios in PHASE_H_VALIDATION.md not yet run)
+**Deliberate pause before J.2.** Codemaster direction: use the app naturally for a few days before deciding what deserves J.2. Capture, Focus, notifications, Plan, Profile entry — all should be exercised before the next architectural pass.
+
+**Tracked backlog ideas (not approved for implementation):**
+- Profile Completion State: "Calendar connected ✓ / Home location ○ / Notifications ○" — natural setup guidance without traditional onboarding. Fits "earn the right to ask." Do not build yet.
+- CaptureActionGrid visual weight reduction (~10–15%)
+- CaptureCard diagnostic copy humanization ("no_timing" → "No timing detected")
+- GradientBackground + expo-linear-gradient (deferred from V1.2)
+
+**When J.2 planning begins, decide:**
+- Avatar URL population (Google profile photo, no new scopes)
+- Display name editing
+- Profile Completion State (if the setup guidance pattern fits)
+- Apple Sign-In (deferred; separate planning required)
 
 ---
 
