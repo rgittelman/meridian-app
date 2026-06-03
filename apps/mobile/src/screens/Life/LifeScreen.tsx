@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Settings } from 'lucide-react-native';
 
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { NotificationVerificationModal } from '@/components/notifications/NotificationVerificationModal';
 import { LifeDomainsView } from '@/components/life/LifeDomainsView';
+import { ProfileAvatar } from '@/components/shared/primitives/ProfileAvatar';
+import { ProfileModal } from '@/screens/Profile/ProfileModal';
 import { Text } from '@/components/typography/Text';
-import { SettingsScreen } from '@/screens/Settings/SettingsScreen';
 import { runCaptureIntelligenceQaAudit } from '@/services/capture';
 import { isDevEnvironment } from '@/utils/isDev';
 import { makeStyles, spacing } from '@/theme';
-import { useTheme } from '@/hooks/useTheme';
 
 export function LifeScreen() {
   const [verificationOpen, setVerificationOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const styles = useStyles();
-  const { colors } = useTheme();
   const showVerification = isDevEnvironment();
 
   useEffect(() => {
@@ -33,13 +31,13 @@ export function LifeScreen() {
           Life
         </Text>
         <Pressable
-          onPress={() => setSettingsOpen(true)}
+          onPress={() => setProfileOpen(true)}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Open settings"
-          style={({ pressed }) => pressed && styles.devButtonPressed}
+          accessibilityLabel="Open profile"
+          style={({ pressed }) => pressed && styles.avatarPressed}
         >
-          <Settings size={20} color={colors.inkSecondary} strokeWidth={1.75} />
+          <ProfileAvatar size={28} />
         </Pressable>
       </View>
 
@@ -57,14 +55,17 @@ export function LifeScreen() {
           </Pressable>
         </View>
       ) : null}
+
       <LifeDomainsView />
+
       {showVerification ? (
         <NotificationVerificationModal
           visible={verificationOpen}
           onClose={() => setVerificationOpen(false)}
         />
       ) : null}
-      <SettingsScreen visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
     </ScreenContainer>
   );
 }
@@ -75,6 +76,9 @@ const useStyles = makeStyles((c) => ({
     alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
     marginBottom: spacing[4],
+  },
+  avatarPressed: {
+    opacity: 0.8,
   },
   devEntry: {
     marginBottom: spacing[4],
