@@ -11,4 +11,8 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
+# Expo modules — classes loaded via reflection at runtime
+-keep class expo.modules.** { *; }
+-keepnames class expo.modules.** { *; }
+
 # Add any project specific keep options here:
