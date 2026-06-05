@@ -11,11 +11,4 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# Expo Kotlin module types — loaded via reflection at runtime.
-# -dontoptimize is required because R8's constructor parameter removal strips
-# the KClass argument from ReturnType.<init> and other Expo reflection constructors,
-# causing NoSuchMethodError at runtime even when -keep rules are present.
--keep class expo.modules.** { *; }
--dontoptimize
-
 # Add any project specific keep options here:
