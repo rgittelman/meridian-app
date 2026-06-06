@@ -16,21 +16,31 @@ index 0000000..d8b952f
 +}
 diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/LazyKType.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/LazyKType.kt
 new file mode 100644
-index 0000000..9a4c5e9
+index 0000000..8445081
 --- /dev/null
 +++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/LazyKType.kt
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,22 @@
 +package expo.modules.kotlin.types
 +
 +import kotlin.reflect.KClass
++import kotlin.reflect.KClassifier
 +import kotlin.reflect.KType
++import kotlin.reflect.KTypeProjection
 +
++/**
++ * Compatibility shim: pika IR transformer generates LazyKType instances and casts
++ * them to KType. In the old expo-modules-core API, LazyKType implemented KType.
++ */
 +class LazyKType(
 +  val kClass: KClass<*>,
-+  val isNullable: Boolean = false,
++  override val isMarkedNullable: Boolean = false,
 +  private val kTypeProvider: (() -> KType)? = null
-+) {
-+  val kType: KType? get() = kTypeProvider?.invoke()
++) : KType {
++  override val classifier: KClassifier get() = kClass
++  override val arguments: List<KTypeProjection> get() = emptyList()
++  override val annotations: List<Annotation> get() = emptyList()
++
++  val kType: KType get() = kTypeProvider?.invoke() ?: this
 +}
 diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/ReturnType.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/ReturnType.kt
 index edf2186..1258722 100644
