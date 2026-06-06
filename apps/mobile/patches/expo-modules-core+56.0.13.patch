@@ -1,3 +1,40 @@
+diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/AnyType.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/AnyType.kt
+index 924869c..2fb2fc5 100644
+--- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/AnyType.kt
++++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/AnyType.kt
+@@ -3,8 +3,11 @@ package expo.modules.kotlin.types
+ import com.facebook.react.bridge.Dynamic
+ import expo.modules.kotlin.AppContext
+ import expo.modules.kotlin.jni.ExpectedType
++import expo.modules.kotlin.types.descriptors.RawTypeDescriptor
+ import expo.modules.kotlin.types.descriptors.TypeDescriptor
+ import expo.modules.kotlin.types.descriptors.typeDescriptorOf
++import kotlin.reflect.KClass
++import kotlin.reflect.KType
+ 
+ inline fun <reified T> toAnyType(converterProvider: TypeConverterProvider? = null): AnyType {
+   val cachedAnyType = AnyTypeCache.cachedAnyType<T>()
+@@ -23,6 +26,20 @@ class AnyType(
+   val typeDescriptor: TypeDescriptor,
+   val converterProvider: TypeConverterProvider? = null
+ ) {
++  // Compatibility constructor: pika IR transformer generates AnyType(KType, TypeConverterProvider)
++  // calls against the old expo-modules-core API. Bridges to TypeDescriptor-based constructor.
++  constructor(kType: KType, converterProvider: TypeConverterProvider? = null) : this(
++    typeDescriptor = TypeDescriptor(
++      typeInfo = RawTypeDescriptor.Simple(
++        jClass = (kType.classifier as KClass<*>).java,
++        isNullable = kType.isMarkedNullable,
++        introspection = null
++      ),
++      kTypeProvider = { kType }
++    ),
++    converterProvider = converterProvider
++  )
++
+   private val converter: TypeConverter<*> by lazy {
+     converterProvider?.obtainTypeConverter(typeDescriptor)
+       ?: TypeConverterProviderImpl.obtainTypeConverter(typeDescriptor)
 diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/AnyTypeProvider.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/AnyTypeProvider.kt
 new file mode 100644
 index 0000000..d8b952f
