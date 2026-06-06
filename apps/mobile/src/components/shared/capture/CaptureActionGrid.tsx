@@ -43,7 +43,15 @@ export function CaptureActionGrid({ onNote, onTask, onReminder, onEvent }: Captu
           <View style={[styles.iconWrap, { backgroundColor: `${action.gradient[0]}18` }]}>
             <GradientIcon Icon={action.Icon} size={22} gradient={action.gradient} strokeWidth={1.75} />
           </View>
-          <Text variant="caption" color="inkSecondary" weight="medium" align="center">
+          <Text
+            variant="caption"
+            color="inkSecondary"
+            weight="medium"
+            align="center"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
             {action.label}
           </Text>
         </TouchableOpacity>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
@@ -20,6 +20,7 @@ import {
   resolveCurrentRegionFromDevice,
   reverseGeocodeAddress,
 } from '@/services/location/geofenceManager';
+import { useCalendar } from '@/hooks/useCalendar';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useCalendarSelectionStore } from '@/store/calendarSelectionStore';
 import { useLocationStore } from '@/store/locationStore';
@@ -54,6 +55,7 @@ export function SettingsScreen({ visible, onClose }: Props) {
   const calendarStatus = useCalendarStore((s) => s.status);
   const syncEvents = useCalendarStore((s) => s.syncEvents);
   const disconnect = useCalendarStore((s) => s.disconnect);
+  const { connect: connectCalendar } = useCalendar();
 
   // Read only what's needed for the summary row count.
   const availableCalendars = useCalendarSelectionStore((s) => s.availableCalendars);
@@ -262,7 +264,11 @@ export function SettingsScreen({ visible, onClose }: Props) {
           </Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* ── Notifications ─────────────────────────────────────────────── */}
         <View style={styles.section}>
@@ -326,6 +332,22 @@ export function SettingsScreen({ visible, onClose }: Props) {
                 {isCalendarConnected ? 'Google' : '—'}
               </Text>
             </View>
+
+            {!isCalendarConnected && (
+              <>
+                <Separator />
+                <Pressable
+                  onPress={() => void connectCalendar()}
+                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Connect Google Calendar"
+                >
+                  <Text variant="body" color="accent">
+                    Connect Google Calendar
+                  </Text>
+                </Pressable>
+              </>
+            )}
 
             {isCalendarConnected && (
               <>
@@ -465,6 +487,7 @@ export function SettingsScreen({ visible, onClose }: Props) {
         </View>
 
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
 
       {/* Permission prompt — presented as a second modal layer */}
@@ -785,11 +808,15 @@ const useStyles = makeStyles((c) => ({
     gap: spacing[1],
   },
   locationLabelGroup: {
+    flex: 1,
+    minWidth: 0,
     gap: spacing[1],
+    marginRight: spacing[2],
   },
   locationActionGroup: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
+    flexShrink: 0,
   },
   locationActionBtn: {
     paddingVertical: spacing[1],

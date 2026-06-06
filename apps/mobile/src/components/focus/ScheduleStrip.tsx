@@ -131,7 +131,13 @@ export function ScheduleStrip({
         </View>
       )}
 
-      {!configured && (
+      {!configured && onConnect && (
+        <View style={{ paddingHorizontal: padH }}>
+          <ConnectCalendarCard onConnect={onConnect} loading={connecting} compact />
+        </View>
+      )}
+
+      {!configured && !onConnect && (
         <View style={{ paddingHorizontal: padH }}>
           <Text variant="callout" color="inkTertiary" maxFontSizeMultiplier={1.1}>
             Connect calendar to see what&apos;s ahead.
