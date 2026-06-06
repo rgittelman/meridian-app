@@ -125,6 +125,7 @@ None. Branch is stable. All V1.1–V1.7 changes are implemented and passing.
 
 | Risk | Severity | Notes |
 |---|---|---|
+| Android standalone depends on patch-package shims | Low | `patches/expo-modules-core+56.0.13.patch` bridges pika IR transformer / expo-modules-core 56.x API mismatch. Attempt removal on next Expo SDK upgrade. |
 | Phase H.3 device validation not run | Medium | Traffic path untested on real device with live Maps API key |
 | Settings is a temporary modal | Low | Intentional — will be restructured under Phase J account model |
 | `boardOrCommunitySoon` fires on "board" keyword | Low | Work board meetings may surface as community (FP-1, accepted) |
