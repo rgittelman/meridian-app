@@ -56,7 +56,7 @@ Live findings from Android field testing. Updated as issues are discovered, fixe
 | Status | Area | Issue | Notes |
 |---|---|---|---|
 | `fixed` | Calendar | No connect path when disconnected — section only showed Disconnect | Field Test Patch 1 |
-| `fixed` | Location | Home/Work action buttons clipped when saved address exists | Field Test Patch 1 — flex:1 on label group |
+| `fixed` | Location | Home/Work title wraps ("Ho/me", "Wor/k") and actions clipped | Field Test Patch 2 — vertical layout |
 | `fixed` | Location | Keyboard covers address input while typing | Field Test Patch 1 — KeyboardAvoidingView |
 
 ---
@@ -98,6 +98,7 @@ Live findings from Android field testing. Updated as issues are discovered, fixe
 | Patch | Commit | Issues Fixed |
 |---|---|---|
 | Field Test Patch 1 | `dcdc6c5` | Calendar CTA (Focus + Settings), location button clipping, keyboard avoidance, Capture tile wrapping |
+| Field Test Patch 2 | pending | Home/Work title wrapping, action buttons clipped, Current Region de-emphasized |
 
 ---
 

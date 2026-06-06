@@ -436,22 +436,19 @@ export function SettingsScreen({ visible, onClose }: Props) {
 
             <Separator />
 
-            {/* Current region — with clarifying label */}
+            {/* Current region — de-emphasised reference row */}
             <View style={[styles.row, styles.regionRow]}>
               <View style={styles.regionLabelGroup}>
-                <Text variant="body" color="inkSecondary">
+                <Text variant="footnote" color="inkTertiary">
                   Current Region
-                </Text>
-                <Text variant="caption" color="inkGhost">
-                  Meridian's read of where you are right now
                 </Text>
               </View>
               <View style={styles.currentRegionValue}>
-                <Text variant="body" color="inkSecondary">
+                <Text variant="footnote" color="inkSecondary" numberOfLines={1}>
                   {currentLocationLabel ?? regionLabel(currentRegion)}
                 </Text>
                 {currentLocationLabel && (
-                  <Text variant="caption" color="inkGhost">
+                  <Text variant="caption" color="inkGhost" numberOfLines={1}>
                     {regionLabel(currentRegion)}
                   </Text>
                 )}
@@ -596,16 +593,19 @@ function LocationRow({
 
   return (
     <View>
-      {/* Label row */}
-      <View style={styles.row}>
-        <View style={styles.locationLabelGroup}>
-          <Text variant="body">{label}</Text>
-          {isSet && (
-            <Text variant="caption" color="inkSecondary" numberOfLines={1}>
-              {savedAddress ?? 'Set'}
-            </Text>
-          )}
-        </View>
+      {/* Vertical layout: title → address → actions */}
+      <View style={styles.locationRowBlock}>
+        {/* Title — always single line */}
+        <Text variant="body" numberOfLines={1}>{label}</Text>
+
+        {/* Saved address — below title, truncates cleanly */}
+        {isSet && !isAddressMode && (
+          <Text variant="caption" color="inkSecondary" numberOfLines={2}>
+            {savedAddress ?? 'Set'}
+          </Text>
+        )}
+
+        {/* Actions — below content, left-aligned */}
         {!isAddressMode && (
           <View style={styles.locationActionGroup}>
             {isBusy ? (
@@ -807,16 +807,17 @@ const useStyles = makeStyles((c) => ({
     alignItems: 'flex-end' as const,
     gap: spacing[1],
   },
-  locationLabelGroup: {
-    flex: 1,
-    minWidth: 0,
+  // Vertical location block: title → address → actions (full-width, no side cramming)
+  locationRowBlock: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
     gap: spacing[1],
-    marginRight: spacing[2],
   },
   locationActionGroup: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    flexShrink: 0,
+    flexWrap: 'wrap' as const,
+    marginTop: spacing[1],
   },
   locationActionBtn: {
     paddingVertical: spacing[1],
@@ -859,12 +860,12 @@ const useStyles = makeStyles((c) => ({
     lineHeight: 18,
   },
   regionRow: {
-    alignItems: 'flex-start' as const,
+    alignItems: 'center' as const,
+    paddingVertical: spacing[2],
   },
   regionLabelGroup: {
-    gap: spacing[1],
     flex: 1,
-    paddingRight: spacing[4],
+    paddingRight: spacing[2],
   },
   versionFooter: {
     alignItems: 'center' as const,
