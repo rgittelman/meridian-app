@@ -2,6 +2,7 @@ import { Calendar, ChevronRight, MapPin, Video } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { GradientCard } from '@/components/shared/surfaces/GradientCard';
+import { TeamsLogo } from '@/components/shared/icons/TeamsLogo';
 import { domainColorFor } from '@/components/calendar/planEventAccent';
 import { Text } from '@/components/typography/Text';
 import type { MeridianCalendarEvent } from '@/types/calendar';
@@ -103,7 +104,11 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
           {/* Meeting type or location tag */}
           {meetingProvider ? (
             <View style={styles.tagRow}>
-              <Video size={11} color={colors.inkGhost} strokeWidth={1.75} />
+              {meetingProvider === 'teams' ? (
+                <TeamsLogo size={12} />
+              ) : (
+                <Video size={11} color={colors.inkGhost} strokeWidth={1.75} />
+              )}
               <Text variant="caption" style={styles.tagText} maxFontSizeMultiplier={1.0}>
                 {meetingProvider === 'teams' ? 'Microsoft Teams' : 'Google Meet'}
               </Text>
