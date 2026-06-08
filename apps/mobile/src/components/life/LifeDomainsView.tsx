@@ -86,14 +86,20 @@ export function LifeDomainsView() {
 
       {/* ── Domain cards grid ──────────────────────────────────────────── */}
       <View style={styles.grid}>
-        {displayDomains.map((domain) => (
-          <View key={domain.id} style={styles.gridItem}>
-            <LifeDomainCard
-              domain={domain}
-              onPress={() => setSelected(domain)}
-            />
-          </View>
-        ))}
+        {displayDomains.map((domain, index) => {
+          // If there's an odd number of domains, the last card spans full width
+          // so it doesn't sit orphaned in a half-width cell.
+          const isLastOdd =
+            displayDomains.length % 2 === 1 && index === displayDomains.length - 1;
+          return (
+            <View key={domain.id} style={[styles.gridItem, isLastOdd && styles.gridItemFull]}>
+              <LifeDomainCard
+                domain={domain}
+                onPress={() => setSelected(domain)}
+              />
+            </View>
+          );
+        })}
       </View>
 
       <View
@@ -166,6 +172,9 @@ const useStyles = makeStyles((c) => ({
   },
   gridItem: {
     width: '47.5%' as unknown as number,
+  },
+  gridItemFull: {
+    width: '100%' as unknown as number,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

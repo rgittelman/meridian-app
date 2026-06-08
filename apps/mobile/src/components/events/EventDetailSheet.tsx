@@ -37,6 +37,35 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Maps Google Calendar API responseStatus values to human-readable labels. */
+const RSVP_LABEL: Record<string, string> = {
+  accepted: 'Going',
+  declined: 'Declined',
+  tentative: 'Maybe',
+  needsAction: 'Awaiting',
+};
+
+/**
+ * Strips angle-bracket annotations Google Calendar adds to attendee display names.
+ * e.g. "Jane Smith<external contact>" → "Jane Smith"
+ */
+function cleanAttendeeName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/<[^>]*>/g, '').trim();
+  return cleaned || null;
+}
+
+/**
+ * Strips angle-bracket URL markup from calendar event descriptions.
+ * MS Teams and other providers format URLs as <https://...> in the description.
+ * e.g. "Join now<https://teams.microsoft.com/...>" → "Join now https://teams.microsoft.com/..."
+ */
+function cleanDescription(raw: string): string {
+  return raw
+    .replace(/<(https?:\/\/[^>]+)>/g, '$1') // <https://...> → plain URL
+    .trim();
+}
+
 function LinkedCaptureRow({ item }: { item: LifeObject }) {
   return (
     <Text variant="footnote" color="inkSecondary" maxFontSizeMultiplier={1.1}>
@@ -60,7 +89,7 @@ export function EventDetailSheet({
   const attr = event.attribution;
   const ownerLabel = resolveOwnerDisplayLabel(attr);
 
-  const description = event.description?.trim() ?? '';
+  const description = cleanDescription(event.description?.trim() ?? '');
   const descPreview =
     description.length > 220 && !descExpanded
       ? description.slice(0, 220).trim() + '…'
@@ -152,16 +181,20 @@ export function EventDetailSheet({
               <Text variant="caption" color="inkGhost" style={styles.label}>
                 Attendees
               </Text>
-              {event.attendees.slice(0, 8).map((a, i) => (
-                <Text
-                  key={`${a.email ?? a.displayName ?? i}`}
-                  variant="footnote"
-                  color="inkSecondary"
-                >
-                  {a.displayName ?? a.email ?? 'Guest'}
-                  {a.responseStatus ? ` · ${a.responseStatus}` : ''}
-                </Text>
-              ))}
+              {event.attendees.slice(0, 8).map((a, i) => {
+                const name = cleanAttendeeName(a.displayName) ?? a.email ?? 'Guest';
+                const rsvp = a.responseStatus ? RSVP_LABEL[a.responseStatus] : null;
+                return (
+                  <Text
+                    key={`${a.email ?? a.displayName ?? i}`}
+                    variant="footnote"
+                    color="inkSecondary"
+                  >
+                    {name}
+                    {rsvp ? ` · ${rsvp}` : ''}
+                  </Text>
+                );
+              })}
             </View>
           )}
 
