@@ -1,4 +1,4 @@
-import { MapPin, Pencil, Video } from 'lucide-react-native';
+import { ChevronRight, MapPin, Pencil, Video, X } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   Linking,
@@ -19,26 +19,16 @@ import { resolveOwnerDisplayLabel } from '@/services/attribution/ownerDisplay';
 import { useTheme } from '@/hooks/useTheme';
 import { makeStyles, radius, spacing } from '@/theme';
 
+// Brand colors — not theme-adaptive (intentional: these are meeting provider identity colors)
+const TEAMS_COLOR = '#6264A7';
+const MEET_COLOR = '#1A73E8';
+
 type EventDetailSheetProps = {
   visible: boolean;
   event: MeridianCalendarEvent | null;
   onClose: () => void;
   onEdit?: (event: MeridianCalendarEvent) => void;
 };
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  const styles = useDetailStyles();
-  return (
-    <View style={styles.row}>
-      <Text variant="caption" color="inkGhost" style={styles.label}>
-        {label}
-      </Text>
-      <Text variant="body" color="ink" maxFontSizeMultiplier={1.2}>
-        {value}
-      </Text>
-    </View>
-  );
-}
 
 /** Maps Google Calendar API responseStatus values to human-readable labels. */
 const RSVP_LABEL: Record<string, string> = {
@@ -89,6 +79,17 @@ function mapsUrlFor(address: string): string {
   return `https://maps.google.com/?q=${encoded}`;
 }
 
+/** Returns a relative day label for the given date: TODAY, TOMORROW, or the weekday name. */
+function relativeDayLabel(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (diff === 0) return 'TODAY';
+  if (diff === 1) return 'TOMORROW';
+  return date.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
+}
+
 function LinkedCaptureRow({ item }: { item: LifeObject }) {
   return (
     <Text variant="footnote" color="inkSecondary" maxFontSizeMultiplier={1.1}>
@@ -123,6 +124,7 @@ export function EventDetailSheet({
   const role = event.sourceCalendarAccessRole;
   const canEdit = role === 'owner' || role === 'writer';
 
+  // Meeting URL detection
   const meetingUrl = event.meetingUrl;
   const meetingProvider: 'teams' | 'meet' | 'other' | null = meetingUrl
     ? meetingUrl.includes('teams.microsoft.com')
@@ -131,12 +133,22 @@ export function EventDetailSheet({
         ? 'meet'
         : 'other'
     : null;
+
+  const meetingCardLabel =
+    meetingProvider === 'teams'
+      ? 'Microsoft Teams Meeting'
+      : meetingProvider === 'meet'
+        ? 'Google Meet'
+        : 'Virtual Meeting';
+
   const joinLabel =
     meetingProvider === 'teams'
       ? 'Join Teams'
       : meetingProvider === 'meet'
         ? 'Join Google Meet'
         : 'Join Meeting';
+
+  const joinColor = meetingProvider === 'teams' ? TEAMS_COLOR : MEET_COLOR;
 
   const handleJoinMeeting = () => {
     if (meetingUrl) void Linking.openURL(meetingUrl);
@@ -152,19 +164,32 @@ export function EventDetailSheet({
     if (physicalLocation) void Linking.openURL(mapsUrlFor(physicalLocation));
   };
 
+  const dayLabel = relativeDayLabel(event.startTime);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       <View style={styles.sheet}>
         <View style={styles.handle} />
 
-        {/* Header row: title area + pencil/view-only badge */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerSpacer} />
+        {/* Top bar: X close (left) + pencil or view-only badge (right) */}
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [styles.topBarBtn, pressed && styles.topBarBtnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            hitSlop={10}
+          >
+            <X size={18} color={colors.inkSecondary} strokeWidth={2} />
+          </Pressable>
+
+          <View style={styles.topBarFill} />
+
           {canEdit && onEdit ? (
             <Pressable
               onPress={() => onEdit(event)}
-              style={({ pressed }) => [styles.pencilBtn, pressed && styles.pencilPressed]}
+              style={({ pressed }) => [styles.topBarBtn, pressed && styles.topBarBtnPressed]}
               accessibilityRole="button"
               accessibilityLabel="Edit event"
               hitSlop={10}
@@ -185,18 +210,34 @@ export function EventDetailSheet({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Day chip */}
+          <Text variant="caption" style={styles.dayChip} maxFontSizeMultiplier={1.0}>
+            {dayLabel}
+          </Text>
+
           <Text variant="display" color="ink" style={styles.title} maxFontSizeMultiplier={1.15}>
             {event.displayTitle ?? event.title}
           </Text>
-          {event.rawTitle &&
-          event.displayTitle &&
-          event.rawTitle !== event.displayTitle ? (
-            <DetailRow label="Calendar title" value={event.rawTitle} />
-          ) : null}
+
+          {/* Date + time row */}
           <Text variant="body" color="inkSecondary" maxFontSizeMultiplier={1.1}>
             {formatEventDateRange(event)}
           </Text>
 
+          {event.rawTitle &&
+          event.displayTitle &&
+          event.rawTitle !== event.displayTitle ? (
+            <View style={styles.detailRow}>
+              <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
+                Calendar title
+              </Text>
+              <Text variant="body" color="ink" maxFontSizeMultiplier={1.2}>
+                {event.rawTitle}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Attribution */}
           <View style={styles.meta}>
             <Text variant="footnote" color="inkGhost">
               {event.planAttributionLine ?? event.displaySourceLabel}
@@ -212,46 +253,63 @@ export function EventDetailSheet({
             ) : null}
           </View>
 
-          {/* Physical location card — tappable to open Maps */}
-          {physicalLocation ? (
-            <Pressable
-              onPress={handleOpenMaps}
-              style={({ pressed }) => [styles.locationCard, pressed && styles.locationPressed]}
-              accessibilityRole="link"
-              accessibilityLabel={`Open ${physicalLocation} in Maps`}
-            >
-              <MapPin size={14} color={colors.inkSecondary} strokeWidth={1.75} />
-              <View style={styles.locationText}>
-                <Text variant="footnote" color="inkSecondary" maxFontSizeMultiplier={1.1}>
-                  {physicalLocation}
-                </Text>
-                <Text variant="caption" color="inkGhost">
-                  Open in Maps
-                </Text>
-              </View>
-            </Pressable>
-          ) : event.location ? (
-            <DetailRow label="Location" value={event.location} />
-          ) : null}
-
-          {/* Primary meeting CTA */}
-          {meetingProvider ? (
-            <Pressable
-              onPress={handleJoinMeeting}
-              style={({ pressed }) => [styles.joinBtn, pressed && styles.joinPressed]}
-              accessibilityRole="link"
-              accessibilityLabel={joinLabel}
-            >
-              <Video size={16} color={colors.sheetBg} strokeWidth={2} />
-              <Text variant="subhead" style={styles.joinText}>
-                {joinLabel}
+          {/* Location / Meeting section */}
+          {(meetingProvider || physicalLocation || event.location) ? (
+            <View style={styles.block}>
+              <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
+                {meetingProvider ? 'Location / Meeting' : 'Location'}
               </Text>
-            </Pressable>
+
+              {/* Meeting type card — tappable */}
+              {meetingProvider ? (
+                <Pressable
+                  onPress={handleJoinMeeting}
+                  style={({ pressed }) => [styles.meetingCard, pressed && styles.meetingCardPressed]}
+                  accessibilityRole="link"
+                  accessibilityLabel={meetingCardLabel}
+                >
+                  <View style={[styles.meetingIconBox, { backgroundColor: joinColor + '22' }]}>
+                    <Video size={16} color={joinColor} strokeWidth={2} />
+                  </View>
+                  <Text variant="subhead" color="ink" style={styles.meetingCardLabel} numberOfLines={1}>
+                    {meetingCardLabel}
+                  </Text>
+                  <ChevronRight size={16} color={colors.inkGhost} strokeWidth={1.75} />
+                </Pressable>
+              ) : null}
+
+              {/* Physical location card — tappable to open Maps */}
+              {physicalLocation ? (
+                <Pressable
+                  onPress={handleOpenMaps}
+                  style={({ pressed }) => [styles.locationCard, pressed && styles.locationCardPressed]}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${physicalLocation} in Maps`}
+                >
+                  <View style={styles.locationCardContent}>
+                    <MapPin size={14} color={colors.inkSecondary} strokeWidth={1.75} />
+                    <View style={styles.locationTextBlock}>
+                      <Text variant="body" style={styles.locationAddress} maxFontSizeMultiplier={1.1}>
+                        {physicalLocation}
+                      </Text>
+                      <Text variant="caption" color="inkGhost">
+                        Open in Maps ↗
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ) : event.location && !meetingProvider ? (
+                <Text variant="body" color="ink" maxFontSizeMultiplier={1.2}>
+                  {event.location}
+                </Text>
+              ) : null}
+            </View>
           ) : null}
 
+          {/* Notes */}
           {description ? (
             <View style={styles.block}>
-              <Text variant="caption" color="inkGhost" style={styles.label}>
+              <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
                 Notes
               </Text>
               <Text variant="body" color="inkSecondary" maxFontSizeMultiplier={1.15}>
@@ -259,7 +317,7 @@ export function EventDetailSheet({
               </Text>
               {description.length > 220 && (
                 <Pressable onPress={() => setDescExpanded((v) => !v)} hitSlop={8}>
-                  <Text variant="footnote" style={styles.linkText}>
+                  <Text variant="footnote" style={styles.showMoreText}>
                     {descExpanded ? 'Show less' : 'Show more'}
                   </Text>
                 </Pressable>
@@ -271,38 +329,69 @@ export function EventDetailSheet({
             </Text>
           )}
 
+          {/* Primary Join CTA — below notes, full-width prominent */}
+          {meetingProvider ? (
+            <Pressable
+              onPress={handleJoinMeeting}
+              style={({ pressed }) => [
+                styles.joinBtn,
+                { backgroundColor: joinColor },
+                pressed && styles.joinBtnPressed,
+              ]}
+              accessibilityRole="link"
+              accessibilityLabel={joinLabel}
+            >
+              <Video size={18} color="#fff" strokeWidth={2} />
+              <Text variant="subhead" style={styles.joinBtnText}>
+                {joinLabel}
+              </Text>
+              <ChevronRight size={18} color="#fff" strokeWidth={2} style={styles.joinChevron} />
+            </Pressable>
+          ) : null}
+
+          {/* Attendees */}
           {event.attendees.length > 0 && (
             <View style={styles.block}>
-              <Text variant="caption" color="inkGhost" style={styles.label}>
+              <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
                 Attendees
               </Text>
               {event.attendees.slice(0, 8).map((a, i) => {
                 const name = cleanAttendeeName(a.displayName) ?? a.email ?? 'Guest';
                 const rsvp = a.responseStatus ? RSVP_LABEL[a.responseStatus] : null;
                 return (
-                  <Text
-                    key={`${a.email ?? a.displayName ?? i}`}
-                    variant="footnote"
-                    color="inkSecondary"
-                  >
-                    {name}
-                    {rsvp ? ` · ${rsvp}` : ''}
-                  </Text>
+                  <View key={`${a.email ?? a.displayName ?? i}`} style={styles.attendeeRow}>
+                    <Text variant="footnote" color="inkSecondary" style={styles.attendeeName}>
+                      {name}
+                    </Text>
+                    {rsvp ? (
+                      <View style={[styles.rsvpChip, rsvpChipStyle(a.responseStatus)]}>
+                        <Text variant="caption" style={[styles.rsvpText, rsvpTextStyle(a.responseStatus)]}>
+                          {rsvp}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 );
               })}
             </View>
           )}
 
+          {/* Organizer */}
           {event.organizer?.displayName || event.organizer?.email ? (
-            <DetailRow
-              label="Organizer"
-              value={event.organizer.displayName ?? event.organizer.email ?? ''}
-            />
+            <View style={styles.detailRow}>
+              <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
+                Organizer
+              </Text>
+              <Text variant="body" color="ink" maxFontSizeMultiplier={1.2}>
+                {event.organizer.displayName ?? event.organizer.email ?? ''}
+              </Text>
+            </View>
           ) : null}
 
+          {/* Connected captures */}
           {linked.length > 0 && (
             <View style={styles.block}>
-              <Text variant="caption" color="inkGhost" style={styles.label}>
+              <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
                 Connected items
               </Text>
               {linked.map((item) => (
@@ -311,20 +400,28 @@ export function EventDetailSheet({
             </View>
           )}
         </ScrollView>
-
-        <View style={styles.footer}>
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [styles.footerBtn, pressed && styles.footerPressed]}
-          >
-            <Text variant="subhead" color="inkSecondary">
-              Close
-            </Text>
-          </Pressable>
-        </View>
       </View>
     </Modal>
   );
+}
+
+// RSVP chip color helpers
+function rsvpChipStyle(status: string | undefined): object {
+  switch (status) {
+    case 'accepted': return { backgroundColor: 'rgba(90,142,120,0.15)' };
+    case 'declined': return { backgroundColor: 'rgba(180,70,70,0.12)' };
+    case 'tentative': return { backgroundColor: 'rgba(180,140,60,0.12)' };
+    default: return { backgroundColor: 'rgba(120,120,120,0.10)' };
+  }
+}
+
+function rsvpTextStyle(status: string | undefined): object {
+  switch (status) {
+    case 'accepted': return { color: '#5A8E78' };
+    case 'declined': return { color: '#B44646' };
+    case 'tentative': return { color: '#B08C3C' };
+    default: return { color: '#888' };
+  }
 }
 
 const useStyles = makeStyles((c) => ({
@@ -353,21 +450,24 @@ const useStyles = makeStyles((c) => ({
     marginTop: spacing[3],
     marginBottom: spacing[1],
   },
-  headerRow: {
+  // Top bar: X left, fill, pencil/badge right
+  topBar: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: spacing[5],
+    paddingHorizontal: spacing[4],
     paddingBottom: spacing[2],
   },
-  headerSpacer: { flex: 1 },
-  pencilBtn: {
-    padding: spacing[2],
-    borderRadius: radius.sm,
+  topBarFill: { flex: 1 },
+  topBarBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.borderSubtle,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  pencilPressed: {
-    backgroundColor: c.surfaceMuted,
-  },
+  topBarBtnPressed: { backgroundColor: c.surfaceMuted },
   viewOnlyBadge: {
     paddingVertical: spacing[1],
     paddingHorizontal: spacing[2],
@@ -375,14 +475,19 @@ const useStyles = makeStyles((c) => ({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.borderSubtle,
   },
-  viewOnlyText: {
-    letterSpacing: 0.2,
-  },
+  viewOnlyText: { letterSpacing: 0.2 },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing[5],
-    paddingBottom: spacing[4],
+    paddingBottom: spacing[8],
     gap: spacing[4],
+  },
+  // Day chip
+  dayChip: {
+    color: '#6264A7',
+    letterSpacing: 0.5,
+    fontWeight: '600' as const,
+    fontSize: 11,
   },
   title: { maxWidth: 340 },
   meta: {
@@ -391,62 +496,79 @@ const useStyles = makeStyles((c) => ({
     gap: spacing[1],
   },
   block: { gap: spacing[2] },
-  label: { letterSpacing: 0.3 },
+  sectionLabel: { letterSpacing: 0.3 },
+  detailRow: { gap: spacing[1] },
   empty: { fontStyle: 'italic' as const },
-  linkText: { color: c.inkTertiary, marginTop: spacing[1] },
-  // Location card
-  locationCard: {
+  showMoreText: { color: c.inkTertiary, marginTop: spacing[1] },
+  // Meeting type card
+  meetingCard: {
     flexDirection: 'row' as const,
-    alignItems: 'flex-start' as const,
+    alignItems: 'center' as const,
     gap: spacing[3],
     paddingVertical: spacing[3],
     paddingHorizontal: spacing[3],
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.borderSubtle,
-    backgroundColor: c.surfaceMuted,
+    borderColor: c.border,
+    backgroundColor: c.sheetBg,
   },
-  locationPressed: {
-    opacity: 0.7,
+  meetingCardPressed: { backgroundColor: c.surfaceMuted },
+  meetingIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  locationText: {
-    flex: 1,
-    gap: 2,
+  meetingCardLabel: { flex: 1 },
+  // Location card
+  locationCard: {
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+    overflow: 'hidden' as const,
   },
-  // Join meeting button — filled, prominent
+  locationCardPressed: { opacity: 0.7 },
+  locationCardContent: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: spacing[3],
+    padding: spacing[3],
+  },
+  locationTextBlock: { flex: 1, gap: 2 },
+  locationAddress: { color: '#4B6EE8' },
+  // Join CTA button
   joinBtn: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: spacing[2],
-    alignSelf: 'flex-start' as const,
-    paddingVertical: spacing[3],
+    paddingVertical: spacing[4],
     paddingHorizontal: spacing[4],
     borderRadius: radius.md,
-    backgroundColor: c.ink,
   },
-  joinPressed: {
-    opacity: 0.8,
-  },
-  joinText: {
-    color: c.sheetBg,
+  joinBtnPressed: { opacity: 0.85 },
+  joinBtnText: {
+    color: '#fff',
     fontWeight: '600' as const,
+    flex: 1,
   },
-  footer: {
+  joinChevron: {
+    marginLeft: 'auto' as const,
+  },
+  // Attendees
+  attendeeRow: {
     flexDirection: 'row' as const,
-    justifyContent: 'flex-end' as const,
-    gap: spacing[3],
-    padding: spacing[4],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.sheetBorder,
+    alignItems: 'center' as const,
+    gap: spacing[2],
   },
-  footerBtn: {
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
+  attendeeName: { flex: 1 },
+  rsvpChip: {
+    paddingVertical: 2,
+    paddingHorizontal: spacing[2],
+    borderRadius: radius.full,
   },
-  footerPressed: { opacity: 0.7 },
-}));
-
-const useDetailStyles = makeStyles(() => ({
-  row: { gap: spacing[1] },
-  label: { letterSpacing: 0.3 },
+  rsvpText: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+  },
 }));

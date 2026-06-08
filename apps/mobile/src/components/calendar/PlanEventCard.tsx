@@ -1,8 +1,7 @@
-import { ChevronRight, MapPin, Video } from 'lucide-react-native';
+import { Calendar, ChevronRight, MapPin, Video } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { GradientCard } from '@/components/shared/surfaces/GradientCard';
-import { DomainBadge } from '@/components/shared/primitives/DomainBadge';
 import { domainColorFor } from '@/components/calendar/planEventAccent';
 import { Text } from '@/components/typography/Text';
 import type { MeridianCalendarEvent } from '@/types/calendar';
@@ -17,10 +16,10 @@ type PlanEventCardProps = {
 function formatDuration(start: Date, end: Date): string {
   const mins = Math.round((end.getTime() - start.getTime()) / 60000);
   if (mins <= 0) return '';
-  if (mins < 60) return `${mins}m`;
+  if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
 }
 
 /** True if the location string looks like a physical address rather than a URL or virtual tag. */
@@ -69,8 +68,9 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
       accessibilityRole="button"
     >
       <View style={styles.row}>
-        <View style={styles.badgeWrap}>
-          <DomainBadge domain={event.inferredLifeDomain} variant="dot" size="sm" />
+        {/* Calendar icon — left side */}
+        <View style={styles.iconWrap}>
+          <Calendar size={16} color={accentColor ?? colors.inkTertiary} strokeWidth={1.75} />
         </View>
 
         <View style={styles.content}>
@@ -83,24 +83,14 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
             {event.displayTitle ?? event.title}
           </Text>
 
+          {/* Time + duration */}
           <View style={styles.metaRow}>
-            <Text
-              variant="footnote"
-              style={styles.source}
-              numberOfLines={1}
-              maxFontSizeMultiplier={1.05}
-            >
-              {event.planAttributionLine ?? event.displaySourceLabel}
-            </Text>
-            <Text variant="footnote" style={styles.timeSep} maxFontSizeMultiplier={1.0}>
-              ·
-            </Text>
             <Text variant="footnote" style={styles.time} maxFontSizeMultiplier={1.05}>
               {event.allDay ? 'All day' : event.displayTime}
             </Text>
             {duration ? (
               <>
-                <Text variant="footnote" style={styles.timeSep} maxFontSizeMultiplier={1.0}>
+                <Text variant="footnote" style={styles.sep} maxFontSizeMultiplier={1.0}>
                   ·
                 </Text>
                 <Text variant="footnote" style={styles.duration} maxFontSizeMultiplier={1.05}>
@@ -110,12 +100,12 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
             ) : null}
           </View>
 
-          {/* Meeting type indicator */}
+          {/* Meeting type or location tag */}
           {meetingProvider ? (
             <View style={styles.tagRow}>
               <Video size={11} color={colors.inkGhost} strokeWidth={1.75} />
               <Text variant="caption" style={styles.tagText} maxFontSizeMultiplier={1.0}>
-                {meetingProvider === 'teams' ? 'Teams' : 'Google Meet'}
+                {meetingProvider === 'teams' ? 'Microsoft Teams' : 'Google Meet'}
               </Text>
             </View>
           ) : physicalLocation ? (
@@ -150,10 +140,11 @@ const useStyles = makeStyles((c) => ({
     gap: spacing[3],
     alignItems: 'center' as const,
   },
-  badgeWrap: {
-    paddingTop: 2,
+  iconWrap: {
     alignSelf: 'flex-start' as const,
-    marginTop: 3,
+    marginTop: 2,
+    width: 20,
+    alignItems: 'center' as const,
   },
   content: {
     flex: 1,
@@ -176,18 +167,15 @@ const useStyles = makeStyles((c) => ({
     flexShrink: 1,
   },
   time: {
-    color: c.planEventTime,
+    color: c.ink,
+    fontWeight: '500' as const,
   },
   duration: {
     color: c.inkGhost,
   },
-  timeSep: {
+  sep: {
     color: c.inkGhost,
     opacity: 0.5,
-  },
-  source: {
-    color: c.planEventSource,
-    flexShrink: 1,
   },
   chevronWrap: {
     alignSelf: 'center' as const,
