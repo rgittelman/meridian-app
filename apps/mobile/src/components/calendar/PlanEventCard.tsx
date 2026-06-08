@@ -139,6 +139,12 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
 const useStyles = makeStyles((c) => ({
   cardOverride: {
     gap: 0,
+    // HIG: surface contrast does the card separation — no visible border needed.
+    // borderLeftWidth (the domain accent) is set by GradientCard via a separate
+    // style key and is not affected by these overrides.
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
   },
   row: {
     flexDirection: 'row' as const,

@@ -324,28 +324,26 @@ export function EventDetailSheet({
             </View>
           ) : null}
 
-          {/* Notes */}
+          {/* Notes — contained in a surfaceMuted block to visually separate raw calendar text */}
           {description ? (
             <View style={styles.block}>
               <Text variant="caption" color="inkGhost" style={styles.sectionLabel}>
                 Notes
               </Text>
-              <Text variant="body" color="inkSecondary" maxFontSizeMultiplier={1.15}>
-                {descPreview}
-              </Text>
-              {description.length > 220 && (
-                <Pressable onPress={() => setDescExpanded((v) => !v)} hitSlop={8}>
-                  <Text variant="footnote" style={styles.showMoreText}>
-                    {descExpanded ? 'Show less' : 'Show more'}
-                  </Text>
-                </Pressable>
-              )}
+              <View style={styles.notesContainer}>
+                <Text variant="body" color="inkSecondary" maxFontSizeMultiplier={1.15}>
+                  {descPreview}
+                </Text>
+                {description.length > 220 && (
+                  <Pressable onPress={() => setDescExpanded((v) => !v)} hitSlop={8}>
+                    <Text variant="footnote" style={styles.showMoreText}>
+                      {descExpanded ? 'Show less' : 'Show more'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             </View>
-          ) : (
-            <Text variant="footnote" color="inkGhost" style={styles.empty}>
-              No extra details attached.
-            </Text>
-          )}
+          ) : null}
 
           {/* Primary Join CTA — below notes, full-width prominent */}
           {meetingProvider ? (
@@ -464,8 +462,9 @@ const useStyles = makeStyles((c) => ({
     bottom: 0,
     maxHeight: '88%',
     backgroundColor: c.sheetBg,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    // HIG: sheets have very rounded tops (32px matches Apple's standard sheet radius)
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: c.sheetBorder,
   },
@@ -486,9 +485,10 @@ const useStyles = makeStyles((c) => ({
     paddingBottom: spacing[2],
   },
   topBarFill: { flex: 1 },
+  // HIG: minimum 44×44pt touch target for icon-only buttons
   topBarBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
     backgroundColor: c.surfaceMuted,
     alignItems: 'center' as const,
@@ -509,15 +509,17 @@ const useStyles = makeStyles((c) => ({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing[5],
-    paddingBottom: spacing[8],
-    gap: spacing[4],
+    paddingBottom: spacing[10],
+    // HIG: generous section gaps — surface contrast does the separation work
+    gap: spacing[5],
   },
-  // Day chip
+  // Day chip — uppercase structure label above title
   dayChip: {
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     fontWeight: '600' as const,
     fontSize: 11,
     color: c.inkTertiary,
+    textTransform: 'uppercase' as const,
   },
   title: { maxWidth: 340 },
   meta: {
@@ -525,24 +527,34 @@ const useStyles = makeStyles((c) => ({
     flexWrap: 'wrap' as const,
     gap: spacing[1],
   },
-  block: { gap: spacing[2] },
-  sectionLabel: { letterSpacing: 0.3 },
+  // HIG: section blocks — 12px internal gap, 20px between sections (from scrollContent gap)
+  block: { gap: spacing[3] },
+  // Section labels: uppercase, wide tracking — Apple grouped-list style
+  sectionLabel: {
+    letterSpacing: 0.8,
+    textTransform: 'uppercase' as const,
+  },
   detailRow: { gap: spacing[1] },
   empty: { fontStyle: 'italic' as const },
   showMoreText: { color: c.inkTertiary, marginTop: spacing[1] },
-  // Meeting type card
+  // Notes container — surfaceMuted to visually contain raw calendar text
+  notesContainer: {
+    backgroundColor: c.surfaceMuted,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  // Meeting type card — no border; surfaceMuted fill creates depth without outlines
   meetingCard: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: spacing[3],
-    paddingVertical: spacing[3],
-    paddingHorizontal: spacing[3],
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-    backgroundColor: c.sheetBg,
+    paddingVertical: spacing[4],
+    paddingHorizontal: spacing[4],
+    borderRadius: radius.lg,
+    backgroundColor: c.surfaceMuted,
   },
-  meetingCardPressed: { backgroundColor: c.surfaceMuted },
+  meetingCardPressed: { opacity: 0.7 },
   meetingIconBox: {
     width: 36,
     height: 36,
@@ -551,30 +563,34 @@ const useStyles = makeStyles((c) => ({
     justifyContent: 'center' as const,
   },
   meetingCardLabel: { flex: 1 },
-  // Location card
+  // Location card — no border; surfaceMuted fill; larger radius
   locationCard: {
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-    overflow: 'hidden' as const,
+    borderRadius: radius.lg,
+    backgroundColor: c.surfaceMuted,
   },
   locationCardPressed: { opacity: 0.7 },
   locationCardContent: {
     flexDirection: 'row' as const,
     alignItems: 'flex-start' as const,
     gap: spacing[3],
-    padding: spacing[3],
+    padding: spacing[4],
   },
-  locationTextBlock: { flex: 1, gap: 2 },
+  locationTextBlock: { flex: 1, gap: spacing[1] },
   locationAddress: { color: c.inkSecondary },
-  // Join CTA button
+  // Open Maps affordance row
+  openMapsRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  // Join CTA — pill-ish, filled brand color, generous padding
   joinBtn: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: spacing[2],
-    paddingVertical: spacing[4],
-    paddingHorizontal: spacing[4],
-    borderRadius: radius.md,
+    gap: spacing[3],
+    paddingVertical: 18,
+    paddingHorizontal: spacing[5],
+    borderRadius: radius.xl,
   },
   joinBtnPressed: { opacity: 0.85 },
   joinBtnText: {
@@ -583,26 +599,19 @@ const useStyles = makeStyles((c) => ({
     flex: 1,
   },
   joinChevron: {},
-  // Location card open-maps affordance
-  openMapsRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 4,
-  },
   // Attendees
   attendeeRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: spacing[2],
-    minHeight: 32,
+    gap: spacing[3],
+    minHeight: 36,
   },
+  // No border — surfaceMuted fill is sufficient; borders on circles feel busy
   attendeeAvatar: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: radius.full,
     backgroundColor: c.surfaceMuted,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     flexShrink: 0,
@@ -616,8 +625,8 @@ const useStyles = makeStyles((c) => ({
   },
   attendeeName: { flex: 1 },
   rsvpChip: {
-    paddingVertical: 2,
-    paddingHorizontal: spacing[2],
+    paddingVertical: 3,
+    paddingHorizontal: spacing[2] + 2,
     borderRadius: radius.full,
   },
   rsvpText: {
