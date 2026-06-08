@@ -4,19 +4,85 @@
 **Status:** LOCKED — standing rule for all future UI work  
 **Reference image:** `Meridian_inspiration_styling_colors.png` (repo root)
 
-When design decisions are ambiguous, prefer the direction shown in the reference image.
+> **How to use the reference image:**  
+> Do not replicate screens literally. Extract and apply the visual philosophy.  
+> Match the *feeling*, not the exact layout.  
+> When uncertain: what would this screen feel like if it belonged in that image?
+
+---
+
+## Eight principles — the design application framework
+
+When building or reviewing any screen, apply these in order:
+
+### 1. Warm/cool state language
+Every surface carries an emotional temperature. Warm (orange, amber, red) communicates
+energy, urgency, time in motion. Cool (purple, violet, indigo) communicates calm intention,
+active focus, deliberate action. Choose the temperature based on the emotional state
+the screen should invoke — not based on brand consistency alone.
+
+### 2. Hero → Context → Action hierarchy
+Every screen has exactly one **hero element** — the thing that answers "what matters right
+now." Below it sits **context** — the information that makes the hero meaningful. Below that
+sits **action** — what the user can do about it.
+
+Nothing at the hero level should compete with the hero. Context should support, not distract.
+Actions should be unambiguous.
+
+Do not build screens where everything is the same visual weight.
+
+### 3. Screen subtitles
+Every primary screen has a short, human-voice subtitle under its title.
+Not a category label. Not a system description. A sentence that a person would say.
+
+> "Stay in the zone. Get what matters done."  
+> "Map your day. Time for what moves you forward."  
+> "Your world at a glance. All the pieces that matter."
+
+These are not decorative. They carry tone. They make Meridian feel like a product that
+cares about the person using it, not just the data it displays.
+
+### 4. Rich iconography
+Icons are not bullets. Domain icons (heart, briefcase, leaf, star) carry emotional meaning.
+Action icons (ChevronRight, Pencil, X) communicate affordance. Status icons (bell, calendar,
+check) communicate type and state. Use icons purposefully — each one should earn its place.
+
+Quick-action grids, capture type indicators, and domain badges all use distinct, colored icons.
+Monochrome icon fields read as utility apps. Meridian is not a utility app.
+
+### 5. Layered surfaces
+Depth is created by surface, not shadow. Three layers: base → surface → muted.
+Cards float above the background by being slightly lighter. Inset content (notes, contained
+text, secondary info) uses the muted layer, which is slightly darker than the card surface.
+
+This is consistent in both light and dark modes. The relationship between layers
+is always: background → elevated card → inset content. Never inverted.
+
+### 6. Premium spacing
+Whitespace is a design element, not wasted space. The reference image breathes.
+Every section has room. Cards do not crowd each other. Touch targets are not cramped.
+
+When in doubt, add spacing. The feeling to aim for is calm, not efficient.
+Dense layouts read as anxiety. Breathing layouts read as confidence.
+
+### 7. Strong primary actions
+Every screen that requires a user decision has one obvious primary action.
+It is visually heavier than everything else on screen through color, size, or both.
+Secondary actions are visually quieter — ghost, muted, or simply absent.
+
+A screen with three equally-prominent buttons has no primary button.
+A screen with one clear CTA feels intentional.
+
+### 8. Real data only
+No fake metrics. No progress rings that measure nothing. No streak counters. No points.
+Meridian earns the user's trust by showing what is actually true — their real calendar,
+their real captured items, their real time distribution.
+
+If a number appears on screen, it is a real number from real data.
 
 ---
 
 ## Core philosophy
-
-Meridian is a premium consumer app. It should feel calm, clear, and capable.
-Not a developer tool. Not an enterprise product. A personal companion that makes your day
-feel more intentional and less chaotic.
-
-Every visual decision serves emotional clarity. The user should feel oriented, not overwhelmed.
-
-**No fake metrics. No artificial gamification. Real data only.**
 
 ---
 
