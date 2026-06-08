@@ -27,7 +27,6 @@ type PlanWeekViewProps = {
   onConnect: () => void;
   connecting: boolean;
   onViewEventDetail: (event: MeridianCalendarEvent) => void;
-  onEditEvent: (event: MeridianCalendarEvent) => void;
   onPromotedCapturePress?: (capture: PlanPromotedCapture) => void;
 };
 
@@ -41,7 +40,6 @@ export function PlanWeekView({
   onConnect,
   connecting,
   onViewEventDetail,
-  onEditEvent,
   onPromotedCapturePress,
 }: PlanWeekViewProps) {
   const styles = useStyles();
@@ -101,7 +99,6 @@ export function PlanWeekView({
                     key={event.id}
                     event={event}
                     onViewDetail={onViewEventDetail}
-                    onEdit={onEditEvent}
                   />
                 ))}
                 {dayCaptures.length > 0 ? (

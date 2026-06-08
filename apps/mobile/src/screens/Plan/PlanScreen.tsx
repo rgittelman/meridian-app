@@ -31,10 +31,6 @@ export function PlanScreen() {
     setDetailEvent(event);
   }, []);
 
-  const handleEdit = useCallback((event: MeridianCalendarEvent) => {
-    setEditEvent(event);
-  }, []);
-
   const handleEditFromDetail = useCallback((event: MeridianCalendarEvent) => {
     setDetailEvent(null);
     setEditEvent(event);
@@ -52,7 +48,6 @@ export function PlanScreen() {
         onConnect={handleConnect}
         connecting={connecting}
         onViewEventDetail={handleViewDetail}
-        onEditEvent={handleEdit}
         onPromotedCapturePress={setCaptureDetail}
       />
       <PromotedCaptureDetailSheet

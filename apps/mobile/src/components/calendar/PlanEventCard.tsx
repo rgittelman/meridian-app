@@ -1,4 +1,5 @@
-import { Pressable, View } from 'react-native';
+import { ChevronRight, MapPin, Video } from 'lucide-react-native';
+import { View } from 'react-native';
 
 import { GradientCard } from '@/components/shared/surfaces/GradientCard';
 import { DomainBadge } from '@/components/shared/primitives/DomainBadge';
@@ -11,20 +12,67 @@ import { makeStyles, spacing } from '@/theme';
 type PlanEventCardProps = {
   event: MeridianCalendarEvent;
   onViewDetail: (event: MeridianCalendarEvent) => void;
-  onEdit: (event: MeridianCalendarEvent) => void;
 };
 
-export function PlanEventCard({ event, onViewDetail, onEdit }: PlanEventCardProps) {
+function formatDuration(start: Date, end: Date): string {
+  const mins = Math.round((end.getTime() - start.getTime()) / 60000);
+  if (mins <= 0) return '';
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+/** True if the location string looks like a physical address rather than a URL or virtual tag. */
+function isPhysicalLocation(location: string): boolean {
+  if (!location) return false;
+  const lower = location.toLowerCase();
+  return !(
+    lower.startsWith('http') ||
+    lower.includes('zoom.us') ||
+    lower.includes('meet.google') ||
+    lower.includes('teams.microsoft') ||
+    lower.includes('webex') ||
+    lower.includes('gotomeeting')
+  );
+}
+
+export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
   const { colors } = useTheme();
   const styles = useStyles();
   const accentColor = domainColorFor(colors, event.inferredLifeDomain);
 
+  const duration =
+    !event.allDay && event.startTime && event.endTime
+      ? formatDuration(event.startTime, event.endTime)
+      : null;
+
+  const meetingUrl = event.meetingUrl;
+  const meetingProvider: 'teams' | 'meet' | null = meetingUrl
+    ? meetingUrl.includes('teams.microsoft.com')
+      ? 'teams'
+      : meetingUrl.includes('meet.google.com')
+        ? 'meet'
+        : null
+    : null;
+
+  const physicalLocation =
+    !meetingUrl && event.location && isPhysicalLocation(event.location)
+      ? event.location
+      : null;
+
   return (
-    <GradientCard accentColor={accentColor} style={styles.cardOverride}>
+    <GradientCard
+      accentColor={accentColor}
+      style={styles.cardOverride}
+      onPress={() => onViewDetail(event)}
+      accessibilityRole="button"
+    >
       <View style={styles.row}>
         <View style={styles.badgeWrap}>
           <DomainBadge domain={event.inferredLifeDomain} variant="dot" size="sm" />
         </View>
+
         <View style={styles.content}>
           <Text
             variant="subhead"
@@ -34,13 +82,13 @@ export function PlanEventCard({ event, onViewDetail, onEdit }: PlanEventCardProp
           >
             {event.displayTitle ?? event.title}
           </Text>
+
           <View style={styles.metaRow}>
             <Text
               variant="footnote"
               style={styles.source}
               numberOfLines={1}
               maxFontSizeMultiplier={1.05}
-              accessibilityLabel={`Calendar context ${event.planAttributionLine ?? event.displaySourceLabel}`}
             >
               {event.planAttributionLine ?? event.displaySourceLabel}
             </Text>
@@ -50,31 +98,43 @@ export function PlanEventCard({ event, onViewDetail, onEdit }: PlanEventCardProp
             <Text variant="footnote" style={styles.time} maxFontSizeMultiplier={1.05}>
               {event.allDay ? 'All day' : event.displayTime}
             </Text>
+            {duration ? (
+              <>
+                <Text variant="footnote" style={styles.timeSep} maxFontSizeMultiplier={1.0}>
+                  ·
+                </Text>
+                <Text variant="footnote" style={styles.duration} maxFontSizeMultiplier={1.05}>
+                  {duration}
+                </Text>
+              </>
+            ) : null}
           </View>
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() => onViewDetail(event)}
-              style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-              accessibilityRole="button"
-              accessibilityLabel={`View details for ${event.title}`}
-              hitSlop={8}
-            >
-              <Text variant="footnote" style={styles.actionText}>
-                Details
+
+          {/* Meeting type indicator */}
+          {meetingProvider ? (
+            <View style={styles.tagRow}>
+              <Video size={11} color={colors.inkGhost} strokeWidth={1.75} />
+              <Text variant="caption" style={styles.tagText} maxFontSizeMultiplier={1.0}>
+                {meetingProvider === 'teams' ? 'Teams' : 'Google Meet'}
               </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => onEdit(event)}
-              style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-              accessibilityRole="button"
-              accessibilityLabel={`Edit ${event.title}`}
-              hitSlop={8}
-            >
-              <Text variant="footnote" style={styles.actionText}>
-                Edit
+            </View>
+          ) : physicalLocation ? (
+            <View style={styles.tagRow}>
+              <MapPin size={11} color={colors.inkGhost} strokeWidth={1.75} />
+              <Text
+                variant="caption"
+                style={styles.tagText}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.0}
+              >
+                {physicalLocation}
               </Text>
-            </Pressable>
-          </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.chevronWrap}>
+          <ChevronRight size={16} color={colors.inkGhost} strokeWidth={1.75} />
         </View>
       </View>
     </GradientCard>
@@ -82,17 +142,18 @@ export function PlanEventCard({ event, onViewDetail, onEdit }: PlanEventCardProp
 }
 
 const useStyles = makeStyles((c) => ({
-  // GradientCard default padding is spacing[4]; keep it — slightly more spacious than before
   cardOverride: {
     gap: 0,
   },
   row: {
     flexDirection: 'row' as const,
     gap: spacing[3],
-    alignItems: 'flex-start' as const,
+    alignItems: 'center' as const,
   },
   badgeWrap: {
-    paddingTop: 5,
+    paddingTop: 2,
+    alignSelf: 'flex-start' as const,
+    marginTop: 3,
   },
   content: {
     flex: 1,
@@ -104,8 +165,21 @@ const useStyles = makeStyles((c) => ({
     flexWrap: 'wrap' as const,
     gap: spacing[1],
   },
+  tagRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    marginTop: 1,
+  },
+  tagText: {
+    color: c.inkGhost,
+    flexShrink: 1,
+  },
   time: {
     color: c.planEventTime,
+  },
+  duration: {
+    color: c.inkGhost,
   },
   timeSep: {
     color: c.inkGhost,
@@ -115,23 +189,7 @@ const useStyles = makeStyles((c) => ({
     color: c.planEventSource,
     flexShrink: 1,
   },
-  actions: {
-    flexDirection: 'row' as const,
-    gap: spacing[4],
-    marginTop: spacing[2],
-  },
-  action: {
-    paddingVertical: spacing[1],
-    paddingHorizontal: spacing[2],
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: c.borderSubtle,
-  },
-  actionPressed: {
-    backgroundColor: c.surfaceMuted,
-  },
-  actionText: {
-    color: c.inkTertiary,
-    letterSpacing: 0.2,
+  chevronWrap: {
+    alignSelf: 'center' as const,
   },
 }));
