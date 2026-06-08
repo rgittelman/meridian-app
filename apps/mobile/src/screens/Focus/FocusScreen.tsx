@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusPill } from '@/components/shared/primitives/StatusPill';
 import type { StatusSentiment } from '@/components/shared/primitives/StatusPill';
+import { EventDetailSheet } from '@/components/events/EventDetailSheet';
 import { AmbientCapture } from '@/components/focus/AmbientCapture';
 import { CalmWins } from '@/components/focus/CalmWins';
 import { CompletionToast } from '@/components/focus/CompletionToast';
@@ -31,6 +32,7 @@ import { useResurfacingStore } from '@/store/resurfacingStore';
 import { FOCUS_MAX } from '@/constants/focus';
 import { TAB_ROUTES } from '@/constants/tabs';
 import { logFocusVisibleCount } from '@/services/quality/qualityDebug';
+import type { MeridianCalendarEvent } from '@/types/calendar';
 import type { RootTabParamList } from '@/types/navigation';
 import { screenPaddingHorizontal, spacing } from '@/theme';
 
@@ -57,23 +59,33 @@ export function FocusScreen() {
     useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const [snoozeTargetId, setSnoozeTargetId] = useState<string | null>(null);
   const [snoozeTargetTitle, setSnoozeTargetTitle] = useState<string | null>(null);
+  const [detailEvent, setDetailEvent] = useState<MeridianCalendarEvent | null>(null);
 
   const openCapture = useCallback(() => {
     navigation.navigate(TAB_ROUTES.Capture, { focusInput: true });
   }, [navigation]);
 
-  const openPlan = useCallback(() => {
-    navigation.navigate(TAB_ROUTES.Plan);
-  }, [navigation]);
-
   const {
     status: calendarStatus,
     weekEvents: calendarWeekEvents,
+    focusUpcoming,
     upcomingSchedule,
     continuityHint: calendarHint,
     configured: calendarConfigured,
     connect: connectCalendar,
   } = useCalendar();
+
+  // Open EventDetailSheet for a Coming Up chip — id is the full event id
+  const handleScheduleItemPress = useCallback((id: string) => {
+    const event = focusUpcoming.find((e) => e.id === id) ?? null;
+    if (event) setDetailEvent(event);
+  }, [focusUpcoming]);
+
+  // Open EventDetailSheet for a Before You Go prep card — eventId from PrepAwarenessItem
+  const handlePrepEventPress = useCallback((eventId: string) => {
+    const event = calendarWeekEvents.find((e) => e.id === eventId) ?? null;
+    if (event) setDetailEvent(event);
+  }, [calendarWeekEvents]);
   const calendarConnecting = calendarStatus === 'loading';
 
   const lifeSnapshot = useLifeIntelligence();
@@ -237,7 +249,7 @@ export function FocusScreen() {
           onConnect={connectCalendar}
           connecting={calendarConnecting}
           continuityHint={calendarHint}
-          onItemPress={openPlan}
+          onItemPress={handleScheduleItemPress}
         />
 
         {prepSnapshot.surfacedForFocus.length > 0 && (
@@ -247,7 +259,7 @@ export function FocusScreen() {
               <PrepAwarenessSection
                 items={prepSnapshot.surfacedForFocus}
                 overflowCount={prepSnapshot.focusPrepOverflowCount}
-                onPress={openPlan}
+                onEventPress={handlePrepEventPress}
               />
             </View>
           </>
@@ -275,6 +287,13 @@ export function FocusScreen() {
       </ScreenContainer>
 
       {/* ── Overlays ────────────────────────────────────────────────────── */}
+
+      {/* Event detail sheet — opened by tapping Coming Up chips or Before You Go cards */}
+      <EventDetailSheet
+        visible={detailEvent !== null}
+        event={detailEvent}
+        onClose={() => setDetailEvent(null)}
+      />
 
       {/* Completion undo toast — positioned above tab bar */}
       <CompletionToast

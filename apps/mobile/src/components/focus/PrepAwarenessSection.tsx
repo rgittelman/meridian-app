@@ -6,13 +6,19 @@ import { makeStyles, spacing } from '@/theme';
 type PrepAwarenessSectionProps = {
   items: PrepAwarenessItem[];
   overflowCount?: number;
-  /** Called when user taps the section. Navigates to Plan for full context. */
-  onPress?: () => void;
+  /** Called when user taps a prep card. Receives the related calendar event id. */
+  onEventPress?: (eventId: string) => void;
 };
 
-function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
+function PrepAwarenessCard({
+  item,
+  onPress,
+}: {
+  item: PrepAwarenessItem;
+  onPress?: () => void;
+}) {
   return (
-    <GradientCard style={cardStyle.inner} accessibilityRole="text">
+    <GradientCard style={cardStyle.inner} accessibilityRole={onPress ? 'button' : 'text'} onPress={onPress}>
       <Text variant="callout" color="ink" maxFontSizeMultiplier={1.1}>
         {item.primaryLabel}
       </Text>
@@ -38,7 +44,7 @@ function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
 export function PrepAwarenessSection({
   items,
   overflowCount = 0,
-  onPress,
+  onEventPress,
 }: PrepAwarenessSectionProps) {
   const styles = useStyles();
 
@@ -52,16 +58,16 @@ export function PrepAwarenessSection({
       : null;
 
   return (
-    <GradientCard
-      style={styles.wrap}
-      accessibilityRole={onPress ? 'button' : 'none'}
-      onPress={onPress}
-    >
+    <GradientCard style={styles.wrap} accessibilityRole="none">
       <Text variant="caption" color="inkTertiary" style={styles.eyebrow}>
         Before you go
       </Text>
       {items.map((item) => (
-        <PrepAwarenessCard key={item.id} item={item} />
+        <PrepAwarenessCard
+          key={item.id}
+          item={item}
+          onPress={onEventPress ? () => onEventPress(item.eventId) : undefined}
+        />
       ))}
       {overflowLine ? (
         <Text variant="footnote" color="inkGhost" maxFontSizeMultiplier={1.05}>
