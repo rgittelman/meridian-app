@@ -27,13 +27,13 @@ export const CHILD_SPORTS_PROFILES: ChildSportsProfile[] = [
     name: 'Quinn',
     personId: 'quinn',
     activities: ['hockey', 'football', 'school'],
-    leagueTokens: ['penguin', 'rangers/penguin', 'rangers penguin'],
+    leagueTokens: ['beaver', 'rangers/beaver', 'rangers beaver'],
   },
   {
     name: 'Hudson',
     personId: 'hudson',
     activities: ['hockey', 'football', 'school'],
-    leagueTokens: ['beaver', 'rangers/beaver', 'rangers beaver'],
+    leagueTokens: ['penguin', 'rangers/penguin', 'rangers penguin'],
   },
 ];
 
@@ -63,16 +63,16 @@ export function inferChildFromSportsTitle(
 
   if (/rangers\s*\/\s*beaver|beaver\s+division/i.test(text)) {
     return {
-      name: 'Hudson',
-      personId: 'hudson',
+      name: 'Quinn',
+      personId: 'quinn',
       confidence: 'high',
       reason: 'teamsnap_beaver_division',
     };
   }
   if (/rangers\s*\/\s*penguin|penguin\s+division/i.test(text)) {
     return {
-      name: 'Quinn',
-      personId: 'quinn',
+      name: 'Hudson',
+      personId: 'hudson',
       confidence: 'high',
       reason: 'teamsnap_penguin_division',
     };
@@ -80,16 +80,16 @@ export function inferChildFromSportsTitle(
 
   if (/\bbeaver\b/i.test(text) && /rangers|division|hockey|teamsnap/i.test(text)) {
     return {
-      name: 'Hudson',
-      personId: 'hudson',
+      name: 'Quinn',
+      personId: 'quinn',
       confidence: 'medium',
       reason: 'beaver_league_token',
     };
   }
   if (/\bpenguin\b/i.test(text) && /rangers|division|hockey|teamsnap/i.test(text)) {
     return {
-      name: 'Quinn',
-      personId: 'quinn',
+      name: 'Hudson',
+      personId: 'hudson',
       confidence: 'medium',
       reason: 'penguin_league_token',
     };
