@@ -269,9 +269,9 @@ export function EventDetailSheet({
                   accessibilityRole="link"
                   accessibilityLabel={meetingCardLabel}
                 >
-                  <View style={[styles.meetingIconBox, { backgroundColor: joinColor + '22' }]}>
+                  <View style={[styles.meetingIconBox, { backgroundColor: joinColor + '18' }]}>
                     {meetingProvider === 'teams' ? (
-                      <TeamsLogo size={20} />
+                      <TeamsLogo size={22} />
                     ) : (
                       <Video size={16} color={joinColor} strokeWidth={2} />
                     )}
@@ -347,7 +347,7 @@ export function EventDetailSheet({
               accessibilityLabel={joinLabel}
             >
               {meetingProvider === 'teams' ? (
-                <TeamsLogo size={20} />
+                <TeamsLogo size={22} onBackground />
               ) : (
                 <Video size={18} color="#fff" strokeWidth={2} />
               )}
@@ -523,8 +523,8 @@ const useStyles = makeStyles((c) => ({
   },
   meetingCardPressed: { backgroundColor: c.surfaceMuted },
   meetingIconBox: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: radius.sm,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
