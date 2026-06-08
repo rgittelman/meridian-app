@@ -11,7 +11,7 @@
 
 ---
 
-## Eight principles — the design application framework
+## Nine principles — the design application framework
 
 When building or reviewing any screen, apply these in order:
 
@@ -31,16 +31,26 @@ Actions should be unambiguous.
 
 Do not build screens where everything is the same visual weight.
 
+**This is the difference between a calendar app and a decision-making app.**
+When the user opens Meridian, the first answer they get is "what matters most right now?"
+— not "here is a list of events." Hero → Context → Action enforces that contract.
+
 ### 3. Screen subtitles
 Every primary screen has a short, human-voice subtitle under its title.
 Not a category label. Not a system description. A sentence that a person would say.
 
-> "Stay in the zone. Get what matters done."  
-> "Map your day. Time for what moves you forward."  
-> "Your world at a glance. All the pieces that matter."
+**Authoritative subtitle copy (locked):**
 
-These are not decorative. They carry tone. They make Meridian feel like a product that
-cares about the person using it, not just the data it displays.
+| Screen | Subtitle |
+|---|---|
+| Focus | "Stay present. Protect what matters today." |
+| Plan | "See the shape of your week before it shapes you." |
+| Life | "Your world at a glance. All the pieces that matter." |
+| Capture | "Get it out of your head. We'll help organize it." |
+
+These are not orientation labels — they are product voice. They tell the user not just
+*what the screen is* but *why they should care*. Screen subtitles are not optional,
+not decorative, and not marketing copy. They are the product talking to the person.
 
 ### 4. Rich iconography
 Icons are not bullets. Domain icons (heart, briefcase, leaf, star) carry emotional meaning.
@@ -79,6 +89,25 @@ Meridian earns the user's trust by showing what is actually true — their real 
 their real captured items, their real time distribution.
 
 If a number appears on screen, it is a real number from real data.
+
+**The inspiration image cheats.** Numbers like "67%", "87%", "Balanced", "On Track" in the
+reference image are compositional props, not real outputs. Meridian must earn every number
+it shows. If we cannot explain the source of a stat from real user data, we do not show it.
+This is the standard that separates Meridian from the category.
+
+### 9. Progressive disclosure
+Information is revealed in layers. Never show everything at once.
+
+Every screen has a natural depth sequence:
+- **Hero** — the single most important thing on this screen right now
+- **Summary** — the minimal supporting context that makes the hero meaningful
+- **Details** — everything else, available on tap or scroll, never competing with the summary
+
+This applies at every level: screens, cards, sheets, and inline rows. A card shows title +
+time. A detail sheet shows the full event. A notes block is collapsed until tapped.
+
+Progressive disclosure is why the app feels calm even when the user's week is packed.
+Information density increases as the user asks for it — not by default.
 
 ---
 
