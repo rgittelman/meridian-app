@@ -6,6 +6,8 @@ import { makeStyles, spacing } from '@/theme';
 type PrepAwarenessSectionProps = {
   items: PrepAwarenessItem[];
   overflowCount?: number;
+  /** Called when user taps the section. Navigates to Plan for full context. */
+  onPress?: () => void;
 };
 
 function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
@@ -36,6 +38,7 @@ function PrepAwarenessCard({ item }: { item: PrepAwarenessItem }) {
 export function PrepAwarenessSection({
   items,
   overflowCount = 0,
+  onPress,
 }: PrepAwarenessSectionProps) {
   const styles = useStyles();
 
@@ -49,7 +52,11 @@ export function PrepAwarenessSection({
       : null;
 
   return (
-    <GradientCard style={styles.wrap} accessibilityRole="none">
+    <GradientCard
+      style={styles.wrap}
+      accessibilityRole={onPress ? 'button' : 'none'}
+      onPress={onPress}
+    >
       <Text variant="caption" color="inkTertiary" style={styles.eyebrow}>
         Before you go
       </Text>

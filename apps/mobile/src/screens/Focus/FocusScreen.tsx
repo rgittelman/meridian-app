@@ -62,6 +62,10 @@ export function FocusScreen() {
     navigation.navigate(TAB_ROUTES.Capture, { focusInput: true });
   }, [navigation]);
 
+  const openPlan = useCallback(() => {
+    navigation.navigate(TAB_ROUTES.Plan);
+  }, [navigation]);
+
   const {
     status: calendarStatus,
     weekEvents: calendarWeekEvents,
@@ -233,6 +237,7 @@ export function FocusScreen() {
           onConnect={connectCalendar}
           connecting={calendarConnecting}
           continuityHint={calendarHint}
+          onItemPress={openPlan}
         />
 
         {prepSnapshot.surfacedForFocus.length > 0 && (
@@ -242,6 +247,7 @@ export function FocusScreen() {
               <PrepAwarenessSection
                 items={prepSnapshot.surfacedForFocus}
                 overflowCount={prepSnapshot.focusPrepOverflowCount}
+                onPress={openPlan}
               />
             </View>
           </>

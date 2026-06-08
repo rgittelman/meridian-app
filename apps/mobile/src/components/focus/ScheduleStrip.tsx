@@ -1,5 +1,5 @@
 import { Calendar } from 'lucide-react-native';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { Text } from '@/components/typography/Text';
 import { ConnectCalendarCard } from '@/components/calendar/ConnectCalendarCard';
@@ -20,19 +20,22 @@ function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-type ScheduleChipProps = { item: ScheduleItem };
+type ScheduleChipProps = { item: ScheduleItem; onPress?: (id: string) => void };
 
-function ScheduleChip({ item }: ScheduleChipProps) {
+function ScheduleChip({ item, onPress }: ScheduleChipProps) {
   const { colors } = useTheme();
   const styles = useChipStyles();
   const initials = item.person ? getInitials(item.person) : null;
   const isFree = item.isFree ?? false;
 
   return (
-    <View
-      style={[styles.chip, isFree && styles.chipFree]}
+    <TouchableOpacity
+      onPress={onPress ? () => onPress(item.id) : undefined}
+      activeOpacity={onPress ? 0.7 : 1}
       accessibilityLabel={`${item.label} at ${item.time}`}
+      accessibilityRole={onPress ? 'button' : 'text'}
     >
+      <View style={[styles.chip, isFree && styles.chipFree]}>
       <View style={[styles.avatar, isFree && styles.avatarFree]}>
         {initials ? (
           <Text variant="footnote" style={styles.initials} maxFontSizeMultiplier={1.0}>
@@ -61,7 +64,8 @@ function ScheduleChip({ item }: ScheduleChipProps) {
           {item.time}
         </Text>
       </View>
-    </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -72,6 +76,8 @@ type ScheduleStripProps = {
   onConnect?: () => void;
   connecting?: boolean;
   continuityHint?: string | null;
+  /** Called when user taps a schedule chip. Receives the ScheduleItem id. */
+  onItemPress?: (id: string) => void;
 };
 
 export function ScheduleStrip({
@@ -81,6 +87,7 @@ export function ScheduleStrip({
   onConnect,
   connecting = false,
   continuityHint,
+  onItemPress,
 }: ScheduleStripProps) {
   const padH = screenPaddingHorizontal;
 
@@ -164,7 +171,7 @@ export function ScheduleStrip({
           accessibilityLabel="Upcoming schedule"
         >
           {items.map((item) => (
-            <ScheduleChip key={item.id} item={item} />
+            <ScheduleChip key={item.id} item={item} onPress={onItemPress} />
           ))}
           <View style={staticStyles.trailingSpace} />
         </ScrollView>
