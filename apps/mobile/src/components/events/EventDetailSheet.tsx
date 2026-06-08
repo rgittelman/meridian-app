@@ -493,10 +493,10 @@ const useStyles = makeStyles((c) => ({
   },
   // Day chip
   dayChip: {
-    color: '#6264A7',
     letterSpacing: 0.5,
     fontWeight: '600' as const,
     fontSize: 11,
+    color: c.inkTertiary,
   },
   title: { maxWidth: 340 },
   meta: {
@@ -545,7 +545,7 @@ const useStyles = makeStyles((c) => ({
     padding: spacing[3],
   },
   locationTextBlock: { flex: 1, gap: 2 },
-  locationAddress: { color: '#4B6EE8' },
+  locationAddress: { color: c.inkSecondary },
   // Join CTA button
   joinBtn: {
     flexDirection: 'row' as const,
@@ -561,9 +561,7 @@ const useStyles = makeStyles((c) => ({
     fontWeight: '600' as const,
     flex: 1,
   },
-  joinChevron: {
-    marginLeft: 'auto' as const,
-  },
+  joinChevron: {},
   // Attendees
   attendeeRow: {
     flexDirection: 'row' as const,

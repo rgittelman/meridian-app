@@ -107,7 +107,7 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
               {meetingProvider === 'teams' ? (
                 <TeamsLogo size={12} />
               ) : (
-                <Video size={11} color={colors.inkGhost} strokeWidth={1.75} />
+                <Video size={13} color={colors.inkGhost} strokeWidth={1.75} />
               )}
               <Text variant="caption" style={styles.tagText} maxFontSizeMultiplier={1.0}>
                 {meetingProvider === 'teams' ? 'Microsoft Teams' : 'Google Meet'}
@@ -115,7 +115,7 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
             </View>
           ) : physicalLocation ? (
             <View style={styles.tagRow}>
-              <MapPin size={11} color={colors.inkGhost} strokeWidth={1.75} />
+              <MapPin size={13} color={colors.inkGhost} strokeWidth={1.75} />
               <Text
                 variant="caption"
                 style={styles.tagText}
