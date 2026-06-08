@@ -1,4 +1,4 @@
-import { ChevronRight, MapPin, Pencil, Video, X } from 'lucide-react-native';
+import { ChevronRight, ExternalLink, MapPin, Pencil, Video, X } from 'lucide-react-native';
 import { TeamsLogo } from '@/components/shared/icons/TeamsLogo';
 import { useState } from 'react';
 import {
@@ -89,6 +89,16 @@ function relativeDayLabel(date: Date): string {
   if (diff === 0) return 'TODAY';
   if (diff === 1) return 'TOMORROW';
   return date.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
+}
+
+/** Derives 1–2 initials from a display name or email. */
+function getInitials(name: string): string {
+  // email fallback — use first two chars before @
+  if (name.includes('@')) return name.slice(0, 2).toUpperCase();
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function LinkedCaptureRow({ item }: { item: LifeObject }) {
@@ -199,7 +209,7 @@ export function EventDetailSheet({
             </Pressable>
           ) : (
             <View style={styles.viewOnlyBadge}>
-              <Text variant="caption" color="inkGhost" style={styles.viewOnlyText}>
+              <Text variant="caption" style={styles.viewOnlyText}>
                 View only
               </Text>
             </View>
@@ -297,9 +307,12 @@ export function EventDetailSheet({
                       <Text variant="body" style={styles.locationAddress} maxFontSizeMultiplier={1.1}>
                         {physicalLocation}
                       </Text>
-                      <Text variant="caption" color="inkGhost">
-                        Open in Maps ↗
-                      </Text>
+                      <View style={styles.openMapsRow}>
+                        <Text variant="caption" color="inkGhost">
+                          Open in Maps
+                        </Text>
+                        <ExternalLink size={11} color={colors.inkGhost} strokeWidth={1.75} />
+                      </View>
                     </View>
                   </View>
                 </Pressable>
@@ -366,9 +379,15 @@ export function EventDetailSheet({
               </Text>
               {event.attendees.slice(0, 8).map((a, i) => {
                 const name = cleanAttendeeName(a.displayName) ?? a.email ?? 'Guest';
+                const initials = getInitials(name);
                 const rsvp = a.responseStatus ? RSVP_LABEL[a.responseStatus] : null;
                 return (
                   <View key={`${a.email ?? a.displayName ?? i}`} style={styles.attendeeRow}>
+                    <View style={styles.attendeeAvatar}>
+                      <Text variant="caption" style={styles.attendeeInitials} maxFontSizeMultiplier={1.0}>
+                        {initials}
+                      </Text>
+                    </View>
                     <Text variant="footnote" color="inkSecondary" style={styles.attendeeName}>
                       {name}
                     </Text>
@@ -471,20 +490,22 @@ const useStyles = makeStyles((c) => ({
     width: 36,
     height: 36,
     borderRadius: radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.borderSubtle,
+    backgroundColor: c.surfaceMuted,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
-  topBarBtnPressed: { backgroundColor: c.surfaceMuted },
+  topBarBtnPressed: { opacity: 0.6 },
   viewOnlyBadge: {
-    paddingVertical: spacing[1],
-    paddingHorizontal: spacing[2],
-    borderRadius: radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.borderSubtle,
+    paddingVertical: spacing[1] + 2,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.full,
+    backgroundColor: c.surfaceMuted,
   },
-  viewOnlyText: { letterSpacing: 0.2 },
+  viewOnlyText: {
+    letterSpacing: 0.2,
+    color: c.inkSecondary,
+    fontWeight: '500' as const,
+  },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing[5],
@@ -562,11 +583,36 @@ const useStyles = makeStyles((c) => ({
     flex: 1,
   },
   joinChevron: {},
+  // Location card open-maps affordance
+  openMapsRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
   // Attendees
   attendeeRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: spacing[2],
+    minHeight: 32,
+  },
+  attendeeAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.full,
+    backgroundColor: c.surfaceMuted,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    flexShrink: 0,
+  },
+  attendeeInitials: {
+    color: c.inkSecondary,
+    fontSize: 11,
+    fontWeight: '600' as const,
+    letterSpacing: 0.3,
+    lineHeight: 14,
   },
   attendeeName: { flex: 1 },
   rsvpChip: {
