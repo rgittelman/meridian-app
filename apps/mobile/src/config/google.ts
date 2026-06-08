@@ -66,12 +66,32 @@ export function googleInstalledAppRedirectUri(clientId: string): string {
 }
 
 /**
+ * Returns true when Android native Google Sign-In is available.
+ * Android uses @react-native-google-signin/google-signin instead of a browser-based
+ * OAuth flow — `resolveGoogleOAuthConfig` returns null on Android intentionally.
+ */
+export function isAndroidNativeSignInConfigured(): boolean {
+  const ids = getGoogleClientIds();
+  return Platform.OS === 'android' && Boolean(ids.android);
+}
+
+/**
  * Picks client + redirect for the current platform.
- * iOS dev client: prefer iOS OAuth client (bundle com.meridian.app in Console).
- * Fallback: Web client + http://127.0.0.1 (add that URI in Web client settings).
+ *
+ * Android: returns null — OAuth is handled natively via @react-native-google-signin.
+ *   Android-type OAuth clients require the native Google Sign-In SDK to verify the
+ *   APK's SHA-1 signature. expo-auth-session uses Chrome Custom Tabs (a browser flow),
+ *   so Google cannot verify the caller — any browser-based flow produces Error 400.
+ *
+ * iOS: prefer iOS OAuth client. Fallback: Web client + http://127.0.0.1.
  */
 export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
   const ids = getGoogleClientIds();
+
+  // Android uses native sign-in — no browser OAuth config needed.
+  if (Platform.OS === 'android') {
+    return null;
+  }
 
   if (__DEV__ && Platform.OS === 'ios' && !ids.ios) {
     console.warn(
@@ -85,14 +105,6 @@ export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
       clientId: ids.ios,
       redirectUri: googleInstalledAppRedirectUri(ids.ios),
       source: 'ios',
-    };
-  }
-
-  if (Platform.OS === 'android' && ids.android) {
-    return {
-      clientId: ids.android,
-      redirectUri: googleInstalledAppRedirectUri(ids.android),
-      source: 'android',
     };
   }
 
@@ -123,7 +135,7 @@ export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
 }
 
 export function isGoogleOAuthConfigured(): boolean {
-  return resolveGoogleOAuthConfig() !== null;
+  return resolveGoogleOAuthConfig() !== null || isAndroidNativeSignInConfigured();
 }
 
 export function getOAuthRedirectMode(

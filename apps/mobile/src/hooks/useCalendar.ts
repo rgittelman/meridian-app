@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import { isGoogleOAuthConfigured } from '@/config/google';
 import {
@@ -118,7 +119,9 @@ export function useCalendar() {
   }, [configured]);
 
   const connect = useCallback(async () => {
-    if (!configured || !authRequest) {
+    // On Android, authRequest is null by design — native sign-in is used instead.
+    const needsAuthRequest = Platform.OS !== 'android';
+    if (!configured || (needsAuthRequest && !authRequest)) {
       setStatus('auth_failed');
       return;
     }
@@ -129,7 +132,7 @@ export function useCalendar() {
       await logGoogleOAuthDebug(authRequest);
       const oauth = await promptGoogleOAuth(authRequest);
 
-      if (oauth.outcome === 'success' && 'code' in oauth) {
+      if (oauth.outcome === 'success' && 'code' in oauth && authRequest) {
         const ok = await finishOAuth(authRequest, oauth.code);
         if (!ok && __DEV__) {
           logCalendarDebug('connect: finishOAuth returned false', {
