@@ -14,6 +14,7 @@ import { applyEventDisplayToEvent } from '@/services/relevance/humanizeEventDisp
 import { inferFromEvent } from '@/services/people/inferFromEvent';
 import { classifyEventSignal } from './eventFilters';
 import {
+  extractTeamsUrlFromDescription,
   parseConferenceData,
   parseGoogleAttendees,
   parseGooglePerson,
@@ -146,10 +147,14 @@ export function normalizeGoogleEvent(
   const legacy = legacyFieldsFromAttribution(attribution, title, description);
   const displaySourceLabel = attribution.sourceCalendarDisplayLabel;
 
-  const { conferenceData, meetingUrl } = parseConferenceData(
+  const { conferenceData, meetingUrl: conferenceMeetingUrl } = parseConferenceData(
     raw.conferenceData,
     raw.hangoutLink,
   );
+  // Fall back to extracting a Teams join URL from the description when no
+  // conferenceData entry was provided (Teams adds its URL to the description
+  // rather than using Google's conferenceData structure).
+  const meetingUrl = conferenceMeetingUrl ?? extractTeamsUrlFromDescription(description);
 
   const event: MeridianCalendarEvent = {
     id: `${calendar.sourceCalendarId}:${raw.id}`,

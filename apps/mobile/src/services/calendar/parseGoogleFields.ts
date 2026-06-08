@@ -36,6 +36,19 @@ export function parseGooglePerson(
   };
 }
 
+/**
+ * Extracts a Microsoft Teams join URL from a calendar event description.
+ * Teams invites embed the URL as <https://teams.microsoft.com/l/meetup-join/...>
+ * in the description text rather than using Google's conferenceData structure.
+ */
+export function extractTeamsUrlFromDescription(description?: string): string | undefined {
+  if (!description) return undefined;
+  const match = description.match(
+    /<?(https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^\s<>]+)>?/i,
+  );
+  return match?.[1];
+}
+
 export function parseConferenceData(
   raw?: GoogleApiEvent['conferenceData'],
   hangoutLink?: string,

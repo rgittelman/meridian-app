@@ -95,9 +95,20 @@ export function EventDetailSheet({
       ? description.slice(0, 220).trim() + '…'
       : description;
 
+  const meetingUrl = event.meetingUrl;
+  // Detect provider for button label — Teams URLs contain teams.microsoft.com
+  const meetingProvider: 'teams' | 'meet' | 'other' = meetingUrl
+    ? meetingUrl.includes('teams.microsoft.com')
+      ? 'teams'
+      : meetingUrl.includes('meet.google.com')
+        ? 'meet'
+        : 'other'
+    : 'meet';
+  const joinLabel =
+    meetingProvider === 'teams' ? 'Join Teams' : meetingProvider === 'meet' ? 'Join Meet' : 'Join';
+
   const handleJoinMeet = () => {
-    const url = event.meetingUrl;
-    if (url) void Linking.openURL(url);
+    if (meetingUrl) void Linking.openURL(meetingUrl);
   };
 
   return (
@@ -163,15 +174,15 @@ export function EventDetailSheet({
             </Text>
           )}
 
-          {event.meetingUrl ? (
+          {meetingUrl ? (
             <Pressable
               onPress={handleJoinMeet}
               style={({ pressed }) => [styles.meetBtn, pressed && styles.meetPressed]}
               accessibilityRole="link"
-              accessibilityLabel="Join Google Meet"
+              accessibilityLabel={joinLabel}
             >
               <Text variant="subhead" style={styles.meetText}>
-                Join Meet
+                {joinLabel}
               </Text>
             </Pressable>
           ) : null}
