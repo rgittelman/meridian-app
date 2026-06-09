@@ -1,5 +1,6 @@
-import { ChevronRight, ExternalLink, MapPin, Pencil, Video, X } from 'lucide-react-native';
+import { ChevronRight, ExternalLink, MapPin, Pencil, X } from 'lucide-react-native';
 import { TeamsLogo } from '@/components/shared/icons/TeamsLogo';
+import { GoogleMeetLogo } from '@/components/shared/icons/GoogleMeetLogo';
 import { useState } from 'react';
 import {
   Linking,
@@ -283,7 +284,7 @@ export function EventDetailSheet({
                     {meetingProvider === 'teams' ? (
                       <TeamsLogo size={22} />
                     ) : (
-                      <Video size={16} color={joinColor} strokeWidth={2} />
+                      <GoogleMeetLogo size={22} />
                     )}
                   </View>
                   <Text variant="subhead" color="ink" style={styles.meetingCardLabel} numberOfLines={1}>
@@ -360,7 +361,7 @@ export function EventDetailSheet({
               {meetingProvider === 'teams' ? (
                 <TeamsLogo size={22} onBackground />
               ) : (
-                <Video size={18} color="#fff" strokeWidth={2} />
+                <GoogleMeetLogo size={22} onBackground />
               )}
               <Text variant="subhead" style={styles.joinBtnText}>
                 {joinLabel}
