@@ -148,13 +148,6 @@ export function EventDetailSheet({
 
   const meetingCardLabel =
     meetingProvider === 'teams'
-      ? 'Microsoft Teams Meeting'
-      : meetingProvider === 'meet'
-        ? 'Google Meet'
-        : 'Virtual Meeting';
-
-  const joinLabel =
-    meetingProvider === 'teams'
       ? 'Join Teams'
       : meetingProvider === 'meet'
         ? 'Join Google Meet'
@@ -272,25 +265,27 @@ export function EventDetailSheet({
                 {meetingProvider ? 'Location / Meeting' : 'Location'}
               </Text>
 
-              {/* Meeting type card — tappable */}
+              {/* Meeting CTA card — tappable, branded background */}
               {meetingProvider ? (
                 <Pressable
                   onPress={handleJoinMeeting}
-                  style={({ pressed }) => [styles.meetingCard, pressed && styles.meetingCardPressed]}
+                  style={({ pressed }) => [
+                    styles.meetingCard,
+                    { backgroundColor: joinColor + '28' },
+                    pressed && styles.meetingCardPressed,
+                  ]}
                   accessibilityRole="link"
                   accessibilityLabel={meetingCardLabel}
                 >
-                  <View style={[styles.meetingIconBox, { backgroundColor: joinColor + '18' }]}>
-                    {meetingProvider === 'teams' ? (
-                      <TeamsLogo size={22} />
-                    ) : (
-                      <GoogleMeetLogo size={22} />
-                    )}
-                  </View>
+                  {meetingProvider === 'teams' ? (
+                    <TeamsLogo size={24} />
+                  ) : (
+                    <GoogleMeetLogo size={24} />
+                  )}
                   <Text variant="subhead" color="ink" style={styles.meetingCardLabel} numberOfLines={1}>
                     {meetingCardLabel}
                   </Text>
-                  <ChevronRight size={16} color={colors.inkGhost} strokeWidth={1.75} />
+                  <ChevronRight size={16} color={colors.inkSecondary} strokeWidth={1.75} />
                 </Pressable>
               ) : null}
 
@@ -346,29 +341,6 @@ export function EventDetailSheet({
             </View>
           ) : null}
 
-          {/* Primary Join CTA — below notes, full-width prominent */}
-          {meetingProvider ? (
-            <Pressable
-              onPress={handleJoinMeeting}
-              style={({ pressed }) => [
-                styles.joinBtn,
-                { backgroundColor: joinColor },
-                pressed && styles.joinBtnPressed,
-              ]}
-              accessibilityRole="link"
-              accessibilityLabel={joinLabel}
-            >
-              {meetingProvider === 'teams' ? (
-                <TeamsLogo size={22} onBackground />
-              ) : (
-                <GoogleMeetLogo size={22} onBackground />
-              )}
-              <Text variant="subhead" style={styles.joinBtnText}>
-                {joinLabel}
-              </Text>
-              <ChevronRight size={18} color="#fff" strokeWidth={2} style={styles.joinChevron} />
-            </Pressable>
-          ) : null}
 
           {/* Attendees */}
           {event.attendees.length > 0 && (
@@ -545,7 +517,7 @@ const useStyles = makeStyles((c) => ({
     padding: spacing[4],
     gap: spacing[2],
   },
-  // Meeting type card — no border; surfaceMuted fill creates depth without outlines
+  // Meeting CTA card — branded tinted background, action label
   meetingCard: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -553,16 +525,8 @@ const useStyles = makeStyles((c) => ({
     paddingVertical: spacing[4],
     paddingHorizontal: spacing[4],
     borderRadius: radius.lg,
-    backgroundColor: c.surfaceMuted,
   },
   meetingCardPressed: { opacity: 0.7 },
-  meetingIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
   meetingCardLabel: { flex: 1 },
   // Location card — no border; surfaceMuted fill; larger radius
   locationCard: {
@@ -584,22 +548,6 @@ const useStyles = makeStyles((c) => ({
     alignItems: 'center' as const,
     gap: 4,
   },
-  // Join CTA — pill-ish, filled brand color, generous padding
-  joinBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: spacing[3],
-    paddingVertical: 18,
-    paddingHorizontal: spacing[5],
-    borderRadius: radius.xl,
-  },
-  joinBtnPressed: { opacity: 0.85 },
-  joinBtnText: {
-    color: '#fff',
-    fontWeight: '600' as const,
-    flex: 1,
-  },
-  joinChevron: {},
   // Attendees
   attendeeRow: {
     flexDirection: 'row' as const,
