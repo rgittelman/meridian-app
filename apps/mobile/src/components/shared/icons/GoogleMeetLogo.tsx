@@ -1,41 +1,27 @@
 /**
- * Google Meet logo — inline SVG component.
+ * Google Meet logo — official SVG geometry via react-native-svg.
  *
- * Replicates the current Google Meet brand icon using only Rect, Circle, and
- * Polygon primitives (no Path, no bezier curves, no fonts, no images).
+ * Paths and polygons are taken directly from the official Google Meet SVG
+ * (google-meet-svgrepo-com.svg, viewBox "0 -22.5 256 256").
  *
- * Full-color layout (onBackground=false):
- *   Camera body (left ~62% of icon) split into two Google colors:
- *     Blue   (#4285F4) — upper body
- *     Green  (#34A853) — lower body strip
- *   V-fin (right ~38%, two triangles meeting at vertical center):
- *     Red    (#EA4335) — upper fin triangle
- *     Yellow (#FBBC04) — lower fin triangle
+ * Seven shapes, seven Google brand colors:
+ *   #00832D  green  — upper fin
+ *   #0066DA  blue   — bottom-left corner
+ *   #E94235  red    — top-left corner
+ *   #2684FC  blue   — left column body
+ *   #00AC47  green  — right fin + bottom area
+ *   #FFBA00  yellow — top area
  *
- * On-background layout (onBackground=true):
- *   Blue rounded-square tile with a white camera body + white fin.
- *   Matches Teams logo treatment on the Join CTA button.
- *
- * Two-tier rendering:
- *   ≤ 16px  →  body + fin, no lens (max legibility at tag-row scale)
- *   > 16px  →  body + fin + white lens circle (depth cue at card/CTA scale)
- *
- * Viewbox 40×40 — consistent with TeamsLogoSmall.
+ * onBackground: white camera silhouette on a #1A73E8 tile — matches the
+ * Join Teams treatment and the spec.
  */
-import Svg, { Circle, Polygon, Rect } from 'react-native-svg';
+import Svg, { Path, Polygon, Rect } from 'react-native-svg';
 
-// Google brand palette
-const BLUE   = '#4285F4';
-const RED    = '#EA4335';
-const YELLOW = '#FBBC04';
-const GREEN  = '#34A853';
-
-// Meet CTA button color — matches MEET_COLOR in EventDetailSheet
 const TILE_BLUE = '#1A73E8';
 
 type GoogleMeetLogoProps = {
   size?: number;
-  /** Set true when rendering on a filled colored background — uses a white icon on a blue tile. */
+  /** Renders a white camera on a blue tile — for use inside the Join CTA button. */
   onBackground?: boolean;
 };
 
@@ -43,74 +29,57 @@ export function GoogleMeetLogo({ size = 24, onBackground = false }: GoogleMeetLo
   if (onBackground) {
     return <GoogleMeetOnBackground size={size} />;
   }
-  return size <= 16 ? (
-    <GoogleMeetLogoSmall size={size} />
-  ) : (
-    <GoogleMeetLogoFull size={size} />
-  );
+  return <GoogleMeetFullColor size={size} />;
 }
 
-// ─── Full-color small tier (≤ 16px) ──────────────────────────────────────────
-// Body + fin only, no lens.
-// Camera body: x=1..25, y=3..37  — chamfered corners on the left edge (≈3px bevel)
-// Red fin:   triangle upper-right, points meeting at (25, 20)
-// Yellow fin: triangle lower-right, points meeting at (25, 20)
-// Green strip: bottom ~30% of body
-function GoogleMeetLogoSmall({ size }: { size: number }) {
+// ─── Full-color logo ──────────────────────────────────────────────────────────
+// Official geometry, viewBox "0 -22.5 256 256".
+function GoogleMeetFullColor({ size }: { size: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 40 40">
-      {/* Blue — upper camera body (chamfered top-left + bottom-left corners) */}
+    <Svg width={size} height={size} viewBox="0 -22.5 256 256">
+      {/* Upper fin — dark green */}
       <Polygon
-        points="5,3 24,3 24,20 1,20 1,7"
-        fill={BLUE}
+        fill="#00832D"
+        points="144.822496,105.321856 169.778926,133.848796 203.341343,155.294133 209.178931,105.50196 203.341343,56.8331137 169.136495,75.6715889"
       />
-      {/* Green — lower camera body */}
+      {/* Bottom-left corner — blue */}
+      <Path
+        fill="#0066DA"
+        d="M0.000557021739,150.659712 L0.000557021739,193.089915 C0.000557021739,202.77838 7.86384724,210.643527 17.5541688,210.643527 L59.9843714,210.643527 L68.7704609,178.585069 L59.9843714,150.659712 L30.8744153,141.873623 L0.000557021739,150.659712 Z"
+      />
+      {/* Top-left corner — red */}
       <Polygon
-        points="1,20 24,20 24,37 5,37 1,33"
-        fill={GREEN}
+        fill="#E94235"
+        points="59.9838143,0 0,59.9838143 30.875715,68.7494798 59.9838143,59.9838143 68.6102243,32.4390893"
       />
-      {/* Red — upper fin */}
-      <Polygon points="25,7 37,16 25,20" fill={RED} />
-      {/* Yellow — lower fin */}
-      <Polygon points="25,20 37,26 25,33" fill={YELLOW} />
-    </Svg>
-  );
-}
-
-// ─── Full-color large tier (> 16px) ──────────────────────────────────────────
-// Same geometry + white lens circle for depth at 18–24px.
-function GoogleMeetLogoFull({ size }: { size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 40 40">
-      {/* Blue — upper camera body */}
+      {/* Left column body — blue */}
       <Polygon
-        points="5,3 24,3 24,20 1,20 1,7"
-        fill={BLUE}
+        fill="#2684FC"
+        points="0.000557021739,150.679394 59.9843714,150.679394 59.9843714,59.9832573 0.000557021739,59.9832573"
       />
-      {/* Green — lower camera body */}
-      <Polygon
-        points="1,20 24,20 24,37 5,37 1,33"
-        fill={GREEN}
+      {/* Right fin — green */}
+      <Path
+        fill="#00AC47"
+        d="M241.658683,25.3977775 L203.341157,56.8342278 L203.341157,155.29339 L241.818362,186.852385 C247.577967,191.364261 256.003849,187.251584 256.003849,179.930462 L256.003849,32.1785888 C256.003849,24.7757699 247.377439,20.6835169 241.658683,25.3977775"
       />
-      {/* Red — upper fin */}
-      <Polygon points="25,7 37,16 25,20" fill={RED} />
-      {/* Yellow — lower fin */}
-      <Polygon points="25,20 37,26 25,33" fill={YELLOW} />
-      {/* Lens circle — white, subtle, sits centred in the body */}
-      <Circle cx={12} cy={20} r={7} fill="rgba(255,255,255,0.22)" />
+      {/* Bottom area — green */}
+      <Path
+        fill="#00AC47"
+        d="M144.822496,105.321856 L144.822496,150.659712 L59.9843714,150.659712 L59.9843714,210.643527 L185.787731,210.643527 C195.478053,210.643527 203.341343,202.77838 203.341343,193.089915 L203.341343,155.294133 L144.822496,105.321856 Z"
+      />
+      {/* Top area — yellow */}
+      <Path
+        fill="#FFBA00"
+        d="M185.787731,0 L59.9843714,0 L59.9843714,59.9838143 L144.822496,59.9838143 L144.822496,105.32167 L203.341343,56.832928 L203.341343,17.5536117 C203.341343,7.86329022 195.478053,0 185.787731,0"
+      />
     </Svg>
   );
 }
 
 // ─── On-background (white camera on blue tile) ────────────────────────────────
 // Used inside the Join Google Meet CTA button.
-// Tile: TILE_BLUE rounded square.
-// Icon: white camera body (chamfered polygon) + white fin triangle.
-// All sizes use the same geometry — the tile background makes it always legible.
+// Simple white camera silhouette — matches Teams logo treatment.
 function GoogleMeetOnBackground({ size }: { size: number }) {
-  const body  = 'rgba(255,255,255,0.92)';
-  const fin   = 'rgba(255,255,255,0.75)';
-
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       {/* Blue tile */}
@@ -118,10 +87,13 @@ function GoogleMeetOnBackground({ size }: { size: number }) {
       {/* White camera body */}
       <Polygon
         points="5,10 24,10 24,30 5,30 1,26 1,14"
-        fill={body}
+        fill="rgba(255,255,255,0.92)"
       />
       {/* White fin */}
-      <Polygon points="25,13 36,20 25,27" fill={fin} />
+      <Polygon
+        points="25,13 36,20 25,27"
+        fill="rgba(255,255,255,0.75)"
+      />
     </Svg>
   );
 }
