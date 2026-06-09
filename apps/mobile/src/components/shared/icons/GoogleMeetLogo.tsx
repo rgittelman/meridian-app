@@ -4,31 +4,21 @@
  * Paths and polygons are taken directly from the official Google Meet SVG
  * (google-meet-svgrepo-com.svg, viewBox "0 -22.5 256 256").
  *
- * Seven shapes, seven Google brand colors:
+ * Seven shapes, six Google brand colors:
  *   #00832D  green  — upper fin
  *   #0066DA  blue   — bottom-left corner
  *   #E94235  red    — top-left corner
  *   #2684FC  blue   — left column body
  *   #00AC47  green  — right fin + bottom area
  *   #FFBA00  yellow — top area
- *
- * onBackground: white camera silhouette on a #1A73E8 tile — matches the
- * Join Teams treatment and the spec.
  */
-import Svg, { Path, Polygon, Rect } from 'react-native-svg';
-
-const TILE_BLUE = '#1A73E8';
+import Svg, { Path, Polygon } from 'react-native-svg';
 
 type GoogleMeetLogoProps = {
   size?: number;
-  /** Renders a white camera on a blue tile — for use inside the Join CTA button. */
-  onBackground?: boolean;
 };
 
-export function GoogleMeetLogo({ size = 24, onBackground = false }: GoogleMeetLogoProps) {
-  if (onBackground) {
-    return <GoogleMeetOnBackground size={size} />;
-  }
+export function GoogleMeetLogo({ size = 24 }: GoogleMeetLogoProps) {
   return <GoogleMeetFullColor size={size} />;
 }
 
@@ -76,24 +66,3 @@ function GoogleMeetFullColor({ size }: { size: number }) {
   );
 }
 
-// ─── On-background (white camera on blue tile) ────────────────────────────────
-// Used inside the Join Google Meet CTA button.
-// Simple white camera silhouette — matches Teams logo treatment.
-function GoogleMeetOnBackground({ size }: { size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 40 40">
-      {/* Blue tile */}
-      <Rect x={0} y={0} width={40} height={40} rx={8} ry={8} fill={TILE_BLUE} />
-      {/* White camera body */}
-      <Polygon
-        points="5,10 24,10 24,30 5,30 1,26 1,14"
-        fill="rgba(255,255,255,0.92)"
-      />
-      {/* White fin */}
-      <Polygon
-        points="25,13 36,20 25,27"
-        fill="rgba(255,255,255,0.75)"
-      />
-    </Svg>
-  );
-}
