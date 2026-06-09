@@ -1,10 +1,10 @@
 import type { LifeDomainId } from '@/types/life';
 import {
+  Activity,
   Briefcase,
-  Globe,
-  Home,
-  Leaf,
-  User,
+  Compass,
+  Heart,
+  Users,
   type LucideIcon,
 } from 'lucide-react-native';
 
@@ -23,11 +23,11 @@ export const LIFE_DOMAIN_ORDER: LifeDomainId[] = [
 ];
 
 export const LIFE_DOMAIN_DEFINITIONS: LifeDomainDefinition[] = [
-  { id: 'family',    label: 'Family',    Icon: Home      },
-  { id: 'work',      label: 'Work',      Icon: Briefcase },
-  { id: 'community', label: 'Community', Icon: Globe     },
-  { id: 'health',    label: 'Health',    Icon: Leaf      },
-  { id: 'personal',  label: 'Personal',  Icon: User      },
+  { id: 'family', label: 'Family', Icon: Heart },
+  { id: 'work', label: 'Work', Icon: Briefcase },
+  { id: 'community', label: 'Community', Icon: Users },
+  { id: 'health', label: 'Health', Icon: Activity },
+  { id: 'personal', label: 'Personal', Icon: Compass },
 ];
 
 /** Family domain people anchors (relationship anchors, not contacts). */

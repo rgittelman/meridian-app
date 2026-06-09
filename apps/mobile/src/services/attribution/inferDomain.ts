@@ -56,6 +56,7 @@ const WORK_SIGNALS = [
   'sync',
   'leadership',
   'qbr',
+  'touch base',
 ];
 
 export type DomainInference = {

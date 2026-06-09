@@ -1,9 +1,8 @@
 import {
+  Activity,
   Briefcase,
-  Globe,
-  Home,
-  Leaf,
-  User,
+  Compass,
+  Heart,
   type LucideIcon,
 } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
@@ -15,10 +14,10 @@ import { makeStyles, radius, spacing } from '@/theme';
 type Category = { id: string; label: string; Icon: LucideIcon };
 
 const CATEGORIES: Category[] = [
-  { id: 'work',     label: 'Work',     Icon: Briefcase },
-  { id: 'family',   label: 'Family',   Icon: Home      },
-  { id: 'health',   label: 'Health',   Icon: Leaf      },
-  { id: 'personal', label: 'Personal', Icon: User      },
+  { id: 'work', label: 'Work', Icon: Briefcase },
+  { id: 'family', label: 'Family', Icon: Heart },
+  { id: 'health', label: 'Health', Icon: Activity },
+  { id: 'personal', label: 'Personal', Icon: Compass },
 ];
 
 function CategoryAnchor({ label, Icon }: Pick<Category, 'label' | 'Icon'>) {

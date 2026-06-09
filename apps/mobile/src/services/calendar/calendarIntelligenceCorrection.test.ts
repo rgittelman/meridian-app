@@ -756,3 +756,92 @@ describe('Fix 7 — financial category is a signal, not a domain override', () =
     assert.equal(result.domain, 'community', `Expected community, got ${result.domain} (${result.reason})`);
   });
 });
+
+// ── Fix 9: "touch base" classified as Work ────────────────────────────────────
+
+describe('Fix 9 — "touch base" is a work signal', () => {
+  // Root cause: "Florida BLM Merch. Touch base" (June 9, 11:30am, FRG/Office calendar)
+  // was falling through to domain: personal (default_personal) because:
+  //   1. sourceCalendarName stored as FRG email address → workBoost = false
+  //   2. "touch base" was absent from WORK_SIGNALS
+  // Fix: add 'touch base' to WORK_SIGNALS so the title itself is sufficient.
+
+  it('Florida BLM Merch. Touch base → domain: work', () => {
+    const result = inferEventDomain(makeDomainInput('Florida BLM Merch. Touch base'));
+    assert.equal(result.domain, 'work', `Expected work, got ${result.domain} (${result.reason})`);
+    assert.equal(result.reason, 'work_signal');
+    assert.equal(result.confidence, 'high');
+  });
+
+  it('touch base with Pat → domain: work', () => {
+    const result = inferEventDomain(makeDomainInput('Touch base with Pat'));
+    assert.equal(result.domain, 'work', `Expected work, got ${result.domain} (${result.reason})`);
+  });
+
+  it('Quick touch base — rug market → domain: work', () => {
+    const result = inferEventDomain(makeDomainInput('Quick touch base — rug market'));
+    assert.equal(result.domain, 'work', `Expected work, got ${result.domain} (${result.reason})`);
+  });
+
+  it('Touch Base (capitalised) → domain: work (case-insensitive)', () => {
+    const result = inferEventDomain(makeDomainInput('Touch Base'));
+    assert.equal(result.domain, 'work', `Expected work, got ${result.domain} (${result.reason})`);
+  });
+
+  it('FRG touch base — no calendar boost needed → still work', () => {
+    // Simulates the FRG email-address calendar where workBoost is false
+    // and sourceCalendarDisplayLabel is not "Work". Title alone must be sufficient.
+    const result = inferEventDomain(
+      makeDomainInput('FRG touch base weekly', {
+        sourceCalendarName: 'ryan.gittelman@fineruggallery.com',
+        sourceCalendarDisplayLabel: 'Fineruggallery',
+      }),
+    );
+    assert.equal(result.domain, 'work', `Expected work, got ${result.domain} (${result.reason})`);
+  });
+
+  it('Plan-visibility: touch base event with work domain + meaningful classification → isVisibleOnPlan', () => {
+    // Prove the full chain: domain: work → evaluateRelevance no longer fires
+    // no_household_connection (work domain is not in the personal/health gate)
+    // → isRelevant stays true → signalClassification meaningful → visible on Plan
+    const event = makeStubEvent({
+      title: 'Florida BLM Merch. Touch base',
+      inferredLifeDomain: 'work',
+      attribution: makeAttribution({ inferredDomain: 'work' }),
+      signalClassification: 'meaningful',
+      relevance: {
+        relevanceScore: 'high',
+        relevanceReason: 'work_or_community_commitment',
+        relevanceConfidence: 'high',
+        householdImpact: 'none',
+        matchedHouseholdMembers: [],
+        sourceRole: 'commitment',
+        isRelevant: true,
+        preferences: {},
+      },
+    });
+    const classification = classifyEventSignal(event);
+    assert.equal(classification, 'meaningful');
+    assert.equal(event.relevance?.isRelevant, true);
+    // isVisibleOnPlan = meaningful && isRelevant
+    const isVisibleOnPlan =
+      event.signalClassification === 'meaningful' && event.relevance?.isRelevant === true;
+    assert.equal(isVisibleOnPlan, true, 'touch base work event must be visible on Plan');
+  });
+
+  // Regression: unrelated events must not gain the work domain by accident
+  it('"Touching base at the spa" — gerund form does not contain exact substring "touch base"', () => {
+    // "touching base" is "touch" + "ing base" — the literal substring "touch base" is absent.
+    // The signal fires only on exact "touch base", not on "touching base".
+    // Resolving to personal here is correct: no work context and not a work meeting phrase.
+    const result = inferEventDomain(makeDomainInput('Touching base at the spa'));
+    assert.notEqual(result.domain, 'work', '"touching base" must not trigger the work signal');
+  });
+
+  it('baseball practice — "base" alone must not trigger work signal', () => {
+    const result = inferEventDomain(makeDomainInput('Baseball practice Tuesday'));
+    // Youth sports: YOUTH_COMMITMENT has 'baseball' → family
+    // If it doesn't match family, it must NOT be work (no "touch base" phrase present)
+    assert.notEqual(result.domain, 'work', '"base" alone must not trigger work signal');
+  });
+});

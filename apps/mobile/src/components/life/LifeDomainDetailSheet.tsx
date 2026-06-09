@@ -5,7 +5,6 @@ import { useTheme } from '@/hooks/useTheme';
 import type { LifeDomainSnapshot } from '@/types/life';
 import { previewLineForCommitment } from '@/services/life/buildCommitments';
 import { LIFE_DOMAIN_DEFINITIONS } from '@/services/life/constants';
-import { domainColorFor } from '@/components/calendar/planEventAccent';
 import { makeStyles, radius, spacing } from '@/theme';
 
 type LifeDomainDetailSheetProps = {
@@ -35,7 +34,6 @@ export function LifeDomainDetailSheet({
 
   const def = LIFE_DOMAIN_DEFINITIONS.find((d) => d.id === domain.id);
   const Icon = def?.Icon;
-  const domainAccent = domainColorFor(colors, domain.id);
 
   const upcomingEvents = domain.upcomingCommitments.filter((c) => c.kind === 'event');
   const captures = domain.activeCaptures;
@@ -52,7 +50,7 @@ export function LifeDomainDetailSheet({
           <View style={styles.headerRow}>
             {Icon ? (
               <View style={styles.iconWrap}>
-                <Icon size={22} color={domainAccent ?? colors.inkTertiary} strokeWidth={1.75} />
+                <Icon size={22} color={colors.inkTertiary} strokeWidth={1.75} />
               </View>
             ) : null}
             <Text variant="display" color="ink" maxFontSizeMultiplier={1.12}>
