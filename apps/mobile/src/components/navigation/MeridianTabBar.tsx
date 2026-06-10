@@ -123,7 +123,11 @@ function TabRow({
                 <Icon size={22} color={captureIconColor} strokeWidth={2} />
               </View>
             ) : (
-              <Icon size={22} color={iconColor} strokeWidth={focused ? 2.25 : 1.75} />
+              <>
+                <Icon size={22} color={iconColor} strokeWidth={focused ? 2.25 : 1.75} />
+                {/* Active indicator dot — width 18, height 3, full radius */}
+                <View style={[styles.indicator, focused ? styles.indicatorActive : styles.indicatorHidden]} />
+              </>
             )}
             <Text
               variant="footnote"
@@ -195,6 +199,18 @@ const useStyles = makeStyles((c) => ({
   captureIconWrapActive: {
     backgroundColor: c.accentMuted,
     borderColor: c.accent,
+  },
+  indicator: {
+    width: 18,
+    height: 3,
+    borderRadius: radius.full,
+  },
+  indicatorActive: {
+    backgroundColor: c.tabActive,
+  },
+  indicatorHidden: {
+    // Reserve space so icon position stays stable when active state changes
+    opacity: 0,
   },
   label: {
     marginTop: 2,

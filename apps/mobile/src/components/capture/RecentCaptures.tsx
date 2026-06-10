@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   sectionLabel: {
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   list: {
     gap: spacing[2] + 2,

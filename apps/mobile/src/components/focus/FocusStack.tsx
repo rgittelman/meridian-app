@@ -99,7 +99,7 @@ export function FocusStack({
     <View style={styles.wrap}>
       <Text
         variant="caption"
-        color="inkTertiary"
+        color="inkGhost"
         style={styles.sectionLabel}
         maxFontSizeMultiplier={1.1}
       >
@@ -117,6 +117,28 @@ export function FocusStack({
         >
           {insight}
         </Text>
+      ) : null}
+
+      {/* Zero state — no items and nothing completed yet (fresh start or new user) */}
+      {cardItems.length === 0 && completedCount === 0 ? (
+        <View style={styles.clearState}>
+          <Text
+            variant="title"
+            color="ink"
+            style={styles.clearHeadline}
+            maxFontSizeMultiplier={1.2}
+          >
+            You&apos;re starting fresh.
+          </Text>
+          <Text
+            variant="body"
+            color="inkSecondary"
+            style={styles.clearSubtext}
+            maxFontSizeMultiplier={1.2}
+          >
+            Capture what&apos;s on your mind — Meridian will surface it when it matters.
+          </Text>
+        </View>
       ) : null}
 
       {/* Clear state — shown when all cards are handled and at least one was completed */}
@@ -151,8 +173,10 @@ export function FocusStack({
             </Text>
           )}
         </View>
-      ) : (
-        /* Card list — layout animation handles smooth reflow on removal */
+      ) : null}
+
+      {/* Card list — only rendered when there are items */}
+      {cardItems.length > 0 ? (
         <Animated.View style={styles.cardList} layout={LinearTransition.springify().damping(22).stiffness(200)}>
           {cardItems.map((item) =>
             isGestureEnabled ? (
@@ -168,7 +192,7 @@ export function FocusStack({
             ),
           )}
         </Animated.View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -178,7 +202,7 @@ const useStyles = makeStyles((c) => ({
     gap: spacing[3],
   },
   sectionLabel: {
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   insight: {
     letterSpacing: 0.1,

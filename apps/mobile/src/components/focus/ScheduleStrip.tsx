@@ -43,7 +43,7 @@ function ScheduleChip({ item, onPress }: ScheduleChipProps) {
           </Text>
         ) : (
           <Calendar
-            size={13}
+            size={14}
             color={isFree ? colors.success : colors.inkTertiary}
             strokeWidth={1.75}
           />
@@ -111,7 +111,7 @@ export function ScheduleStrip({
     <View style={staticStyles.wrap}>
       <Text
         variant="caption"
-        color="inkTertiary"
+        color="inkGhost"
         style={[staticStyles.sectionLabel, { paddingHorizontal: padH }]}
         maxFontSizeMultiplier={1.1}
       >
@@ -230,7 +230,7 @@ const useChipStyles = makeStyles((c) => ({
 
 const staticStyles = StyleSheet.create({
   wrap: { gap: spacing[3] },
-  sectionLabel: { letterSpacing: 0.3 },
+  sectionLabel: { letterSpacing: 0.5 },
   scrollContent: {
     paddingLeft: screenPaddingHorizontal,
     gap: spacing[2],

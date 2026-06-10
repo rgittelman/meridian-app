@@ -46,5 +46,12 @@ const useStyles = makeStyles((c) => ({
     padding: spacing[4],
     borderWidth: 1,
     borderColor: c.border,
+    // Subtle elevation — lifts cards off the background without overpowering
+    // domain-tinted cards (LifeDomainCard overrides these via style prop)
+    shadowColor: '#1E1B16',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
   },
 }));

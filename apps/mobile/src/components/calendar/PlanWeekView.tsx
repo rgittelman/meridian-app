@@ -90,7 +90,7 @@ export function PlanWeekView({
 
             {dayEmpty ? (
               <Text variant="footnote" color="inkGhost" style={styles.emptyDay}>
-                Open
+                Free
               </Text>
             ) : (
               <>
@@ -236,7 +236,7 @@ const useStyles = makeStyles((c) => ({
     gap: spacing[4],
     paddingBottom: spacing[8],
   },
-  eyebrow: { letterSpacing: 0.4 },
+  eyebrow: { letterSpacing: 0.5 },
   headline: { maxWidth: 320 },
   subline: { maxWidth: 280, marginTop: -spacing[1] },
   timeline: {
@@ -260,7 +260,6 @@ const useStyles = makeStyles((c) => ({
   },
   emptyDay: {
     paddingLeft: spacing[4],
-    fontStyle: 'italic' as const,
   },
   capturedGroup: {
     marginTop: spacing[1],

@@ -1,7 +1,7 @@
 import { GradientCard } from '@/components/shared/surfaces/GradientCard';
 import { Text } from '@/components/typography/Text';
 import type { PrepAwarenessItem } from '@/types/prep';
-import { makeStyles, spacing } from '@/theme';
+import { makeStyles, radius, spacing } from '@/theme';
 
 type PrepAwarenessSectionProps = {
   items: PrepAwarenessItem[];
@@ -59,7 +59,7 @@ export function PrepAwarenessSection({
 
   return (
     <GradientCard style={styles.wrap} accessibilityRole="none">
-      <Text variant="caption" color="inkTertiary" style={styles.eyebrow}>
+      <Text variant="caption" color="inkGhost" style={styles.eyebrow}>
         Before you go
       </Text>
       {items.map((item) => (
@@ -78,9 +78,10 @@ export function PrepAwarenessSection({
   );
 }
 
-// Static object — no makeStyles needed for the inner card since GradientCard provides surface
+// Inner cards use a tighter radius than the outer container (radius.sm vs radius.md)
+// to make the nested structure legible — contents visually sit inside the shell
 const cardStyle = {
-  inner: { gap: spacing[1], padding: spacing[3] } as const,
+  inner: { gap: spacing[1], padding: spacing[3], borderRadius: radius.sm } as const,
 };
 
 const useStyles = makeStyles((c) => ({
@@ -89,8 +90,6 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surfaceMuted,
   },
   eyebrow: {
-    letterSpacing: 0.4,
-    textTransform: 'uppercase' as const,
-    color: c.inkGhost,
+    letterSpacing: 0.5,
   },
 }));

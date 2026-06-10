@@ -12,7 +12,7 @@ export function CaptureHeader(_props: CaptureHeaderProps) {
   return (
     <View style={styles.wrap} accessibilityRole="header">
       <Text
-        variant="title"
+        variant="display"
         color="ink"
         style={styles.headline}
         maxFontSizeMultiplier={1.2}

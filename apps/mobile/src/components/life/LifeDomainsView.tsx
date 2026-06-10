@@ -130,7 +130,7 @@ const useStyles = makeStyles((c) => ({
     gap: spacing[4],
   },
   eyebrow: {
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     marginBottom: -spacing[1],
   },
   headline: {

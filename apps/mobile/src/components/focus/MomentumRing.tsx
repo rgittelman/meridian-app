@@ -1,6 +1,13 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { Circle, Defs, LinearGradient, Stop, Svg } from 'react-native-svg';
 
 import { Text } from '@/components/typography/Text';
@@ -18,6 +25,11 @@ const PROGRESS_WIDTH = 9;
 const ATMOSPHERE_RADIUS = RING_RADIUS + 11;
 const ATMOSPHERE_WIDTH = 24;
 
+// Atmosphere pulse bounds — subtle, never draws the eye from the ring content
+const ATMOSPHERE_OPACITY_MIN = 0.028;
+const ATMOSPHERE_OPACITY_MAX = 0.050;
+const ATMOSPHERE_HALF_CYCLE = 3500; // ms — full cycle = 7 s
+
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type MomentumRingProps = {
@@ -34,10 +46,53 @@ export function MomentumRing({
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const dashOffset = useMemo(
-    () => CIRCUMFERENCE * (1 - progress),
-    [progress],
-  );
+  // Target dash offset for the current progress value
+  const targetOffset = useMemo(() => CIRCUMFERENCE * (1 - progress), [progress]);
+
+  // Starts at CIRCUMFERENCE (empty ring) — animates to targetOffset on mount
+  const animatedOffset = useSharedValue(CIRCUMFERENCE);
+
+  // Atmosphere layer opacity — idles between min and max
+  const atmosphereOpacity = useSharedValue(ATMOSPHERE_OPACITY_MIN);
+
+  // Entrance animation: empty → current progress, ease-out, no overshoot
+  useEffect(() => {
+    animatedOffset.value = withTiming(targetOffset, {
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [targetOffset]);
+
+  // Atmosphere idle pulse: slow sine breathing, infinite, opacity only
+  useEffect(() => {
+    atmosphereOpacity.value = withRepeat(
+      withSequence(
+        withTiming(ATMOSPHERE_OPACITY_MAX, {
+          duration: ATMOSPHERE_HALF_CYCLE,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        withTiming(ATMOSPHERE_OPACITY_MIN, {
+          duration: ATMOSPHERE_HALF_CYCLE,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ),
+      -1,   // infinite
+      false, // sequence handles both directions — no auto-reverse
+    );
+  }, []);
+
+  // Animated props — keeps SVG prop types clean
+  const glowAnimatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: animatedOffset.value,
+  }));
+
+  const progressAnimatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: animatedOffset.value,
+  }));
+
+  const atmosphereAnimatedProps = useAnimatedProps(() => ({
+    strokeOpacity: atmosphereOpacity.value,
+  }));
 
   return (
     <View style={styles.wrap}>
@@ -60,15 +115,15 @@ export function MomentumRing({
           </LinearGradient>
         </Defs>
 
-        {/* Atmosphere — very faint outer warmth halo */}
-        <Circle
+        {/* Atmosphere — very faint outer warmth halo, slow breathing pulse */}
+        <AnimatedCircle
           cx={CENTER}
           cy={CENTER}
           r={ATMOSPHERE_RADIUS}
           stroke={colors.ringProgress}
           strokeWidth={ATMOSPHERE_WIDTH}
-          strokeOpacity={0.028}
           fill="none"
+          animatedProps={atmosphereAnimatedProps}
         />
 
         {/* Track — thin warm-stone full circle */}
@@ -93,12 +148,12 @@ export function MomentumRing({
           fill="none"
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={dashOffset}
           transform={`rotate(-90 ${CENTER} ${CENTER})`}
+          animatedProps={glowAnimatedProps}
         />
 
         {/* Progress arc — warm amber gradient, 12 o'clock origin */}
-        <Circle
+        <AnimatedCircle
           cx={CENTER}
           cy={CENTER}
           r={RING_RADIUS}
@@ -107,8 +162,8 @@ export function MomentumRing({
           fill="none"
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={dashOffset}
           transform={`rotate(-90 ${CENTER} ${CENTER})`}
+          animatedProps={progressAnimatedProps}
         />
       </Svg>
 
