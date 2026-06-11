@@ -164,10 +164,10 @@ export const darkColors: AppColors = {
   borderSubtle: 'rgba(255, 255, 255, 0.04)',
 
   // ── Tab bar ───────────────────────────────────────────────────────────────
-  tabBar:       'rgba(13, 11, 26, 0.92)',
-  tabBarBorder: 'rgba(255, 255, 255, 0.06)',
+  tabBar:       'rgba(13, 11, 26, 0.97)',
+  tabBarBorder: 'rgba(255, 255, 255, 0.10)',
   tabActive:    '#F0EDF8',
-  tabInactive:  '#4E4A65',
+  tabInactive:  '#6B6585',
   captureAccent: '#A07AE8',
 
   overlay: 'rgba(0, 0, 0, 0.52)',
