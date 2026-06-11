@@ -14,6 +14,7 @@ import {
   deriveTopDomainLabels,
 } from '@/components/life/lifeSummary';
 import { useLifeIntelligence } from '@/hooks/useLifeIntelligence';
+import { useGradeChildObservation } from '@/hooks/useGradeChildObservation';
 import { useCalendarStore } from '@/store/calendarStore';
 import { makeStyles, spacing } from '@/theme';
 import type { LifeDomainSnapshot } from '@/types/life';
@@ -46,6 +47,7 @@ export function LifeDomainsView() {
   );
 
   const headline = deriveLifeHeadline(activeDomains.length, hasActivity, topLabels);
+  const gradeObservation = useGradeChildObservation();
 
   const displayDomains = hasActivity ? activeDomains : snapshot.domains;
 
@@ -83,6 +85,13 @@ export function LifeDomainsView() {
           </View>
         </GradientCard>
       )}
+
+      {/* ── O09: Grade → Child observation ────────────────────────────── */}
+      {gradeObservation ? (
+        <Text variant="callout" color="inkSecondary" style={styles.observation}>
+          {gradeObservation.text}
+        </Text>
+      ) : null}
 
       {/* ── Domain cards grid ──────────────────────────────────────────── */}
       <View style={styles.grid}>
@@ -184,5 +193,9 @@ const useStyles = makeStyles((c) => ({
   },
   footer: {
     maxWidth: 280,
+  },
+  observation: {
+    maxWidth: 320,
+    marginBottom: -spacing[1],
   },
 }));
