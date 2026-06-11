@@ -8,6 +8,12 @@ type PrepAwarenessSectionProps = {
   overflowCount?: number;
   /** Called when user taps a prep card. Receives the related calendar event id. */
   onEventPress?: (eventId: string) => void;
+  /**
+   * When an O06 observation sentence is already rendered above this section for
+   * a specific event, pass that eventId here to suppress the generic
+   * "N connected item(s)" line on the matching prep card — avoids redundancy.
+   */
+  suppressedSummaryEventId?: string | null;
 };
 
 function PrepAwarenessCard({
@@ -45,6 +51,7 @@ export function PrepAwarenessSection({
   items,
   overflowCount = 0,
   onEventPress,
+  suppressedSummaryEventId,
 }: PrepAwarenessSectionProps) {
   const styles = useStyles();
 
@@ -65,7 +72,11 @@ export function PrepAwarenessSection({
       {items.map((item) => (
         <PrepAwarenessCard
           key={item.id}
-          item={item}
+          item={
+            item.eventId === suppressedSummaryEventId
+              ? { ...item, connectedSummary: null }
+              : item
+          }
           onPress={onEventPress ? () => onEventPress(item.eventId) : undefined}
         />
       ))}

@@ -23,6 +23,7 @@ import { useGreeting } from '@/hooks/useGreeting';
 import { useOrchestration } from '@/hooks/useOrchestration';
 import { useLifeIntelligence } from '@/hooks/useLifeIntelligence';
 import { usePrepIntelligence } from '@/hooks/usePrepIntelligence';
+import { usePrepConnectionObservation } from '@/hooks/usePrepConnectionObservation';
 import { useResurfacingItems } from '@/hooks/useResurfacingItems';
 import { useCaptureStoreHydrated } from '@/hooks/useCaptureStoreHydrated';
 import { useCaptureStore } from '@/store/captureStore';
@@ -34,6 +35,7 @@ import { TAB_ROUTES } from '@/constants/tabs';
 import { logFocusVisibleCount } from '@/services/quality/qualityDebug';
 import type { MeridianCalendarEvent } from '@/types/calendar';
 import type { RootTabParamList } from '@/types/navigation';
+import { Text } from '@/components/typography/Text';
 import { screenPaddingHorizontal, spacing } from '@/theme';
 
 /**
@@ -92,6 +94,7 @@ export function FocusScreen() {
   const { name: greetingName, timeOfDay } = useGreeting();
   const dailyBrief = useDailyBrief();
   const prepSnapshot = usePrepIntelligence();
+  const prepObservation = usePrepConnectionObservation();
 
   // Intelligence pipeline (calendar + life domains inform resurfacing)
   const { items: resurfaced, insight: resurfacingInsight } = useResurfacingItems({
@@ -256,10 +259,20 @@ export function FocusScreen() {
           <>
             <Divider size="lg" />
             <View style={staticStyles.padH}>
+              {prepObservation ? (
+                <Text
+                  variant="callout"
+                  color="inkSecondary"
+                  style={staticStyles.prepObservation}
+                >
+                  {prepObservation.text}
+                </Text>
+              ) : null}
               <PrepAwarenessSection
                 items={prepSnapshot.surfacedForFocus}
                 overflowCount={prepSnapshot.focusPrepOverflowCount}
                 onEventPress={handlePrepEventPress}
+                suppressedSummaryEventId={prepObservation?.eventId ?? null}
               />
             </View>
           </>
@@ -333,5 +346,9 @@ const staticStyles = StyleSheet.create({
   },
   recoverySpace: {
     height: spacing[10] + spacing[8],
+  },
+  prepObservation: {
+    maxWidth: 320,
+    marginBottom: spacing[2],
   },
 });
