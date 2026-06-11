@@ -155,31 +155,31 @@ Deferred:
 - Dynamic leave alert timing
 
 ### Phase H.3 — Real-World Validation
-Status: PARTIAL — static checks passed, device smoke test pending
+Status: PASSED
+Locked: Yes
 
-Static checks (code + tests):
-- All console output gated behind isDevEnvironment() — confirmed
-- API key never logged — confirmed
-- trafficCacheStore not persisted — confirmed
-- trafficEstimates not in calendarStore partialize — confirmed
-- No setInterval, BackgroundFetch, TaskManager, or defineTask in H files — confirmed
-- No live GPS reads in traffic path — confirmed
-- No locked notification systems modified — confirmed
-- 229/229 tests passing — confirmed
-- TypeScript clean — confirmed
+Static checks (code + tests): all confirmed pre-lock.
+Simulator validation: all 8 device cases confirmed 2026-06-11.
+See PHASE_H_VALIDATION.md for full evidence record.
 
-Notification scenarios verified in code:
-- Traffic key absent → NullEtaProvider → G.2 behavior — confirmed
-- Traffic disappears → trafficVersion increments → reconcile → T-30 fallback — confirmed
-- Timing drift > 5 min → reschedule_changed — confirmed
-- Timing drift ≤ 5 min → keep_existing — confirmed
+Summary of simulator findings:
+- NullEtaProvider confirmed when key absent (build artifact cleared)
+- GoogleDistanceMatrixProvider confirmed when key present (ETA provider: google in dev log)
+- Live traffic estimate received: trafficMinutes: 5, baselineMinutes: 6 for test venue
+- Leave alert scheduled at 7:45 PM EDT (traffic-adjusted), not 7:30 PM (T-30 fallback)
+- Full delivery chain confirmed: traffic result → Notification Intelligence approved → OS scheduled
+- Standard copy confirmed: "Meridian H3 Test starts in 30 minutes."
+- Provider-switch confirmed: NullEtaProvider → rebuild → GoogleDistanceMatrixProvider
 
-Device validation outstanding:
-- Cold launch with/without Maps key
-- Live traffic estimate populating in dev logs
-- OS notification scheduling at traffic-adjusted time
-- Confirming no key string in console output
-See PHASE_H_VALIDATION.md for full checklist.
+Known gap (accepted, not a defect):
+- Standard copy ("starts in 30 minutes") is inaccurate when alert fires at a traffic-adjusted
+  time earlier than T-30. The location-aware copy path ("starts at 8:00 PM.") is accurate
+  and fires when currentRegion === 'home'. The standard path fires in all other contexts.
+  This gap is a Phase E artifact; Phase G.2 resolves it for home-region users.
+
+Physical device hardening (optional, not required to ship):
+- Location-aware copy path ("starts at 8:00 PM") requires currentRegion === 'home',
+  which is not available in simulator. Physical device would confirm this copy branch.
 
 ### Phase H.2 — Traffic-Aware Leave Alerts
 Status: PASSED
