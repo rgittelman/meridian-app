@@ -3,7 +3,7 @@ import {
   Activity,
   Briefcase,
   Compass,
-  Heart,
+  Home,
   Users,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -23,7 +23,7 @@ export const LIFE_DOMAIN_ORDER: LifeDomainId[] = [
 ];
 
 export const LIFE_DOMAIN_DEFINITIONS: LifeDomainDefinition[] = [
-  { id: 'family', label: 'Family', Icon: Heart },
+  { id: 'family', label: 'Family', Icon: Home },
   { id: 'work', label: 'Work', Icon: Briefcase },
   { id: 'community', label: 'Community', Icon: Users },
   { id: 'health', label: 'Health', Icon: Activity },

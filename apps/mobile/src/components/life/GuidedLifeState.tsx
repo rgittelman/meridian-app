@@ -2,7 +2,7 @@ import {
   Activity,
   Briefcase,
   Compass,
-  Heart,
+  Home,
   type LucideIcon,
 } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
@@ -15,7 +15,7 @@ type Category = { id: string; label: string; Icon: LucideIcon };
 
 const CATEGORIES: Category[] = [
   { id: 'work', label: 'Work', Icon: Briefcase },
-  { id: 'family', label: 'Family', Icon: Heart },
+  { id: 'family', label: 'Family', Icon: Home },
   { id: 'health', label: 'Health', Icon: Activity },
   { id: 'personal', label: 'Personal', Icon: Compass },
 ];
