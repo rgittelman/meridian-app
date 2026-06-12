@@ -12,7 +12,7 @@ import {
   refreshCaptureParse,
   type CaptureIntelligenceAudit,
 } from '@/services/capture';
-import { matchAndLinkCapture } from '@/services/relationships';
+import { matchAndLinkCapture, scoreCaptureEventRelationship } from '@/services/relationships';
 import { logDeferredRelink } from '@/services/calendar/calendarIntelligenceDebug';
 import { useCalendarStore } from '@/store/calendarStore';
 import { usePlanPromotionStore } from '@/store/planPromotionStore';
@@ -82,6 +82,12 @@ type CaptureState = {
   removeItem: (id: string) => void;
   /** Re-run calendar matching after sync (offline-safe: no-op without events) */
   relinkCapturesToCalendar: () => void;
+  /**
+   * One-time repair: re-scores all calendar_match links under the corrected scorer
+   * and clears any that are now LOW confidence. Stored/manual links are never touched.
+   * Safe to run on every rehydration — idempotent for already-valid links.
+   */
+  repairCorruptedCalendarLinks: () => void;
 };
 
 export const useCaptureStore = create<CaptureState>()(
@@ -139,6 +145,25 @@ export const useCaptureStore = create<CaptureState>()(
         }));
       },
 
+      repairCorruptedCalendarLinks: () => {
+        const events = getLinkableCalendarEvents();
+        set((state) => ({
+          items: state.items.map((item) => {
+            if (!item.linkedCalendarEventId) return item;
+            if (item.status === 'done' || item.status === 'archived') return item;
+            // Never clear manually stored links.
+            if (item.relationshipSource === 'stored') return item;
+
+            const linkedEvent = events.find((e) => e.id === item.linkedCalendarEventId);
+            if (!linkedEvent) return clearCalendarLink(item);
+
+            const { confidence } = scoreCaptureEventRelationship(item, linkedEvent);
+            if (confidence === 'low') return clearCalendarLink(item);
+            return item;
+          }),
+        }));
+      },
+
       relinkCapturesToCalendar: () => {
         const events = getLinkableCalendarEvents();
         if (events.length === 0) return;
@@ -185,12 +210,28 @@ export const useCaptureStore = create<CaptureState>()(
       onRehydrateStorage: () => (state) => {
         if (!state?.items.length) return;
         queueMicrotask(() => {
-          useCaptureStore.getState().relinkCapturesToCalendar();
+          const store = useCaptureStore.getState();
+          store.repairCorruptedCalendarLinks();
+          store.relinkCapturesToCalendar();
         });
       },
     },
   ),
 );
+
+function clearCalendarLink(item: LifeObject): LifeObject {
+  return {
+    ...item,
+    linkedCalendarEventId: undefined,
+    linkedCalendarEventTitle: undefined,
+    linkedCalendarEventSourceCalendar: undefined,
+    relationshipType: undefined,
+    relationshipConfidence: undefined,
+    relationshipReason: undefined,
+    relationshipCreatedAt: null,
+    relationshipSource: undefined,
+  };
+}
 
 function calendarLinkPatch(item: LifeObject): Partial<LifeObject> {
   return {

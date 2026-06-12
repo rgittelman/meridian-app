@@ -30,6 +30,7 @@
     "test:focus-format": "npx tsx --test src/components/focus/completionFormat.test.ts",
     "test:shared": "npx tsx --test src/components/shared/shared.test.ts",
     "test:life": "npx tsx --test src/components/life/lifeSummary.test.ts src/services/engagement/observeGradeChildAttribution.test.ts",
+    "test:relationships": "npx tsx --test src/services/relationships/scoreRelationship.test.ts",
     "test:engagement": "npx tsx --test src/services/engagement/observeGradeChildAttribution.test.ts src/services/engagement/observePrepConnection.test.ts",
     "test:profile": "npx tsx --test src/store/profileStore.test.ts"
   },

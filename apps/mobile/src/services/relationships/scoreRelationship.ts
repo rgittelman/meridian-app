@@ -4,6 +4,11 @@ import type { MeridianCalendarEvent } from '@/types/calendar';
 import type { CalendarRelationshipMatch, RelationshipType } from '@/types/relationships';
 import { inferRelationshipType } from './inferRelationshipType';
 import { safeLower, safeString, safeTrim } from '@/utils/safeString';
+import { HOUSEHOLD_MEMBERS } from '@/services/relevance/householdContext';
+
+const HOUSEHOLD_NAMES: ReadonlySet<string> = new Set(
+  HOUSEHOLD_MEMBERS.map((m) => m.personId),
+);
 
 const PREP_SIGNALS = /\b(?:prep|prepare|review|deck|slides|before|ahead of)\b/i;
 const BRING_SIGNALS = /\b(?:bring|skates|gear|uniform|equipment|pack)\b/i;
@@ -33,13 +38,21 @@ function tokenOverlap(a: string | null | undefined, b: string | null | undefined
   return shared / Math.max(ta.size, tb.size);
 }
 
+/** Returns only the names of people who are HIGH confidence on this event. */
+function highConfidenceEventPeople(event: MeridianCalendarEvent): string[] {
+  return (event.inferredPeople ?? [])
+    .filter((p) => p.confidence === 'high')
+    .map((p) => safeLower(p?.name))
+    .filter((n) => n.length > 0);
+}
+
 function peopleMatchScore(capture: LifeObject, event: MeridianCalendarEvent): number {
   const capturePeople = capture.parse.people
     .map((p) => safeLower(p?.value))
     .filter((n) => n.length > 0);
-  const eventPeople = (event.inferredPeople ?? [])
-    .map((p) => safeLower(p?.name))
-    .filter((n) => n.length > 0);
+  // Only high-confidence inferred people on the event contribute.
+  // Medium/low assignments (e.g. "whole family on sports calendar") must not drive scoring.
+  const eventPeople = highConfidenceEventPeople(event);
   if (capturePeople.length === 0 || eventPeople.length === 0) return 0;
 
   let best = 0;
@@ -79,7 +92,9 @@ function calendarContextScore(capture: LifeObject, event: MeridianCalendarEvent)
     score += 0.3;
   }
 
+  // Only high-confidence people on the event may contribute here.
   for (const p of event.inferredPeople ?? []) {
+    if (p.confidence !== 'high') continue;
     const personName = safeLower(p?.name);
     if (personName && text.includes(personName)) score += 0.35;
   }
@@ -134,6 +149,56 @@ function timingProximityScore(
   return 0;
 }
 
+/**
+ * Returns -1 when the capture explicitly names a household member who is NOT
+ * the high-confidence person on the event. This prevents "Reagan has no school"
+ * from matching Quinn's hockey game purely on category + timing accumulation.
+ *
+ * Returns 0 when there is no household-member mismatch (safe to proceed).
+ */
+function personMismatchPenalty(capture: LifeObject, event: MeridianCalendarEvent): -1 | 0 {
+  const capturePeople = capture.parse.people
+    .filter((p) => p.confidence !== 'low')
+    .map((p) => safeLower(p.value))
+    .filter((n) => HOUSEHOLD_NAMES.has(n));
+
+  if (capturePeople.length === 0) return 0;
+
+  const eventHighPeople = highConfidenceEventPeople(event).filter((n) =>
+    HOUSEHOLD_NAMES.has(n),
+  );
+
+  if (eventHighPeople.length === 0) return 0;
+
+  const anyMatch = capturePeople.some((cp) =>
+    eventHighPeople.some((ep) => cp === ep || cp.includes(ep) || ep.includes(cp)),
+  );
+
+  return anyMatch ? 0 : -1;
+}
+
+/**
+ * At least one of these signals must be present for a match to reach medium/high.
+ * Prevents generic category + timing accumulation from producing false positives.
+ *
+ * Strong signals (person-alone is NOT sufficient — topic must be independently present):
+ *  - title token overlap (direct topic match — "hockey" in capture and event)
+ *  - prep/bring/print language tied to event type (specific action + event type)
+ *  - venue/source-specific calendar signal (≥ 0.45 threshold)
+ *
+ * Rationale: "Quinn has an end of year party tomorrow" names Quinn (same person as the
+ * hockey event) but has no hockey/sport/venue signal. Person-alone cannot distinguish
+ * a party capture from a hockey prep capture. A topic signal must be independently present.
+ */
+function hasCorroborationSignal(
+  titleScore: number,
+  _peopleScore: number,
+  prepScore: number,
+  calendarScore: number,
+): boolean {
+  return titleScore > 0 || prepScore > 0 || calendarScore >= 0.45;
+}
+
 function buildReason(
   capture: LifeObject,
   event: MeridianCalendarEvent,
@@ -162,13 +227,23 @@ export function scoreCaptureEventRelationship(
   const prepScore = prepLanguageScore(capture, event);
   const timingScore = timingProximityScore(capture, event, now);
 
-  const score = Math.min(
+  const type = inferRelationshipType(capture, event);
+  const reason = buildReason(capture, event, type);
+
+  // Guard 1: person mismatch — capture names household member A, event belongs to member B.
+  if (personMismatchPenalty(capture, event) < 0) {
+    return { score: 0, confidence: 'low', type, reason: `${reason}+mismatch_guard` };
+  }
+
+  const rawScore = Math.min(
     1,
     titleScore + peopleScore + categoryScore + calendarScore + prepScore + timingScore,
   );
 
-  const type = inferRelationshipType(capture, event);
-  const reason = buildReason(capture, event, type);
+  // Guard 2: require at least one specific corroboration signal beyond category + timing.
+  const score = hasCorroborationSignal(titleScore, peopleScore, prepScore, calendarScore)
+    ? rawScore
+    : 0;
 
   const confidence: Confidence =
     score >= HIGH_THRESHOLD ? 'high' : score >= MEDIUM_THRESHOLD ? 'medium' : 'low';

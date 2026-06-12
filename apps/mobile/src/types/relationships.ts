@@ -10,7 +10,7 @@ export type RelationshipType =
   | 'work_related'
   | 'community_related';
 
-export type RelationshipSource = 'calendar_match';
+export type RelationshipSource = 'calendar_match' | 'stored';
 
 /** Scored candidate before applying to a Life Object */
 export type CalendarRelationshipMatch = {
