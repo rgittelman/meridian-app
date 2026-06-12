@@ -6,6 +6,7 @@ import { X } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
 
 import { GradientCard } from '@/components/shared/surfaces/GradientCard';
+import { ProviderLogo } from '@/components/shared/icons/ProviderLogo';
 import { StatusPill } from '@/components/shared/primitives/StatusPill';
 import { Text } from '@/components/typography/Text';
 import { CalendarSelectionScreen } from '@/screens/Settings/CalendarSelectionScreen';
@@ -260,7 +261,7 @@ export function SettingsScreen({ visible, onClose }: Props) {
             accessibilityLabel="Close settings"
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <X size={22} color={colors.inkSecondary} strokeWidth={1.75} />
+            <X size={18} color={colors.inkSecondary} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -328,9 +329,14 @@ export function SettingsScreen({ visible, onClose }: Props) {
           <GradientCard style={styles.cardOverride}>
             <View style={styles.row}>
               <Text variant="body">Calendar Account</Text>
-              <Text variant="footnote" color="inkSecondary">
-                {isCalendarConnected ? 'Google' : '—'}
-              </Text>
+              {isCalendarConnected ? (
+                <View style={styles.calendarAccountValue}>
+                  <ProviderLogo provider="google_calendar" context="calendar" size={16} />
+                  <Text variant="footnote" color="inkSecondary">Google</Text>
+                </View>
+              ) : (
+                <Text variant="footnote" color="inkSecondary">—</Text>
+              )}
             </View>
 
             {!isCalendarConnected && (
@@ -799,6 +805,11 @@ const useStyles = makeStyles((c) => ({
     opacity: 0.72,
   },
   calendarSummary: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing[2],
+  },
+  calendarAccountValue: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: spacing[2],

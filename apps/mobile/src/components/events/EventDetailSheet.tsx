@@ -1,6 +1,5 @@
 import { ChevronRight, ExternalLink, MapPin, Pencil, X } from 'lucide-react-native';
-import { TeamsLogo } from '@/components/shared/icons/TeamsLogo';
-import { GoogleMeetLogo } from '@/components/shared/icons/GoogleMeetLogo';
+import { ProviderLogo } from '@/components/shared/icons/ProviderLogo';
 import { useState } from 'react';
 import {
   Linking,
@@ -18,12 +17,13 @@ import type { LifeObject } from '@/types/capture';
 import { useLinkedCapturesForEvent } from '@/hooks/useLinkedCapturesForEvent';
 import { formatEventDateRange } from '@/utils/calendarFormat';
 import { resolveOwnerDisplayLabel } from '@/services/attribution/ownerDisplay';
+import {
+  resolveMeetingProvider,
+  meetingProviderJoinLabel,
+  meetingProviderColor,
+} from '@/services/calendar/meetingProvider';
 import { useTheme } from '@/hooks/useTheme';
 import { makeStyles, radius, spacing } from '@/theme';
-
-// Brand colors — not theme-adaptive (intentional: these are meeting provider identity colors)
-const TEAMS_COLOR = '#6264A7';
-const MEET_COLOR = '#1A73E8';
 
 type EventDetailSheetProps = {
   visible: boolean;
@@ -138,22 +138,13 @@ export function EventDetailSheet({
 
   // Meeting URL detection
   const meetingUrl = event.meetingUrl;
-  const meetingProvider: 'teams' | 'meet' | 'other' | null = meetingUrl
-    ? meetingUrl.includes('teams.microsoft.com')
-      ? 'teams'
-      : meetingUrl.includes('meet.google.com')
-        ? 'meet'
-        : 'other'
-    : null;
+  const meetingProvider = resolveMeetingProvider(meetingUrl);
 
-  const meetingCardLabel =
-    meetingProvider === 'teams'
-      ? 'Join Teams'
-      : meetingProvider === 'meet'
-        ? 'Join Google Meet'
-        : 'Join Meeting';
+  const meetingCardLabel = meetingProvider
+    ? meetingProviderJoinLabel(meetingProvider)
+    : 'Join Meeting';
 
-  const joinColor = meetingProvider === 'teams' ? TEAMS_COLOR : MEET_COLOR;
+  const joinColor = meetingProvider ? meetingProviderColor(meetingProvider) : '#6B7280';
 
   const handleJoinMeeting = () => {
     if (meetingUrl) void Linking.openURL(meetingUrl);
@@ -277,11 +268,7 @@ export function EventDetailSheet({
                   accessibilityRole="link"
                   accessibilityLabel={meetingCardLabel}
                 >
-                  {meetingProvider === 'teams' ? (
-                    <TeamsLogo size={24} />
-                  ) : (
-                    <GoogleMeetLogo size={24} />
-                  )}
+                  <ProviderLogo provider={meetingProvider} context="meeting" size={22} />
                   <Text variant="subhead" color="ink" style={styles.meetingCardLabel} numberOfLines={1}>
                     {meetingCardLabel}
                   </Text>
@@ -307,7 +294,7 @@ export function EventDetailSheet({
                         <Text variant="caption" color="inkGhost">
                           Open in Maps
                         </Text>
-                        <ExternalLink size={11} color={colors.inkGhost} strokeWidth={1.75} />
+                        <ExternalLink size={12} color={colors.inkGhost} strokeWidth={1.75} />
                       </View>
                     </View>
                   </View>

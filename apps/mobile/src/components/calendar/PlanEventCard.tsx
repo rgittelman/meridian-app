@@ -2,11 +2,11 @@ import { Calendar, ChevronRight, MapPin } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { GradientCard } from '@/components/shared/surfaces/GradientCard';
-import { TeamsLogo } from '@/components/shared/icons/TeamsLogo';
-import { GoogleMeetLogo } from '@/components/shared/icons/GoogleMeetLogo';
+import { ProviderLogo } from '@/components/shared/icons/ProviderLogo';
 import { domainColorFor } from '@/components/calendar/planEventAccent';
 import { Text } from '@/components/typography/Text';
 import type { MeridianCalendarEvent } from '@/types/calendar';
+import { resolveMeetingProvider, meetingProviderDisplayName } from '@/services/calendar/meetingProvider';
 import { useTheme } from '@/hooks/useTheme';
 import { makeStyles, spacing } from '@/theme';
 
@@ -49,13 +49,7 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
       : null;
 
   const meetingUrl = event.meetingUrl;
-  const meetingProvider: 'teams' | 'meet' | null = meetingUrl
-    ? meetingUrl.includes('teams.microsoft.com')
-      ? 'teams'
-      : meetingUrl.includes('meet.google.com')
-        ? 'meet'
-        : null
-    : null;
+  const meetingProvider = resolveMeetingProvider(meetingUrl);
 
   const physicalLocation =
     !meetingUrl && event.location && isPhysicalLocation(event.location)
@@ -105,18 +99,14 @@ export function PlanEventCard({ event, onViewDetail }: PlanEventCardProps) {
           {/* Meeting type or location tag */}
           {meetingProvider ? (
             <View style={styles.tagRow}>
-              {meetingProvider === 'teams' ? (
-                <TeamsLogo size={12} />
-              ) : (
-                <GoogleMeetLogo size={13} />
-              )}
+              <ProviderLogo provider={meetingProvider} context="meeting" size={14} />
               <Text variant="caption" style={styles.tagText} maxFontSizeMultiplier={1.0}>
-                {meetingProvider === 'teams' ? 'Microsoft Teams' : 'Google Meet'}
+                {meetingProviderDisplayName(meetingProvider)}
               </Text>
             </View>
           ) : physicalLocation ? (
             <View style={styles.tagRow}>
-              <MapPin size={13} color={colors.inkGhost} strokeWidth={1.75} />
+              <MapPin size={14} color={colors.inkGhost} strokeWidth={1.75} />
               <Text
                 variant="caption"
                 style={styles.tagText}
