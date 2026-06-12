@@ -34,3 +34,35 @@ Then confirm current state in 10 bullets:
 - **No Phase J code** until PHASE_J_PREREQS.md is resolved and Codemaster has approved the plan
 - **No account/auth/avatar UI** in current Settings — belongs to Phase J only
 - **apps/mobile only** — web app and `_archive/legacy-mobile` are out of scope
+
+---
+
+## Strategic Direction Reads
+
+These documents are not required reading every session. Read them when work touches the relevant system, or when a new session needs philosophical grounding on a direction that has been explored but not yet built.
+
+- [`docs/decisions/ENGAGEMENT_OBSERVATIONS_V1.md`](decisions/ENGAGEMENT_OBSERVATIONS_V1.md) — O06/O09 observation design; copy constraints; confidence gates
+- [`docs/decisions/HOUSEHOLD_STATE_DIRECTION_V1.md`](decisions/HOUSEHOLD_STATE_DIRECTION_V1.md) — derived household states; awareness vs. accountability; lifecycle boundaries
+- [`docs/decisions/HOUSEHOLD_DISCOVERY_DIRECTION_V1.md`](decisions/HOUSEHOLD_DISCOVERY_DIRECTION_V1.md) — household member discovery; signal sources; trust gates
+- [`docs/decisions/BACKGROUND_REASSESSMENT_DIRECTION_V1.md`](decisions/BACKGROUND_REASSESSMENT_DIRECTION_V1.md) — quiet correction of inferred intelligence; churn avoidance; safe trigger moments
+
+### Reassessment principle
+
+> Meridian may reassess inferred understanding over time, but must avoid visible churn.
+
+The relationship-scoring trust bug (2026-06-11) is the first real-world example of why reassessment exists:
+
+1. Meridian inferred something (calendar links for Reagan, Grace, and Quinn captures → Quinn Hockey).
+2. Meridian learned the inference was wrong (confidence bug + blanket inferredPeople assignments).
+3. Meridian quietly corrects the inference (`repairCorruptedCalendarLinks` on rehydration).
+4. Meridian preserves trust (no user-visible churn; corrupted links cleared before screen renders).
+
+The repair utility is not a one-time fix. It is the first instance of a reassessment pattern.
+
+**Reassessment rules (non-negotiable):**
+- Inferred relationships may be reassessed and cleared when they no longer pass confidence gates.
+- Stored/manual relationships require much higher caution and must not be touched by automated reassessment.
+- Reassessment must happen at safe moments (app launch, post-sync, post-event-end, daily heartbeat) — not continuously.
+- Quiet correction is desirable. Visible flip-flopping is trust-breaking.
+- Trust is more important than recall. False negatives are preferable to false positives.
+- Post-event prep cleanup is the safest identified future reassessment scope.
