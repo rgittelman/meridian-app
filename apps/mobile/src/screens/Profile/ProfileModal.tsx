@@ -47,7 +47,7 @@ export function ProfileModal({ visible, onClose }: ProfileModalProps) {
             accessibilityLabel="Close profile"
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <X size={22} color={colors.inkSecondary} strokeWidth={1.75} />
+            <X size={18} color={colors.inkSecondary} strokeWidth={2} />
           </Pressable>
         </View>
 

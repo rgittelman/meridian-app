@@ -24,9 +24,9 @@ export function CalmWins({ count = 3 }: CalmWinsProps) {
       accessibilityRole="text"
     >
       <CheckCircle2
-        size={15}
+        size={14}
         color={colors.winsAccent}
-        strokeWidth={2}
+        strokeWidth={1.75}
         style={staticStyles.icon}
       />
       <Text

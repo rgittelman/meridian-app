@@ -200,7 +200,7 @@ function FocusActionButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Icon size={15} color={iconColor} strokeWidth={isHandled ? 2.5 : 2} aria-hidden />
+      <Icon size={16} color={iconColor} strokeWidth={isHandled ? 2.5 : 2} aria-hidden />
       <Text
         variant="footnote"
         style={isHandled ? styles.handledText : styles.holdText}

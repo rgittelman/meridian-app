@@ -68,7 +68,7 @@ export function AmbientCapture({
         accessibilityHint="Opens capture so you can type what's on your mind"
       >
         <View style={styles.plusWrap}>
-          <Plus size={16} color={colors.inkTertiary} strokeWidth={2} />
+          <Plus size={16} color={colors.captureAccent} strokeWidth={2} />
         </View>
 
         <Text
@@ -88,7 +88,7 @@ export function AmbientCapture({
           accessibilityLabel="Voice capture"
           hitSlop={12}
         >
-          <Mic size={17} color={colors.inkTertiary} strokeWidth={1.75} />
+          <Mic size={16} color={colors.inkTertiary} strokeWidth={1.75} />
         </Pressable>
       </AnimatedPressable>
     </View>
